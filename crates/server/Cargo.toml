@@ -1,0 +1,19 @@
+[package]
+authors = ["Tsiry Sandratraina <tsiry.sndr@fluentci.io>"]
+edition = "2021"
+license = "MPL-2.0"
+name = "fluentci-server"
+repository = "https://github.com/fluentci-io/fluentci"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-cors = "0.7.0"
+actix-web = "4.5.1"
+async-graphql = "7.0.2"
+async-graphql-actix-web = "7.0.2"
+fluentci-graphql = {path = "../graphql", version = "0.1.0"}
+mime_guess = "2.0.4"
+owo-colors = "4.0.0"
+tokio = "1.36.0"
