@@ -1,6 +1,6 @@
 # FluentCI Engine
 
-FluentCI Engine is a CI/CD engine that is designed to be simple, flexible, and easy to use. It is supposed to run on the host machine without containerization or virtualization.
+FluentCI Engine is a CI/CD engine that is designed to be simple, flexible, and easy to use. It is supposed to run on the host machine without containerization or virtualization, and it is designed to be used with [Nix](https://nixos.com), [Pkgx](https://pkgx.dev), [Devbox](https://www.jetpack.io/devbox/), [Flox](https://flox.dev), and [Devenv](https://devenv.sh).
 
 ## ✨ Features
 
