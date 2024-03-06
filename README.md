@@ -1,6 +1,6 @@
 # FluentCI Engine
 
-FluentCI Engine is a CI/CD engine that is designed to be simple, flexible, and easy to use. It is supposed to run on the host machine without containerization or virtualiztion.
+FluentCI Engine is a CI/CD engine that is designed to be simple, flexible, and easy to use. It is supposed to run on the host machine without containerization or virtualization.
 
 ## ✨ Features
 
