@@ -15,7 +15,7 @@ impl Service {
         Ok(self)
     }
 
-    async fn with_cache(&self, key: String, path: String) -> Result<&Service, Error> {
+    async fn with_cache(&self, cache: ID) -> Result<&Service, Error> {
         Ok(self)
     }
 

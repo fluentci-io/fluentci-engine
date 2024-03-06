@@ -23,7 +23,7 @@ impl Pipeline {
         Ok(self)
     }
 
-    async fn with_cache(&self, key: String, path: String) -> Result<&Pipeline, Error> {
+    async fn with_cache(&self, cache: ID) -> Result<&Pipeline, Error> {
         Ok(self)
     }
 
