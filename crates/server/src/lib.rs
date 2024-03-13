@@ -7,9 +7,13 @@ use actix_web::{
 };
 use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
+use fluentci_core::deps::Graph;
 use fluentci_graphql::{schema::Query, FluentCISchema};
 use owo_colors::OwoColorize;
-use std::env;
+use std::{
+    env,
+    sync::{Arc, Mutex},
+};
 
 #[actix_web::post("/graphql")]
 async fn index_graphql(schema: web::Data<FluentCISchema>, req: GraphQLRequest) -> GraphQLResponse {
@@ -68,11 +72,14 @@ pub async fn start() -> std::io::Result<()> {
     );
     let addr = format!("127.0.0.1:{}", port);
 
+    let graph = Arc::new(Mutex::new(Graph::new()));
+
     let schema = Schema::build(
         Query::default(),
         EmptyMutation::default(),
         EmptySubscription::default(),
     )
+    .data(graph)
     .finish();
 
     HttpServer::new(move || {
