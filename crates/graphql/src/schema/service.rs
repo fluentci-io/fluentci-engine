@@ -1,5 +1,6 @@
 use crate::schema::objects::service::Service;
-use async_graphql::{Context, Error, Object};
+use async_graphql::{Context, Error, Object, ID};
+use uuid::Uuid;
 
 #[derive(Default, Clone)]
 pub struct ServiceQuery;
@@ -7,7 +8,8 @@ pub struct ServiceQuery;
 #[Object]
 impl ServiceQuery {
     async fn service(&self, _ctx: &Context<'_>, name: String) -> Result<Service, Error> {
-        let service = Service { id: name.into() };
+        let id = Uuid::new_v4().to_string();
+        let service = Service { id: ID(id) };
         Ok(service.clone())
     }
 }

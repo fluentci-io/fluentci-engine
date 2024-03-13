@@ -1,5 +1,6 @@
 use super::objects::cache::Cache;
-use async_graphql::{Context, Error, Object};
+use async_graphql::{Context, Error, Object, ID};
+use uuid::Uuid;
 
 #[derive(Default, Clone)]
 pub struct CacheQuery;
@@ -7,7 +8,12 @@ pub struct CacheQuery;
 #[Object]
 impl CacheQuery {
     async fn cache(&self, _ctx: &Context<'_>, key: String, path: String) -> Result<Cache, Error> {
-        let cache = Cache { id: "".into() };
-        Ok(cache.clone())
+        let id = Uuid::new_v4().to_string();
+        let cache = Cache {
+            id: ID(id),
+            key,
+            path,
+        };
+        Ok(cache)
     }
 }

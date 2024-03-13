@@ -4,6 +4,8 @@ use async_graphql::{Context, Error, Object, ID};
 use fluentci_core::deps::{Graph, GraphCommand, Output};
 use uuid::Uuid;
 
+use super::{devbox::Devbox, devenv::Devenv, flox::Flox, nix::Nix, pkgx::Pkgx};
+
 #[derive(Debug, Clone, Default)]
 pub struct Pipeline {
     pub id: ID,
@@ -13,6 +15,26 @@ pub struct Pipeline {
 impl Pipeline {
     async fn id(&self) -> &ID {
         &self.id
+    }
+
+    async fn devbox(&self, ctx: &Context<'_>) -> Result<Devbox, Error> {
+        Ok(Devbox { id: "".into() })
+    }
+
+    async fn devenv(&self, ctx: &Context<'_>) -> Result<Devenv, Error> {
+        Ok(Devenv { id: "".into() })
+    }
+
+    async fn flox(&self, ctx: &Context<'_>) -> Result<Flox, Error> {
+        Ok(Flox { id: "".into() })
+    }
+
+    async fn nix(&self, ctx: &Context<'_>) -> Result<Nix, Error> {
+        Ok(Nix { id: "".into() })
+    }
+
+    async fn pkgx(&self, ctx: &Context<'_>) -> Result<Pkgx, Error> {
+        Ok(Pkgx { id: "".into() })
     }
 
     async fn with_exec(&self, ctx: &Context<'_>, args: Vec<String>) -> Result<&Pipeline, Error> {
