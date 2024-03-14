@@ -1,5 +1,4 @@
-use std::process::ExitStatus;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::{self, Sender};
 
 use super::edge::Edge;
 use super::vertex::{Runnable, Vertex};
@@ -21,11 +20,11 @@ pub enum GraphCommand {
 pub struct Graph {
     pub vertices: Vec<Vertex>,
     pub edges: Vec<Edge>,
-    tx: Sender<(String, ExitStatus)>,
+    tx: Sender<(String, usize)>,
 }
 
 impl Graph {
-    pub fn new(tx: Sender<(String, ExitStatus)>) -> Self {
+    pub fn new(tx: Sender<(String, usize)>) -> Self {
         Graph {
             vertices: Vec::new(),
             edges: Vec::new(),
@@ -67,11 +66,20 @@ impl Graph {
                         stack.push(edge.to);
                     }
 
-                    let status =
-                        self.vertices[i].run(self.tx.clone(), Output::Stdout, stack.len() == 1);
+                    let (tx, rx) = mpsc::channel();
+
+                    let status = self.vertices[i].run(tx, Output::Stdout, stack.len() == 1);
+
                     if !status.success() {
                         println!("Error: {}", self.vertices[i].id);
+                        self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                        self.reset();
                         break;
+                    }
+
+                    if stack.len() == 1 {
+                        let stdout = rx.recv().unwrap();
+                        self.tx.send((stdout, 0)).unwrap();
                     }
                 }
 
@@ -93,11 +101,19 @@ impl Graph {
                     for edge in self.edges.iter().filter(|e| e.from == i) {
                         stack.push(edge.to);
                     }
-                    let status =
-                        self.vertices[i].run(self.tx.clone(), Output::Stderr, stack.len() == 1);
+                    let (tx, rx) = mpsc::channel();
+                    let status = self.vertices[i].run(tx, Output::Stderr, stack.len() == 1);
+
                     if !status.success() {
                         println!("Error: {}", self.vertices[i].id);
+                        self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                        self.reset();
                         break;
+                    }
+
+                    if stack.len() == 1 {
+                        let stderr = rx.recv().unwrap();
+                        self.tx.send((stderr, 0)).unwrap();
                     }
                 }
 

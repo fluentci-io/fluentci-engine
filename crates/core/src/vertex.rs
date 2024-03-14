@@ -17,7 +17,7 @@ pub struct VertexExecOutput {
 }
 
 pub trait Runnable {
-    fn run(&self, tx: Sender<(String, ExitStatus)>, out: Output, last_cmd: bool) -> ExitStatus;
+    fn run(&self, tx: Sender<String>, out: Output, last_cmd: bool) -> ExitStatus;
 }
 
 #[derive(Debug, Clone)]
@@ -29,7 +29,7 @@ pub struct Vertex {
 }
 
 impl Runnable for Vertex {
-    fn run(&self, tx: Sender<(String, ExitStatus)>, out: Output, last_cmd: bool) -> ExitStatus {
+    fn run(&self, tx: Sender<String>, out: Output, last_cmd: bool) -> ExitStatus {
         let label = format!("[{}]", self.label);
         println!("{} Execute: {}", label.cyan(), self.id.bright_yellow());
         let label = format!("[{}]", self.label);
@@ -65,7 +65,7 @@ impl Runnable for Vertex {
                 stdout.push_str("\n");
             }
             if out_clone == Output::Stdout && last_cmd {
-                tx_clone.send((stdout, ExitStatus::default())).unwrap();
+                tx_clone.send(stdout).unwrap();
             }
         });
 
@@ -77,7 +77,7 @@ impl Runnable for Vertex {
                 stderr.push_str("\n");
             }
             if out == Output::Stderr && last_cmd {
-                tx.send((stderr, ExitStatus::default())).unwrap();
+                tx.send(stderr).unwrap();
             }
         });
 

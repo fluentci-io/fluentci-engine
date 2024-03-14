@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use super::objects::{cache::Cache, directory::Directory, file::File};
+use super::objects::file::File;
 use async_graphql::{Context, Error, Object, ID};
 use fluentci_core::deps::{Graph, GraphCommand};
 use uuid::Uuid;

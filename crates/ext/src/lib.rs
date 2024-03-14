@@ -2,6 +2,7 @@ use anyhow::Error;
 
 pub mod devbox;
 pub mod devenv;
+pub mod envhub;
 pub mod flox;
 pub mod nix;
 pub mod pkgx;

@@ -150,13 +150,19 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.execute(GraphCommand::Execute(Output::Stdout));
-        drop(graph);
-        let rx = ctx
-            .data::<Arc<Mutex<Receiver<(String, ExitStatus)>>>>()
-            .unwrap();
+        let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();
         let rx = rx.lock().unwrap();
-        let (stdout, _) = rx.recv().unwrap();
+        let (stdout, code) = rx.recv().unwrap();
         drop(rx);
+        drop(graph);
+
+        if code != 0 {
+            return Err(Error::new(format!(
+                "Failed to execute command `{}`",
+                stdout
+            )));
+        }
+
         Ok(stdout)
     }
 
@@ -164,11 +170,19 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.execute(GraphCommand::Execute(Output::Stderr));
-        let rx = ctx
-            .data::<Arc<Mutex<Receiver<(String, ExitStatus)>>>>()
-            .unwrap();
+        let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();
         let rx = rx.lock().unwrap();
-        let (stderr, _) = rx.recv().unwrap();
+        let (stderr, code) = rx.recv().unwrap();
+        drop(rx);
+        drop(graph);
+
+        if code != 0 {
+            return Err(Error::new(format!(
+                "Failed to execute command `{}`",
+                stderr
+            )));
+        }
+
         Ok(stderr)
     }
 }
