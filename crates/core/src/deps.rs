@@ -1,7 +1,10 @@
+use std::process::ExitStatus;
+use std::sync::mpsc::Sender;
+
 use super::edge::Edge;
 use super::vertex::{Runnable, Vertex};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Output {
     Stdout,
     Stderr,
@@ -18,13 +21,15 @@ pub enum GraphCommand {
 pub struct Graph {
     pub vertices: Vec<Vertex>,
     pub edges: Vec<Edge>,
+    tx: Sender<(String, ExitStatus)>,
 }
 
 impl Graph {
-    pub fn new() -> Self {
+    pub fn new(tx: Sender<(String, ExitStatus)>) -> Self {
         Graph {
             vertices: Vec::new(),
             edges: Vec::new(),
+            tx,
         }
     }
 
@@ -62,7 +67,12 @@ impl Graph {
                         stack.push(edge.to);
                     }
 
-                    self.vertices[i].run();
+                    let status =
+                        self.vertices[i].run(self.tx.clone(), Output::Stdout, stack.len() == 1);
+                    if !status.success() {
+                        println!("Error: {}", self.vertices[i].id);
+                        break;
+                    }
                 }
 
                 self.reset();
@@ -83,7 +93,12 @@ impl Graph {
                     for edge in self.edges.iter().filter(|e| e.from == i) {
                         stack.push(edge.to);
                     }
-                    println!("Execute: {}", self.vertices[i].id);
+                    let status =
+                        self.vertices[i].run(self.tx.clone(), Output::Stderr, stack.len() == 1);
+                    if !status.success() {
+                        println!("Error: {}", self.vertices[i].id);
+                        break;
+                    }
                 }
 
                 self.reset();
@@ -103,11 +118,14 @@ impl Graph {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::mpsc;
+
     use super::*;
 
     #[test]
     fn test_graph() {
-        let mut graph = Graph::new();
+        let (tx, _) = mpsc::channel();
+        let mut graph = Graph::new(tx);
         graph.execute(GraphCommand::AddVertex(
             "1".into(),
             "A".into(),

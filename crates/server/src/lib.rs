@@ -12,7 +12,7 @@ use fluentci_graphql::{schema::Query, FluentCISchema};
 use owo_colors::OwoColorize;
 use std::{
     env,
-    sync::{Arc, Mutex},
+    sync::{mpsc, Arc, Mutex},
 };
 
 #[actix_web::post("/graphql")]
@@ -71,8 +71,9 @@ pub async fn start() -> std::io::Result<()> {
         format!("localhost:{}", port).bright_green()
     );
     let addr = format!("127.0.0.1:{}", port);
+    let (tx, rx) = mpsc::channel();
 
-    let graph = Arc::new(Mutex::new(Graph::new()));
+    let graph = Arc::new(Mutex::new(Graph::new(tx)));
 
     let schema = Schema::build(
         Query::default(),
@@ -80,6 +81,7 @@ pub async fn start() -> std::io::Result<()> {
         EmptySubscription::default(),
     )
     .data(graph)
+    .data(Arc::new(Mutex::new(rx)))
     .finish();
 
     HttpServer::new(move || {

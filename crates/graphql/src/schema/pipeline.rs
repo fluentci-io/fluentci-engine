@@ -23,6 +23,6 @@ impl PipelineQuery {
 
         drop(graph);
         let pipeline = Pipeline { id: ID(id) };
-        Ok(pipeline.clone())
+        Ok(pipeline)
     }
 }

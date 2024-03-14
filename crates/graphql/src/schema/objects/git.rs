@@ -1,4 +1,5 @@
 use async_graphql::{Error, Object, ID};
+use uuid::Uuid;
 
 use super::directory::Directory;
 
@@ -18,7 +19,8 @@ impl Git {
     }
 
     async fn tree(&self) -> Result<Directory, Error> {
-        let directory = Directory { id: "".into() };
+        let id = Uuid::new_v4().to_string();
+        let directory = Directory { id: ID(id) };
         Ok(directory)
     }
 }

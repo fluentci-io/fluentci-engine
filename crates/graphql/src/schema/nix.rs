@@ -1,5 +1,8 @@
+use std::sync::{Arc, Mutex};
+
 use super::objects::nix::Nix;
 use async_graphql::{Context, Error, Object, ID};
+use fluentci_core::deps::{Graph, GraphCommand};
 use uuid::Uuid;
 
 #[derive(Default, Clone)]
@@ -7,8 +10,20 @@ pub struct NixQuery;
 
 #[Object]
 impl NixQuery {
-    async fn nix(&self, _ctx: &Context<'_>) -> Result<Nix, Error> {
-        let nix = Nix { id: "".into() };
+    async fn nix(&self, ctx: &Context<'_>) -> Result<Nix, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        let id = Uuid::new_v4().to_string();
+        graph.execute(GraphCommand::AddVertex(
+            id.clone(),
+            "nix".into(),
+            "".into(),
+            vec![],
+        ));
+
+        drop(graph);
+
+        let nix = Nix { id: ID(id) };
         Ok(nix)
     }
 }
