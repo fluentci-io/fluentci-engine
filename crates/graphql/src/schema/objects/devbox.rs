@@ -1,7 +1,8 @@
 use std::sync::{mpsc::Receiver, Arc, Mutex};
 
 use async_graphql::{Context, Error, Object, ID};
-use fluentci_core::deps::{Graph, GraphCommand, Output};
+use fluentci_core::deps::{Graph, GraphCommand};
+use fluentci_types::Output;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Default)]
@@ -91,5 +92,12 @@ impl Devbox {
         }
 
         Ok(stderr)
+    }
+
+    async fn as_service(&self, ctx: &Context<'_>) -> Result<ID, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let graph = graph.lock().unwrap();
+        let id = graph.vertices[graph.size() - 1].id.clone();
+        Ok(ID(id))
     }
 }

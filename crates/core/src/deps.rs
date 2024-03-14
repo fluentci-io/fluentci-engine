@@ -1,13 +1,11 @@
 use std::sync::mpsc::{self, Sender};
+use std::sync::Arc;
+
+use fluentci_ext::Extension;
+use fluentci_types::Output;
 
 use super::edge::Edge;
 use super::vertex::{Runnable, Vertex};
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Output {
-    Stdout,
-    Stderr,
-}
 
 #[derive(Debug)]
 pub enum GraphCommand {
@@ -16,19 +14,21 @@ pub enum GraphCommand {
     Execute(Output),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Graph {
     pub vertices: Vec<Vertex>,
     pub edges: Vec<Edge>,
     tx: Sender<(String, usize)>,
+    runner: Arc<Box<dyn Extension + Send + Sync>>,
 }
 
 impl Graph {
-    pub fn new(tx: Sender<(String, usize)>) -> Self {
+    pub fn new(tx: Sender<(String, usize)>, runner: Arc<Box<dyn Extension + Send + Sync>>) -> Self {
         Graph {
             vertices: Vec::new(),
             edges: Vec::new(),
             tx,
+            runner,
         }
     }
 
@@ -68,22 +68,31 @@ impl Graph {
 
                     let (tx, rx) = mpsc::channel();
 
-                    let status = self.vertices[i].run(tx, Output::Stdout, stack.len() == 1);
-
-                    if !status.success() {
-                        println!("Error: {}", self.vertices[i].id);
-                        self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                        self.reset();
-                        break;
-                    }
+                    match self.vertices[i].run(
+                        self.runner.clone(),
+                        tx,
+                        Output::Stdout,
+                        stack.len() == 1,
+                    ) {
+                        Ok(status) => {
+                            if !status.success() {
+                                println!("Error: {}", self.vertices[i].id);
+                                self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            println!("Error: {}", e);
+                            self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                            break;
+                        }
+                    };
 
                     if stack.len() == 1 {
                         let stdout = rx.recv().unwrap();
                         self.tx.send((stdout, 0)).unwrap();
                     }
                 }
-
-                self.reset();
             }
             GraphCommand::Execute(Output::Stderr) => {
                 let mut visited = vec![false; self.vertices.len()];
@@ -102,22 +111,31 @@ impl Graph {
                         stack.push(edge.to);
                     }
                     let (tx, rx) = mpsc::channel();
-                    let status = self.vertices[i].run(tx, Output::Stderr, stack.len() == 1);
-
-                    if !status.success() {
-                        println!("Error: {}", self.vertices[i].id);
-                        self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                        self.reset();
-                        break;
-                    }
+                    match self.vertices[i].run(
+                        self.runner.clone(),
+                        tx,
+                        Output::Stderr,
+                        stack.len() == 1,
+                    ) {
+                        Ok(status) => {
+                            if !status.success() {
+                                println!("Error: {}", self.vertices[i].id);
+                                self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            println!("Error: {}", e);
+                            self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                            break;
+                        }
+                    };
 
                     if stack.len() == 1 {
                         let stderr = rx.recv().unwrap();
                         self.tx.send((stderr, 0)).unwrap();
                     }
                 }
-
-                self.reset();
             }
         }
     }
@@ -136,12 +154,14 @@ impl Graph {
 mod tests {
     use std::sync::mpsc;
 
+    use fluentci_ext::runner::Runner;
+
     use super::*;
 
     #[test]
     fn test_graph() {
         let (tx, _) = mpsc::channel();
-        let mut graph = Graph::new(tx);
+        let mut graph = Graph::new(tx, Arc::new(Box::new(Runner::default())));
         graph.execute(GraphCommand::AddVertex(
             "1".into(),
             "A".into(),

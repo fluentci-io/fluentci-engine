@@ -1,7 +1,8 @@
 use std::sync::{mpsc::Receiver, Arc, Mutex};
 
 use async_graphql::{Context, Error, Object, ID};
-use fluentci_core::deps::{Graph, GraphCommand, Output};
+use fluentci_core::deps::{Graph, GraphCommand};
+use fluentci_types::Output;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Default)]
@@ -56,6 +57,7 @@ impl Nix {
     async fn stdout(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+
         graph.execute(GraphCommand::Execute(Output::Stdout));
         let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();
         let rx = rx.lock().unwrap();
@@ -76,6 +78,7 @@ impl Nix {
     async fn stderr(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+
         graph.execute(GraphCommand::Execute(Output::Stderr));
         let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();
         let rx = rx.lock().unwrap();
@@ -91,5 +94,12 @@ impl Nix {
         }
 
         Ok(stderr)
+    }
+
+    async fn as_service(&self, ctx: &Context<'_>) -> Result<ID, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let graph = graph.lock().unwrap();
+        let id = graph.vertices[graph.size() - 1].id.clone();
+        Ok(ID(id))
     }
 }

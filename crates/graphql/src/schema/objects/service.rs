@@ -10,32 +10,4 @@ impl Service {
     async fn id(&self) -> &ID {
         &self.id
     }
-
-    async fn with_env_variable(&self, key: String, value: String) -> Result<&Service, Error> {
-        Ok(self)
-    }
-
-    async fn with_cache(&self, cache: ID) -> Result<&Service, Error> {
-        Ok(self)
-    }
-
-    async fn with_exec(&self, args: Vec<String>) -> Result<&Service, Error> {
-        Ok(self)
-    }
-
-    async fn with_work_dir(&self, path: String) -> Result<&Service, Error> {
-        Ok(self)
-    }
-
-    async fn with_service(&self, service: ID) -> Result<&Service, Error> {
-        Ok(self)
-    }
-
-    async fn stdout(&self) -> Result<String, Error> {
-        Ok("".to_string())
-    }
-
-    async fn stderr(&self) -> Result<String, Error> {
-        Ok("".to_string())
-    }
 }

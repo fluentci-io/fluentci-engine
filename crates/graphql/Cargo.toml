@@ -10,6 +10,7 @@ anyhow = "1.0.80"
 async-graphql = "7.0.2"
 async-graphql-actix-web = "7.0.2"
 fluentci-core = {path = "../core"}
+fluentci-types = {path = "../types"}
 uuid = {version = "1.7.0", features = [
   "v4",
   "fast-rng",

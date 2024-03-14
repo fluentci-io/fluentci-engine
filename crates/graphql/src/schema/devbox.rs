@@ -13,6 +13,8 @@ impl DevboxQuery {
     async fn devbox(&self, ctx: &Context<'_>) -> Result<Devbox, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+        graph.reset();
+
         let id = Uuid::new_v4().to_string();
         graph.execute(GraphCommand::AddVertex(
             id.clone(),

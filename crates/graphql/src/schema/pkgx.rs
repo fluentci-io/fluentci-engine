@@ -13,6 +13,8 @@ impl PkgxQuery {
     async fn pkgx(&self, ctx: &Context<'_>) -> Result<Pkgx, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+        graph.reset();
+
         let id = Uuid::new_v4().to_string();
         graph.execute(GraphCommand::AddVertex(
             id.clone(),

@@ -13,6 +13,8 @@ impl FloxQuery {
     async fn flox(&self, ctx: &Context<'_>) -> Result<Flox, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+        graph.reset();
+
         let id = Uuid::new_v4().to_string();
         graph.execute(GraphCommand::AddVertex(
             id.clone(),

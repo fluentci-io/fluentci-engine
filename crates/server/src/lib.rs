@@ -8,6 +8,7 @@ use actix_web::{
 use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use fluentci_core::deps::Graph;
+use fluentci_ext::runner::Runner;
 use fluentci_graphql::{schema::Query, FluentCISchema};
 use owo_colors::OwoColorize;
 use std::{
@@ -73,7 +74,10 @@ pub async fn start() -> std::io::Result<()> {
     let addr = format!("127.0.0.1:{}", port);
     let (tx, rx) = mpsc::channel();
 
-    let graph = Arc::new(Mutex::new(Graph::new(tx)));
+    let graph = Arc::new(Mutex::new(Graph::new(
+        tx,
+        Arc::new(Box::new(Runner::default())),
+    )));
 
     let schema = Schema::build(
         Query::default(),

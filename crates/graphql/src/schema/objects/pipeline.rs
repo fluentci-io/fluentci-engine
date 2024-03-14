@@ -1,10 +1,8 @@
-use std::{
-    process::ExitStatus,
-    sync::{mpsc::Receiver, Arc, Mutex},
-};
+use std::sync::{mpsc::Receiver, Arc, Mutex};
 
 use async_graphql::{Context, Error, Object, ID};
-use fluentci_core::deps::{Graph, GraphCommand, Output};
+use fluentci_core::deps::{Graph, GraphCommand};
+use fluentci_types::Output;
 use uuid::Uuid;
 
 use super::{devbox::Devbox, devenv::Devenv, flox::Flox, nix::Nix, pkgx::Pkgx};
@@ -23,6 +21,7 @@ impl Pipeline {
     async fn devbox(&self, ctx: &Context<'_>) -> Result<Devbox, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+
         let id = Uuid::new_v4().to_string();
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
@@ -38,6 +37,7 @@ impl Pipeline {
     async fn devenv(&self, ctx: &Context<'_>) -> Result<Devenv, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+
         let id = Uuid::new_v4().to_string();
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
