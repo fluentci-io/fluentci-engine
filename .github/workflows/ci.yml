@@ -13,8 +13,9 @@ jobs:
       - name: Run Dagger Pipelines
         run: |
           fluentci run rust_pipeline build
-          ls -ltr
           ls -ltr target
+          rm -rf target/release/build target/release/deps target/release/examples target/release/incremental
+          fluentci run . e2e
         env:
           PACKAGE_NAME: fluentci-engine
           DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}
