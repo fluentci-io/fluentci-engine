@@ -17,3 +17,4 @@ jobs:
           ls -ltr target
         env:
           PACKAGE_NAME: fluentci-engine
+          DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}
