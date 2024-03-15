@@ -229,6 +229,7 @@ export async function e2e(
     .withWorkdir("/app")
     .withMountedCache("/app/target", dag.cacheVolume("target"))
     .withExec(["./target/release/fluentci-engine"])
+    .withExposedPort(6880)
     .asService();
 
   const ctr = dag
