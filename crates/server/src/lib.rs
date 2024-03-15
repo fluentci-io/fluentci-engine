@@ -66,12 +66,13 @@ pub async fn start() -> std::io::Result<()> {
 
   "#;
     println!("{}", banner.bright_green());
-    let port = env::var("FLUENTCI_PORT").unwrap_or("6880".to_string());
+    let port = env::var("FLUENTCI_ENGINE_PORT").unwrap_or("6880".to_string());
     println!(
         "Server is running on {}",
         format!("localhost:{}", port).bright_green()
     );
-    let addr = format!("127.0.0.1:{}", port);
+    let host = env::var("FLUENTCI_ENGINE_HOST").unwrap_or("127.0.0.1".to_string());
+    let addr = format!("{}:{}", host, port);
     let (tx, rx) = mpsc::channel();
 
     let graph = Arc::new(Mutex::new(Graph::new(

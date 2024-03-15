@@ -3,7 +3,7 @@
  * @description This module provides a set of functions to build, test, and run clippy on a Rust project 🦀
  */
 
-import { dag, env, Directory, DirectoryID, File } from "../../deps.ts";
+import { dag, env, Container, Directory, DirectoryID, File } from "../../deps.ts";
 
 export enum Job {
   clippy = "clippy",
@@ -220,32 +220,32 @@ export async function build(
 export async function e2e(
   src: string | Directory | undefined = ".",
   options: string[] = []
-): Promise<string> {
+): Promise<Container | string> {
   const context = await getDirectory(src);
   const engine = dag
     .container()
     .from("debian:bookworm")
-    .withDirectory("/app", context, {
-      exclude: [".git", ".devbox", ".fluentci"],
-    })
-    .withWorkdir("/app")
-    .withExec(["ls", "-ltr"])
-    .withExec(["ls", "-ltr", "target"])
-    .withExec(["ls", "-ltr", "target/release"])
-    .withExec(["./target/release/fluentci-engine"])
+    .withFile("/fluentci-engine", dag.host().file('./target/release/fluentci-engine'))
+    .withEnvVariable("FLUENTCI_ENGINE_HOST", "0.0.0.0")
+    .withExec(["/fluentci-engine"])
     .withExposedPort(6880)
     .asService();
 
-  const ctr = dag
+  let ctr = await dag
     .pipeline(Job.e2e)
     .container()
     .from("pkgxdev/pkgx:latest")
     .withExec(["pkgx", "install", "httpie"])
     .withExec(["http", "--version"])
     .withServiceBinding("fluentci-engine", engine)
-    .withExec(["http", "http://fluentci-engine:6880/graphiql"]);
+   .sync();  
 
-  return ctr.stdout();
+  ctr = ctr.withExec(["http", "GET", "http://fluentci-engine:6880/graphiql"]);
+
+  const stdout = await ctr.stdout();
+  console.log(stdout);
+  
+  return stdout;
 }
 
 export type JobExec =

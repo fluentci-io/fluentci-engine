@@ -18,4 +18,5 @@ jobs:
           fluentci run . e2e
         env:
           PACKAGE_NAME: fluentci-engine
+          FLUENTCI_ENGINE_HOST: 0.0.0.0
           DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}
