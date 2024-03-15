@@ -104,14 +104,23 @@ impl Extension for Nix {
         };
 
         env::set_var("USER", user);
+        env::set_var("SHELL", "/bin/bash");
+        
+        let home = match env::var("HOME") {
+            Ok(home) => home,
+            Err(_) => "/root".to_string(),
+        };
+        let nix_path = format!("{}/.nix-profile/bin", home);
         env::set_var(
             "PATH",
             format!(
-                "{}:{}",
+                "{}:{}:{}",
                 env::var("PATH")?,
-                "/nix/var/nix/profiles/default/bin"
+                "/nix/var/nix/profiles/default/bin",
+                nix_path
             ),
         );
+
         let mut child = Command::new("sh")
             .arg("-c")
             .arg("type systemctl > /dev/null")
@@ -126,15 +135,17 @@ impl Extension for Nix {
             "linux" => format!("linux --extra-conf 'sandbox = false' {}", init),
             _ => "".to_string(),
         };
-        let mut child = Command::new("sh")
+        let mut child = Command::new("bash")
             .arg("-c")
             .arg(format!("type nix > /dev/null || curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install {}", linux))
+            
             .spawn()?;
         child.wait()?;
 
-        let mut child = Command::new("sh")
+        let mut child = Command::new("bash")
             .arg("-c")
             .arg(format!("type nix > /dev/null || curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install {} --no-confirm", linux))
+            
             .spawn()?;
         child.wait()?;
         Ok(())

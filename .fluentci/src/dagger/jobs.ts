@@ -225,7 +225,10 @@ export async function e2e(
   const engine = dag
     .container()
     .from("debian:bookworm")
+    .withExec(["apt-get", "update"])
+    .withExec(["apt-get", "install", "-y", "curl", "ca-certificates", "git"])
     .withDirectory("/app", context, { exclude })
+    .withWorkdir("/app")
     .withFile(
       "/fluentci-engine",
       dag.host().file("./target/release/fluentci-engine")
@@ -235,7 +238,7 @@ export async function e2e(
     .withExposedPort(6880)
     .asService();
 
-  let ctr = await dag
+  const ctr = await dag
     .pipeline(Job.e2e)
     .container()
     .from("pkgxdev/pkgx:latest")
@@ -246,40 +249,46 @@ export async function e2e(
     .withServiceBinding("fluentci-engine", engine)
     .sync();
 
-  ctr = ctr.withExec([
+  const pkgx = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat pkgx.graphql)" --ignore-stdin`,
+  ]);
+
+  console.log(await pkgx.stdout());
+
+  const nix = ctr.withExec([
     "bash",
     "-c",
     `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat nix.graphql)" --ignore-stdin`,
   ]);
 
-  let stdout = await ctr.stdout();
-  console.log(stdout);
+  console.log(await nix.stdout());
 
-  ctr = ctr.withExec([
+  const flox = ctr.withExec([
     "bash",
     "-c",
     `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat flox.graphql)" --ignore-stdin`,
   ]);
 
-  stdout = await ctr.stdout();
-  console.log(stdout);
+  console.log(await flox.stdout());
 
-  ctr = ctr.withExec([
+  const devenv = ctr.withExec([
     "bash",
     "-c",
     `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devenv.graphql)" --ignore-stdin`,
   ]);
 
-  stdout = await ctr.stdout();
-  console.log(stdout);
+  console.log(await devenv.stdout());
 
-  ctr = ctr.withExec([
+  const devbox = ctr.withExec([
     "bash",
     "-c",
     `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devbox.graphql)" --ignore-stdin`,
   ]);
 
-  stdout = await ctr.stdout();
+  const stdout = await devbox.stdout();
+
   console.log(stdout);
 
   return stdout;

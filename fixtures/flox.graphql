@@ -2,8 +2,8 @@ query Flox {
   pipeline(name: "Demo") {
     flox {
       withWorkDir(path: "./flox-demo") {
-        withExec(args: ["echo", "hello"]) {
-          withExec(args: ["flox", "--version"]) {
+        withExec(args: ["flox", "--version"]) {
+          withExec(args: ["which", "jq"]) {
             id
             stdout
           }

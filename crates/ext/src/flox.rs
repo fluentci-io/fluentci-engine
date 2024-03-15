@@ -97,6 +97,7 @@ impl Extension for Flox {
 
     fn setup(&self) -> Result<(), Error> {
         Nix::default().setup()?;
+
         let status = Command::new("sh")
             .arg("-c")
             .arg("type flox > /dev/null")

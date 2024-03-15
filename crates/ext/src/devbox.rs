@@ -114,6 +114,7 @@ impl Extension for Devbox {
         let mut child = Command::new("sh")
             .arg("-c")
             .arg("type devbox > /dev/null || curl -fsSL https://get.jetpack.io/devbox | bash")
+            .env("FORCE", "1")
             .spawn()?;
         child.wait()?;
         Ok(())

@@ -16,6 +16,7 @@ pub struct Pkgx {}
 impl Pkgx {
     pub fn install(&self, pkgs: Vec<&str>) -> Result<ExitStatus, Error> {
         self.setup()?;
+
         let mut child = Command::new("sh")
             .arg("-c")
             .arg(format!("pkgx install {}", pkgs.join(" ")))
@@ -68,7 +69,10 @@ impl Extension for Pkgx {
                 stdout.push_str("\n");
             }
             if out_clone == Output::Stdout && last_cmd {
-                tx_clone.send(stdout).unwrap();
+                match tx_clone.send(stdout) {
+                    Ok(_) => {}
+                    Err(e) => eprintln!("{}", e),
+                }
             }
         });
 
@@ -80,7 +84,10 @@ impl Extension for Pkgx {
                 stderr.push_str("\n");
             }
             if out == Output::Stderr && last_cmd {
-                tx.send(stderr).unwrap();
+                match tx.send(stderr) {
+                    Ok(_) => {}
+                    Err(e) => eprintln!("{}", e),
+                }
             }
         });
 
@@ -102,14 +109,12 @@ impl Extension for Pkgx {
     }
 
     fn setup(&self) -> Result<(), Error> {
-        env::set_var(
-            "PATH",
-            format!(
-                "{}:{}",
-                env::var("PATH")?,
-                format!("{}/.local/bin", env::var("HOME")?)
-            ),
+        let path = format!(
+            "{}:{}",
+            env::var("PATH")?,
+            format!("{}/.local/bin", env::var("HOME")?)
         );
+        env::set_var("PATH", &path);
         let mut child = Command::new("sh")
             .arg("-c")
             .arg("type pkgx > /dev/null || curl -fsS https://pkgx.sh | sh")

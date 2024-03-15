@@ -99,6 +99,7 @@ impl Extension for Devenv {
 
     fn setup(&self) -> Result<(), Error> {
         Nix::default().setup()?;
+
         let mut child = Command::new("sh")
             .arg("-c")
             .arg("type devenv > /dev/null")
