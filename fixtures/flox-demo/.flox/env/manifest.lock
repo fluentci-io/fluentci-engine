@@ -1,0 +1,93 @@
+{
+  "lockfile-version": 0,
+  "manifest": {
+    "hook": {},
+    "install": {
+      "jq": {
+        "pkg-path": "jq"
+      }
+    },
+    "options": {
+      "systems": [
+        "x86_64-linux"
+      ]
+    },
+    "registry": {
+      "defaults": {
+        "subtrees": null
+      },
+      "inputs": {
+        "nixpkgs": {
+          "from": {
+            "owner": "NixOS",
+            "ref": "release-23.11",
+            "repo": "nixpkgs",
+            "type": "github"
+          },
+          "subtrees": [
+            "legacyPackages"
+          ]
+        }
+      },
+      "priority": [
+        "nixpkgs"
+      ]
+    },
+    "vars": {}
+  },
+  "packages": {
+    "x86_64-linux": {
+      "jq": {
+        "attr-path": [
+          "legacyPackages",
+          "x86_64-linux",
+          "jq"
+        ],
+        "info": {
+          "broken": false,
+          "description": "A lightweight and flexible command-line JSON processor",
+          "license": "MIT",
+          "pname": "jq",
+          "unfree": false,
+          "version": "1.7.1"
+        },
+        "input": {
+          "attrs": {
+            "lastModified": 1710497833,
+            "narHash": "sha256-EDOSm5uZjaUqZ7Ej69ykT4qM2au8gVaAcHDySsQ7mnQ=",
+            "owner": "NixOS",
+            "repo": "nixpkgs",
+            "rev": "3e6b090c05a4a86e6b9de820f039871ff839d3e7",
+            "type": "github"
+          },
+          "fingerprint": "1ebae8dec1bc8ecdd5d90481a988acd401a5a5a60502c2430fa970d09a2216d6",
+          "url": "github:NixOS/nixpkgs/3e6b090c05a4a86e6b9de820f039871ff839d3e7"
+        },
+        "priority": 5
+      }
+    }
+  },
+  "registry": {
+    "defaults": {
+      "subtrees": null
+    },
+    "inputs": {
+      "nixpkgs": {
+        "from": {
+          "lastModified": 1710497833,
+          "narHash": "sha256-EDOSm5uZjaUqZ7Ej69ykT4qM2au8gVaAcHDySsQ7mnQ=",
+          "owner": "NixOS",
+          "repo": "nixpkgs",
+          "rev": "3e6b090c05a4a86e6b9de820f039871ff839d3e7",
+          "type": "github"
+        },
+        "subtrees": [
+          "legacyPackages"
+        ]
+      }
+    },
+    "priority": [
+      "nixpkgs"
+    ]
+  }
+}

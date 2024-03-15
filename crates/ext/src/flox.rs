@@ -94,21 +94,17 @@ impl Extension for Flox {
 
         Command::new("sh")
             .arg("-c")
-            .arg("echo 'extra-trusted-substituters = https://cache.floxdev.com' | tee -a /etc/nix/nix.conf && echo 'extra-trusted-public-keys = flox-store-public-0:8c/B+kjIaQ+BloCmNkRUKwaVPFWkriSAd0JJvuDu4F0=' | tee -a /etc/nix/nix.conf")
+            .arg("echo 'extra-trusted-substituters = https://cache.floxdev.com' | tee -a /etc/nix/nix.conf && echo 'extra-trusted-public-keys = flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs=' | tee -a /etc/nix/nix.conf")
             .spawn()?
             .wait()?;
 
         Command::new("sh")
             .arg("-c")
             .arg(
-                "nix \
-                profile \
-                install \
-                --impure \
-                --experimental-features \
-                nix-command flakes auto-allocate-uids \
+                "nix profile install --impure \
+                --experimental-features 'nix-command flakes' \
                 --accept-flake-config \
-                github:flox/floxpkgs#flox.fromCatalog",
+                github:flox/flox",
             )
             .spawn()?
             .wait()?;

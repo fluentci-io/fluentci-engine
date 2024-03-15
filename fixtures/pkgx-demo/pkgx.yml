@@ -1,0 +1,4 @@
+dependencies:
+  deno: =1.40.0
+env:
+  DEMO: 123
