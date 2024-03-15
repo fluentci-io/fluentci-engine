@@ -27,7 +27,7 @@ impl Extension for Flox {
 
         let mut child = Command::new("sh")
             .arg("-c")
-            .arg(cmd)
+            .arg(format!("flox activate -- {}", cmd))
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;

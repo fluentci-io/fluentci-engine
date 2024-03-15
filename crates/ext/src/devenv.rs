@@ -34,7 +34,7 @@ impl Extension for Devenv {
 
         let mut child = Command::new("sh")
             .arg("-c")
-            .arg(cmd)
+            .arg(format!("devenv shell {}", cmd))
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
