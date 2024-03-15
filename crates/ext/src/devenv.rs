@@ -5,7 +5,7 @@ use std::{
     thread,
 };
 
-use crate::{nix::Nix, Extension};
+use crate::{nix::Nix, pkgx::Pkgx, Extension};
 use anyhow::Error;
 use fluentci_types::Output;
 
@@ -21,6 +21,8 @@ impl Extension for Devenv {
         last_cmd: bool,
     ) -> Result<ExitStatus, Error> {
         self.setup()?;
+        Pkgx::default().install(vec!["direnv"])?;
+
         let (stdout_tx, stdout_rx): (Sender<String>, Receiver<String>) = mpsc::channel();
         let (stderr_tx, stderr_rx): (Sender<String>, Receiver<String>) = mpsc::channel();
 
