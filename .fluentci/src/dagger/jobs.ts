@@ -225,9 +225,13 @@ export async function e2e(
   const engine = dag
     .container()
     .from("debian:bookworm")
-    .withDirectory("/app", context, { exclude })
+    .withDirectory("/app", context, {
+      exclude: [".git", ".devbox", ".fluentci"],
+    })
     .withWorkdir("/app")
-    .withMountedCache("/app/target", dag.cacheVolume("target"))
+    .withExec(["ls", "-ltr"])
+    .withExec(["ls", "-ltr", "target"])
+    .withExec(["ls", "-ltr", "target/release"])
     .withExec(["./target/release/fluentci-engine"])
     .withExposedPort(6880)
     .asService();
