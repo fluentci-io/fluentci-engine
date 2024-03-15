@@ -249,7 +249,7 @@ export async function e2e(
   ctr = ctr.withExec([
     "bash",
     "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat nix.graphql)"`,
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat nix.graphql)" --ignore-stdin`,
   ]);
 
   let stdout = await ctr.stdout();
@@ -258,7 +258,7 @@ export async function e2e(
   ctr = ctr.withExec([
     "bash",
     "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat flox.graphql)"`,
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat flox.graphql)" --ignore-stdin`,
   ]);
 
   stdout = await ctr.stdout();
@@ -267,7 +267,7 @@ export async function e2e(
   ctr = ctr.withExec([
     "bash",
     "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devenv.graphql)"`,
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devenv.graphql)" --ignore-stdin`,
   ]);
 
   stdout = await ctr.stdout();
@@ -276,7 +276,7 @@ export async function e2e(
   ctr = ctr.withExec([
     "bash",
     "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devbox.graphql)"`,
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devbox.graphql)" --ignore-stdin`,
   ]);
 
   stdout = await ctr.stdout();
