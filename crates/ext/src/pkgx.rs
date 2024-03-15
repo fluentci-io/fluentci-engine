@@ -34,15 +34,21 @@ impl Extension for Pkgx {
         tx: Sender<String>,
         out: Output,
         last_cmd: bool,
+        work_dir: &str,
     ) -> Result<ExitStatus, Error> {
         self.setup()?;
+
+        if cmd.is_empty() {
+            return Ok(ExitStatus::default());
+        }
 
         let (stdout_tx, stdout_rx): (Sender<String>, Receiver<String>) = mpsc::channel();
         let (stderr_tx, stderr_rx): (Sender<String>, Receiver<String>) = mpsc::channel();
 
-        let mut child = Command::new("sh")
+        let mut child = Command::new("bash")
             .arg("-c")
-            .arg(cmd)
+            .arg(format!("eval \"$(pkgx --shellcode)\" && {}", cmd))
+            .current_dir(work_dir)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;

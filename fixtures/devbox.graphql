@@ -1,0 +1,14 @@
+query Devbox {
+  pipeline(name: "Demo") {
+    devbox {
+      withWorkDir(path: "./devbox-demo") {
+        withExec(args: ["devbox", "version"]) {
+          withExec(args: ["which", "jq"]) {
+            id
+            stdout
+          }
+        }
+      }
+    }
+  }
+}

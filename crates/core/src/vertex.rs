@@ -22,6 +22,7 @@ pub trait Runnable {
         tx: Sender<String>,
         out: Output,
         last_cmd: bool,
+        work_dir: &str,
     ) -> Result<ExitStatus, Error>;
 }
 
@@ -40,11 +41,12 @@ impl Runnable for Vertex {
         tx: Sender<String>,
         out: Output,
         last_cmd: bool,
+        work_dir: &str,
     ) -> Result<ExitStatus, Error> {
         let label = format!("[{}]", self.label);
         println!("{} {}", label.cyan(), self.id.bright_yellow());
         println!("{} {}", label.cyan(), self.command.bright_green());
 
-        runner.exec(&self.command, tx, out, last_cmd)
+        runner.exec(&self.command, tx, out, last_cmd, work_dir)
     }
 }

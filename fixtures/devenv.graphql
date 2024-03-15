@@ -1,0 +1,14 @@
+query Devenv {
+  pipeline(name: "Demo") {
+    devenv {
+      withWorkDir(path: "./devenv-demo") {
+        withExec(args: ["devenv", "version"]) {
+          withExec(args: ["which", "git"]) {
+            id
+            stdout
+          }
+        }
+      }
+    }
+  }
+}

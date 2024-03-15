@@ -1,4 +1,4 @@
-use std::fs;
+use std::env::current_dir;
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
 
@@ -21,22 +21,18 @@ pub struct Graph {
     pub edges: Vec<Edge>,
     tx: Sender<(String, usize)>,
     pub runner: Arc<Box<dyn Extension + Send + Sync>>,
-    pub working_dir: String,
+    pub work_dir: String,
 }
 
 impl Graph {
     pub fn new(tx: Sender<(String, usize)>, runner: Arc<Box<dyn Extension + Send + Sync>>) -> Self {
-        let working_dir = format!(
-            "{}/.fluentci/workspace",
-            dirs::home_dir().unwrap().to_str().unwrap()
-        );
-        fs::create_dir_all(&working_dir).unwrap();
+        let work_dir = current_dir().unwrap().to_str().unwrap().to_string();
         Graph {
             vertices: Vec::new(),
             edges: Vec::new(),
             tx,
             runner,
-            working_dir,
+            work_dir,
         }
     }
 
@@ -76,11 +72,17 @@ impl Graph {
 
                     let (tx, rx) = mpsc::channel();
 
+                    if self.vertices[i].label == "withWorkdir" {
+                        self.work_dir = self.vertices[i].command.clone();
+                        continue;
+                    }
+
                     match self.vertices[i].run(
                         self.runner.clone(),
                         tx,
                         Output::Stdout,
                         stack.len() == 1,
+                        &self.work_dir,
                     ) {
                         Ok(status) => {
                             if !status.success() {
@@ -119,11 +121,18 @@ impl Graph {
                         stack.push(edge.to);
                     }
                     let (tx, rx) = mpsc::channel();
+
+                    if self.vertices[i].label == "withWorkdir" {
+                        self.work_dir = self.vertices[i].command.clone();
+                        continue;
+                    }
+
                     match self.vertices[i].run(
                         self.runner.clone(),
                         tx,
                         Output::Stderr,
                         stack.len() == 1,
+                        &self.work_dir,
                     ) {
                         Ok(status) => {
                             if !status.success() {

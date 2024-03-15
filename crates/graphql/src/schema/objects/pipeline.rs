@@ -152,7 +152,29 @@ impl Pipeline {
         Ok(self)
     }
 
-    async fn with_work_dir(&self, path: String) -> Result<&Pipeline, Error> {
+    async fn with_work_dir(&self, ctx: &Context<'_>, path: String) -> Result<&Pipeline, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+
+        let id = Uuid::new_v4().to_string();
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
+        graph.execute(GraphCommand::AddVertex(
+            id.clone(),
+            "withWorkdir".into(),
+            path,
+            deps,
+        ));
+
+        if graph.size() > 2 {
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+        }
+
         Ok(self)
     }
 

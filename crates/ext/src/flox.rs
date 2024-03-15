@@ -19,15 +19,30 @@ impl Extension for Flox {
         tx: Sender<String>,
         out: Output,
         last_cmd: bool,
+        work_dir: &str,
     ) -> Result<ExitStatus, Error> {
         self.setup()?;
+
+        if cmd.is_empty() {
+            return Ok(ExitStatus::default());
+        }
 
         let (stdout_tx, stdout_rx): (Sender<String>, Receiver<String>) = mpsc::channel();
         let (stderr_tx, stderr_rx): (Sender<String>, Receiver<String>) = mpsc::channel();
 
-        let mut child = Command::new("sh")
+        Command::new("bash")
+            .arg("-c")
+            .arg("[ -d .flox ] || flox init")
+            .current_dir(work_dir)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()?
+            .wait()?;
+
+        let mut child = Command::new("bash")
             .arg("-c")
             .arg(format!("flox activate -- {}", cmd))
+            .current_dir(work_dir)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;

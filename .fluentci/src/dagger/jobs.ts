@@ -3,7 +3,7 @@
  * @description This module provides a set of functions to build, test, and run clippy on a Rust project 🦀
  */
 
-import { dag, env, Container, Directory, DirectoryID, File } from "../../deps.ts";
+import { dag, env, Directory, DirectoryID, File } from "../../deps.ts";
 
 export enum Job {
   clippy = "clippy",
@@ -220,12 +220,16 @@ export async function build(
 export async function e2e(
   src: string | Directory | undefined = ".",
   options: string[] = []
-): Promise<Container | string> {
-  const context = await getDirectory(src);
+): Promise<string> {
+  const context = await getDirectory(env.get("WORK_DIR") || src);
   const engine = dag
     .container()
     .from("debian:bookworm")
-    .withFile("/fluentci-engine", dag.host().file('./target/release/fluentci-engine'))
+    .withDirectory("/app", context, { exclude })
+    .withFile(
+      "/fluentci-engine",
+      dag.host().file("./target/release/fluentci-engine")
+    )
     .withEnvVariable("FLUENTCI_ENGINE_HOST", "0.0.0.0")
     .withExec(["/fluentci-engine"])
     .withExposedPort(6880)
@@ -237,14 +241,46 @@ export async function e2e(
     .from("pkgxdev/pkgx:latest")
     .withExec(["pkgx", "install", "httpie"])
     .withExec(["http", "--version"])
+    .withDirectory("/app", context, { exclude })
     .withServiceBinding("fluentci-engine", engine)
-   .sync();  
+    .sync();
 
-  ctr = ctr.withExec(["http", "GET", "http://fluentci-engine:6880/graphiql"]);
+  ctr = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat nix.graphql)"`,
+  ]);
 
-  const stdout = await ctr.stdout();
+  let stdout = await ctr.stdout();
   console.log(stdout);
-  
+
+  ctr = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat flox.graphql)"`,
+  ]);
+
+  stdout = await ctr.stdout();
+  console.log(stdout);
+
+  ctr = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devenv.graphql)"`,
+  ]);
+
+  stdout = await ctr.stdout();
+  console.log(stdout);
+
+  ctr = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devbox.graphql)"`,
+  ]);
+
+  stdout = await ctr.stdout();
+  console.log(stdout);
+
   return stdout;
 }
 

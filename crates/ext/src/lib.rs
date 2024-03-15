@@ -18,6 +18,7 @@ pub trait Extension {
         tx: Sender<String>,
         out: Output,
         last_cmd: bool,
+        work_dir: &str,
     ) -> Result<ExitStatus, Error>;
     fn setup(&self) -> Result<(), Error>;
 }
