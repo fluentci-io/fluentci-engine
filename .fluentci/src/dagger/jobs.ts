@@ -242,6 +242,7 @@ export async function e2e(
     .withExec(["pkgx", "install", "httpie"])
     .withExec(["http", "--version"])
     .withDirectory("/app", context, { exclude })
+    .withWorkdir("/app")
     .withServiceBinding("fluentci-engine", engine)
     .sync();
 
