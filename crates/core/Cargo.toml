@@ -11,6 +11,7 @@ version = "0.1.0"
 [dependencies]
 anyhow = "1.0.81"
 chrono = "0.4.35"
+dirs = "5.0.1"
 fluentci-ext = {path = "../ext", version = "0.1.0"}
 fluentci-types = {path = "../types", version = "0.1.0"}
 owo-colors = "4.0.0"

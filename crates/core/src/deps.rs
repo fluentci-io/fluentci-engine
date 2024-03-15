@@ -1,5 +1,6 @@
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
+use std::{env, fs};
 
 use fluentci_ext::Extension;
 use fluentci_types::Output;
@@ -20,15 +21,22 @@ pub struct Graph {
     pub edges: Vec<Edge>,
     tx: Sender<(String, usize)>,
     pub runner: Arc<Box<dyn Extension + Send + Sync>>,
+    pub working_dir: String,
 }
 
 impl Graph {
     pub fn new(tx: Sender<(String, usize)>, runner: Arc<Box<dyn Extension + Send + Sync>>) -> Self {
+        let working_dir = format!(
+            "{}/.fluentci/workspace",
+            dirs::home_dir().unwrap().to_str().unwrap()
+        );
+        fs::create_dir_all(&working_dir).unwrap();
         Graph {
             vertices: Vec::new(),
             edges: Vec::new(),
             tx,
             runner,
+            working_dir,
         }
     }
 
