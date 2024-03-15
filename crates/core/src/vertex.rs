@@ -42,9 +42,8 @@ impl Runnable for Vertex {
         last_cmd: bool,
     ) -> Result<ExitStatus, Error> {
         let label = format!("[{}]", self.label);
-        println!("{} Execute: {}", label.cyan(), self.id.bright_yellow());
-        let label = format!("[{}]", self.label);
-        println!("{} Command: {}", label.cyan(), self.command.bright_green());
+        println!("{} {}", label.cyan(), self.id.bright_yellow());
+        println!("{} {}", label.cyan(), self.command.bright_green());
 
         runner.exec(&self.command, tx, out, last_cmd)
     }

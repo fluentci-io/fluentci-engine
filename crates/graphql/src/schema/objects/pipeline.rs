@@ -2,6 +2,11 @@ use std::sync::{mpsc::Receiver, Arc, Mutex};
 
 use async_graphql::{Context, Error, Object, ID};
 use fluentci_core::deps::{Graph, GraphCommand};
+use fluentci_ext::devbox::Devbox as DevboxExt;
+use fluentci_ext::devenv::Devenv as DevenvExt;
+use fluentci_ext::flox::Flox as FloxExt;
+use fluentci_ext::nix::Nix as NixExt;
+use fluentci_ext::pkgx::Pkgx as PkgxExt;
 use fluentci_types::Output;
 use uuid::Uuid;
 
@@ -21,6 +26,8 @@ impl Pipeline {
     async fn devbox(&self, ctx: &Context<'_>) -> Result<Devbox, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(DevboxExt::default()));
+        graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
         graph.execute(GraphCommand::AddVertex(
@@ -37,6 +44,8 @@ impl Pipeline {
     async fn devenv(&self, ctx: &Context<'_>) -> Result<Devenv, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(DevenvExt::default()));
+        graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
         graph.execute(GraphCommand::AddVertex(
@@ -53,6 +62,9 @@ impl Pipeline {
     async fn flox(&self, ctx: &Context<'_>) -> Result<Flox, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(FloxExt::default()));
+        graph.runner.setup()?;
+
         let id = Uuid::new_v4().to_string();
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
@@ -68,6 +80,9 @@ impl Pipeline {
     async fn nix(&self, ctx: &Context<'_>) -> Result<Nix, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(NixExt::default()));
+        graph.runner.setup()?;
+
         let id = Uuid::new_v4().to_string();
 
         let dep_id = graph.vertices[graph.size() - 1].id.clone();
@@ -96,6 +111,9 @@ impl Pipeline {
     async fn pkgx(&self, ctx: &Context<'_>) -> Result<Pkgx, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(PkgxExt::default()));
+        graph.runner.setup()?;
+
         let id = Uuid::new_v4().to_string();
         graph.execute(GraphCommand::AddVertex(
             id.clone(),

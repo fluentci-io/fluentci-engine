@@ -19,7 +19,7 @@ pub struct Graph {
     pub vertices: Vec<Vertex>,
     pub edges: Vec<Edge>,
     tx: Sender<(String, usize)>,
-    runner: Arc<Box<dyn Extension + Send + Sync>>,
+    pub runner: Arc<Box<dyn Extension + Send + Sync>>,
 }
 
 impl Graph {

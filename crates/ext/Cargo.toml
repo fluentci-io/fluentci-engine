@@ -12,3 +12,4 @@ version = "0.1.0"
 anyhow = "1.0.80"
 fluentci-types = {path = "../types"}
 owo-colors = "4.0.0"
+users = "0.11.0"

@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use super::objects::pkgx::Pkgx;
 use async_graphql::{Context, Error, Object, ID};
 use fluentci_core::deps::{Graph, GraphCommand};
+use fluentci_ext::pkgx::Pkgx as PkgxExt;
 use uuid::Uuid;
 
 #[derive(Default, Clone)]
@@ -14,6 +15,8 @@ impl PkgxQuery {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.reset();
+        graph.runner = Arc::new(Box::new(PkgxExt::default()));
+        graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
         graph.execute(GraphCommand::AddVertex(
