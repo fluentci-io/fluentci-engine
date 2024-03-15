@@ -1,6 +1,6 @@
+use std::fs;
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
-use std::{env, fs};
 
 use fluentci_ext::Extension;
 use fluentci_types::Output;

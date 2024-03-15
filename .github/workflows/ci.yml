@@ -1,0 +1,19 @@
+name: ci
+on:
+  push:
+    branches:
+      - main
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Fluent CI
+        uses: fluentci-io/setup-fluentci@v4
+      - name: Run Dagger Pipelines
+        run: |
+          fluentci run rust_pipeline build
+          ls -ltr
+          ls -ltr target
+        env:
+          PACKAGE_NAME: fluentci-engine
