@@ -37,5 +37,5 @@ cargo run -p fluentci-engine
 # See ./fixtures for some GraphQL queries examples
 ```
 
-> [!TIPS]
+> [!TIP]
 > Quickly setup Nix on your machine with [DeterminateSystems Nix installer](https://github.com/DeterminateSystems/nix-installer)
