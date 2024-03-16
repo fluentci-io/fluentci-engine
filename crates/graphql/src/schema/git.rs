@@ -1,8 +1,12 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    fs,
+    sync::{Arc, Mutex},
+};
 
 use super::objects::git::Git;
 use async_graphql::{Context, Error, Object, ID};
 use fluentci_core::deps::{Graph, GraphCommand};
+use fluentci_ext::git::Git as GitExt;
 use uuid::Uuid;
 
 #[derive(Default, Clone)]
@@ -10,16 +14,26 @@ pub struct GitQuery;
 
 #[Object]
 impl GitQuery {
-    async fn git(&self, ctx: &Context<'_>) -> Result<Git, Error> {
+    async fn git(&self, ctx: &Context<'_>, url: String) -> Result<Git, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+        graph.reset();
+        graph.runner = Arc::new(Box::new(GitExt::default()));
+        graph.runner.setup()?;
+        graph.work_dir = format!(
+            "{}/.fluentci/cache",
+            dirs::home_dir().unwrap().to_str().unwrap()
+        );
+        fs::create_dir_all(&graph.work_dir)?;
+
         let id = Uuid::new_v4().to_string();
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
             "git".into(),
-            "".into(),
+            url,
             vec![],
         ));
+        graph.execute_vertex(&id)?;
 
         drop(graph);
 

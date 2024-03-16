@@ -7,6 +7,8 @@ pub mod devbox;
 pub mod devenv;
 pub mod envhub;
 pub mod flox;
+pub mod git;
+pub mod http;
 pub mod nix;
 pub mod pkgx;
 pub mod runner;

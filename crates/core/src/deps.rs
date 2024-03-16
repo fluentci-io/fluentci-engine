@@ -168,6 +168,54 @@ impl Graph {
         }
     }
 
+    pub fn execute_vertex(&mut self, id: &str) -> Result<(), String> {
+        let mut visited = vec![false; self.vertices.len()];
+        let mut stack = Vec::new();
+        let mut index = 0;
+        for (i, vertex) in self.vertices.iter().enumerate() {
+            if vertex.id == id {
+                index = i;
+                break;
+            }
+        }
+        stack.push(index);
+        while let Some(i) = stack.pop() {
+            if visited[i] {
+                continue;
+            }
+            visited[i] = true;
+            for edge in self.edges.iter().filter(|e| e.from == i) {
+                stack.push(edge.to);
+            }
+            let (tx, _rx) = mpsc::channel();
+
+            if self.vertices[i].label == "withWorkdir" {
+                if !Path::new(&self.vertices[i].command).exists() {
+                    return Err(format!("Error: {}", self.vertices[i].id));
+                }
+                self.work_dir = self.vertices[i].command.clone();
+                continue;
+            }
+
+            match self.vertices[i].run(
+                self.runner.clone(),
+                tx,
+                Output::Stdout,
+                false,
+                &self.work_dir,
+            ) {
+                Ok(status) => {
+                    if !status.success() {
+                        return Err(format!("Error: {}", self.vertices[i].id));
+                    }
+                }
+                Err(e) => {
+                    return Err(format!("Error: {}", e));
+                }
+            };
+        }
+        Ok(())
+    }
     pub fn size(&self) -> usize {
         self.vertices.len()
     }

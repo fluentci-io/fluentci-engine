@@ -20,7 +20,10 @@ impl Git {
 
     async fn tree(&self) -> Result<Directory, Error> {
         let id = Uuid::new_v4().to_string();
-        let directory = Directory { id: ID(id) };
+        let directory = Directory {
+            id: ID(id),
+            path: "/demo".into(),
+        };
         Ok(directory)
     }
 }

@@ -1,5 +1,5 @@
 use std::{
-    fs::canonicalize,
+    fs::{self, canonicalize},
     path::Path,
     sync::{mpsc::Receiver, Arc, Mutex},
 };
@@ -9,10 +9,14 @@ use fluentci_core::deps::{Graph, GraphCommand};
 use fluentci_ext::devbox::Devbox as DevboxExt;
 use fluentci_ext::devenv::Devenv as DevenvExt;
 use fluentci_ext::flox::Flox as FloxExt;
+use fluentci_ext::git::Git as GitExt;
+use fluentci_ext::http::Http as HttpExt;
 use fluentci_ext::nix::Nix as NixExt;
 use fluentci_ext::pkgx::Pkgx as PkgxExt;
 use fluentci_types::Output;
 use uuid::Uuid;
+
+use crate::schema::objects::{file::File, git::Git};
 
 use super::{devbox::Devbox, devenv::Devenv, flox::Flox, nix::Nix, pkgx::Pkgx};
 
@@ -25,6 +29,59 @@ pub struct Pipeline {
 impl Pipeline {
     async fn id(&self) -> &ID {
         &self.id
+    }
+
+    async fn http(&self, ctx: &Context<'_>, url: String) -> Result<File, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(HttpExt::default()));
+        graph.runner.setup()?;
+        graph.work_dir = format!(
+            "{}/.fluentci/cache",
+            dirs::home_dir().unwrap().to_str().unwrap()
+        );
+        fs::create_dir_all(&graph.work_dir)?;
+
+        let id = Uuid::new_v4().to_string();
+        graph.execute(GraphCommand::AddVertex(
+            id.clone(),
+            "http".into(),
+            url,
+            vec![],
+        ));
+        graph.execute_vertex(&id)?;
+
+        drop(graph);
+        let file = File {
+            id: ID(id),
+            path: "/file".into(),
+        };
+        Ok(file)
+    }
+
+    async fn git(&self, ctx: &Context<'_>, url: String) -> Result<Git, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(GitExt::default()));
+        graph.runner.setup()?;
+        graph.work_dir = format!(
+            "{}/.fluentci/cache",
+            dirs::home_dir().unwrap().to_str().unwrap()
+        );
+        fs::create_dir_all(&graph.work_dir)?;
+
+        let id = Uuid::new_v4().to_string();
+        graph.execute(GraphCommand::AddVertex(
+            id.clone(),
+            "git".into(),
+            url,
+            vec![],
+        ));
+        graph.execute_vertex(&id)?;
+        drop(graph);
+
+        let git = Git { id: ID(id) };
+        Ok(git)
     }
 
     async fn devbox(&self, ctx: &Context<'_>) -> Result<Devbox, Error> {

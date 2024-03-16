@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use super::objects::pipeline::Pipeline;
 use async_graphql::{Context, Error, Object, ID};
 use fluentci_core::deps::{Graph, GraphCommand};
+use fluentci_ext::runner::Runner;
 use uuid::Uuid;
 
 #[derive(Default, Clone)]
@@ -15,6 +16,8 @@ impl PipelineQuery {
         let mut graph = graph.lock().unwrap();
 
         graph.reset();
+        graph.runner = Arc::new(Box::new(Runner::default()));
+        graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
         graph.execute(GraphCommand::AddVertex(
