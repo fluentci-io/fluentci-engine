@@ -36,3 +36,6 @@ cargo run -p fluentci-engine
 # Open the browser and go to http://localhost:6880/graphiql
 # See ./fixtures for some GraphQL queries examples
 ```
+
+> [!TIPS]
+> Quickly setup Nix on your machine with [DeterminateSystems Nix installer](https://github.com/DeterminateSystems/nix-installer)
