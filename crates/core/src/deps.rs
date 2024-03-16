@@ -1,4 +1,5 @@
 use std::env::current_dir;
+use std::path::Path;
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
 
@@ -73,6 +74,11 @@ impl Graph {
                     let (tx, rx) = mpsc::channel();
 
                     if self.vertices[i].label == "withWorkdir" {
+                        if !Path::new(&self.vertices[i].command).exists() {
+                            println!("Error: {}", self.vertices[i].id);
+                            self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                            break;
+                        }
                         self.work_dir = self.vertices[i].command.clone();
                         continue;
                     }
@@ -123,6 +129,11 @@ impl Graph {
                     let (tx, rx) = mpsc::channel();
 
                     if self.vertices[i].label == "withWorkdir" {
+                        if !Path::new(&self.vertices[i].command).exists() {
+                            println!("Error: {}", self.vertices[i].id);
+                            self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                            break;
+                        }
                         self.work_dir = self.vertices[i].command.clone();
                         continue;
                     }

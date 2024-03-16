@@ -1,4 +1,8 @@
-use std::sync::{mpsc::Receiver, Arc, Mutex};
+use std::{
+    fs::canonicalize,
+    path::Path,
+    sync::{mpsc::Receiver, Arc, Mutex},
+};
 
 use async_graphql::{Context, Error, Object, ID};
 use fluentci_core::deps::{Graph, GraphCommand};
@@ -45,6 +49,13 @@ impl Nix {
     async fn with_work_dir(&self, ctx: &Context<'_>, path: String) -> Result<&Nix, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+
+        if !Path::new(&path).exists() && !path.starts_with("/") {
+            let dir = canonicalize(".").unwrap();
+            let dir = dir.to_str().unwrap();
+            let dir = format!("{}/{}", dir, path);
+            return Err(Error::new(format!("Path `{}` does not exist", dir)));
+        }
 
         let id = Uuid::new_v4().to_string();
         let dep_id = graph.vertices[graph.size() - 1].id.clone();
