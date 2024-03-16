@@ -252,7 +252,7 @@ export async function e2e(
   const pkgx = ctr.withExec([
     "bash",
     "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat pkgx.graphql)" --ignore-stdin`,
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat pkgx.graphql)" --ignore-stdin --pretty format`,
   ]);
 
   console.log(await pkgx.stdout());
@@ -260,7 +260,7 @@ export async function e2e(
   const nix = ctr.withExec([
     "bash",
     "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat nix.graphql)" --ignore-stdin`,
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat nix.graphql)" --ignore-stdin --pretty format`,
   ]);
 
   console.log(await nix.stdout());
@@ -268,7 +268,7 @@ export async function e2e(
   const flox = ctr.withExec([
     "bash",
     "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat flox.graphql)" --ignore-stdin`,
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat flox.graphql)" --ignore-stdin --pretty format`,
   ]);
 
   console.log(await flox.stdout());
@@ -276,7 +276,7 @@ export async function e2e(
   const devenv = ctr.withExec([
     "bash",
     "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devenv.graphql)" --ignore-stdin`,
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devenv.graphql)" --ignore-stdin --pretty format`,
   ]);
 
   console.log(await devenv.stdout());
@@ -284,7 +284,7 @@ export async function e2e(
   const devbox = ctr.withExec([
     "bash",
     "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devbox.graphql)" --ignore-stdin`,
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devbox.graphql)" --ignore-stdin --pretty format`,
   ]);
 
   const stdout = await devbox.stdout();
