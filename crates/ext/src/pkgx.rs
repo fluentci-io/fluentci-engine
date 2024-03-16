@@ -48,7 +48,7 @@ impl Extension for Pkgx {
 
         let mut child = Command::new("bash")
             .arg("-c")
-            .arg(format!("eval \"$(pkgx --shellcode)\" && {}", cmd))
+            .arg(format!("eval \"$(pkgx --shellcode)\" && dev; {}", cmd))
             .current_dir(work_dir)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -123,6 +123,7 @@ impl Extension for Pkgx {
             .stderr(Stdio::inherit())
             .spawn()?;
         child.wait()?;
+
         Ok(())
     }
 }
