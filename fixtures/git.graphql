@@ -1,0 +1,12 @@
+query Git {
+  git(url: "https://github.com/tsirysndr/me") {
+    branch(name: "main") {
+      tree {
+        withExec(args: ["pwd"]) {
+          stdout
+        }
+        entries
+      }
+    }
+  }
+}

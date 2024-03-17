@@ -1,0 +1,9 @@
+query Directory {
+  directory(path: ".") {
+    id
+    withExec(args: ["pwd"]) {
+      stdout
+    }
+    entries
+  }
+}

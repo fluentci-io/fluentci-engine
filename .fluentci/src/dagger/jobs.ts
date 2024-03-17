@@ -249,6 +249,22 @@ export async function e2e(
     .withServiceBinding("fluentci-engine", engine)
     .sync();
 
+  const git = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat git.graphql)" --ignore-stdin --pretty format`,
+  ]);
+
+  console.log(await git.stdout());
+
+  const directory = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat directory.graphql)" --ignore-stdin --pretty format`,
+  ]);
+
+  console.log(await directory.stdout());
+
   const pkgx = ctr.withExec([
     "bash",
     "-c",
