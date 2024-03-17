@@ -95,8 +95,6 @@ impl Nix {
         let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();
         let rx = rx.lock().unwrap();
         let (stdout, code) = rx.recv().unwrap();
-        drop(rx);
-        drop(graph);
 
         if code != 0 {
             return Err(Error::new(format!(
@@ -116,8 +114,6 @@ impl Nix {
         let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();
         let rx = rx.lock().unwrap();
         let (stderr, code) = rx.recv().unwrap();
-        drop(rx);
-        drop(graph);
 
         if code != 0 {
             return Err(Error::new(format!(

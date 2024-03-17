@@ -34,8 +34,6 @@ impl HttpQuery {
             vec![],
         ));
         graph.execute_vertex(&id)?;
-
-        drop(graph);
         let file = File {
             id: ID(id),
             path: "/file".into(),

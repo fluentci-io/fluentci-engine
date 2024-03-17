@@ -891,6 +891,7 @@ dependencies = [
  "anyhow",
  "fluentci-types",
  "owo-colors",
+ "regex",
  "reqwest",
  "sha256",
  "users",
@@ -907,6 +908,8 @@ dependencies = [
  "fluentci-core",
  "fluentci-ext",
  "fluentci-types",
+ "regex",
+ "tokio",
  "uuid",
 ]
 

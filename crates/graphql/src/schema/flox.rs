@@ -26,8 +26,6 @@ impl FloxQuery {
             vec![],
         ));
 
-        drop(graph);
-
         let flox = Flox { id: ID(id) };
         Ok(flox)
     }

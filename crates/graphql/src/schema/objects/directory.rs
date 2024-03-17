@@ -33,6 +33,31 @@ impl Directory {
         &self.path
     }
 
+    async fn directory(&self, path: String) -> Result<Directory, Error> {
+        let id = Uuid::new_v4().to_string();
+        let directory = Directory { id: ID(id), path };
+        Ok(directory)
+    }
+
+    async fn entries(&self) -> Result<Vec<String>, Error> {
+        let path = self.path.clone();
+
+        if !Path::new(&path).exists() {
+            return Err(Error::new(format!("Path `{}` does not exist", path)));
+        }
+
+        let entries = tokio::task::spawn_blocking(move || {
+            let entries = std::fs::read_dir(&path)
+                .unwrap()
+                .map(|res| res.unwrap().file_name().into_string().unwrap())
+                .collect();
+            entries
+        })
+        .await
+        .unwrap();
+        Ok(entries)
+    }
+
     async fn devbox(&self, ctx: &Context<'_>) -> Result<Devbox, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
@@ -172,7 +197,7 @@ impl Directory {
     async fn with_exec(&self, ctx: &Context<'_>, args: Vec<String>) -> Result<&Directory, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
-
+        println!(">> with exec");
         let id = Uuid::new_v4().to_string();
         let dep_id = graph.vertices[graph.size() - 1].id.clone();
         let deps = match graph.size() {
@@ -210,8 +235,6 @@ impl Directory {
         let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();
         let rx = rx.lock().unwrap();
         let (stdout, code) = rx.recv().unwrap();
-        drop(rx);
-        drop(graph);
 
         if code != 0 {
             return Err(Error::new(format!(
@@ -230,8 +253,6 @@ impl Directory {
         let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();
         let rx = rx.lock().unwrap();
         let (stderr, code) = rx.recv().unwrap();
-        drop(rx);
-        drop(graph);
 
         if code != 0 {
             return Err(Error::new(format!(

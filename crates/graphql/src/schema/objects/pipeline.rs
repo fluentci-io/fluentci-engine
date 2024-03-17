@@ -16,7 +16,10 @@ use fluentci_ext::pkgx::Pkgx as PkgxExt;
 use fluentci_types::Output;
 use uuid::Uuid;
 
-use crate::schema::objects::{file::File, git::Git};
+use crate::{
+    schema::objects::{file::File, git::Git},
+    util::{extract_git_repo, validate_git_url},
+};
 
 use super::{devbox::Devbox, devenv::Devenv, flox::Flox, nix::Nix, pkgx::Pkgx};
 
@@ -43,15 +46,26 @@ impl Pipeline {
         fs::create_dir_all(&graph.work_dir)?;
 
         let id = Uuid::new_v4().to_string();
+
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
             "http".into(),
             url,
-            vec![],
+            deps,
         ));
         graph.execute_vertex(&id)?;
 
-        drop(graph);
+        if graph.size() > 2 {
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+        }
+
         let file = File {
             id: ID(id),
             path: "/file".into(),
@@ -68,17 +82,41 @@ impl Pipeline {
             "{}/.fluentci/cache",
             dirs::home_dir().unwrap().to_str().unwrap()
         );
+
+        if !validate_git_url(&url) {
+            return Err(Error::new("Invalid git url"));
+        }
+        let repo = extract_git_repo(&url);
+        graph.work_dir = format!("{}/{}", graph.work_dir, repo);
+
         fs::create_dir_all(&graph.work_dir)?;
 
         let id = Uuid::new_v4().to_string();
+
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
             "git".into(),
-            url,
-            vec![],
+            url.clone(),
+            deps,
         ));
         graph.execute_vertex(&id)?;
-        drop(graph);
+
+        if graph.size() > 2 {
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+        }
+
+        graph.work_dir = format!(
+            "{}/{}",
+            graph.work_dir,
+            url.split("/").last().unwrap().replace(".git", "")
+        );
 
         let git = Git { id: ID(id) };
         Ok(git)
@@ -91,12 +129,24 @@ impl Pipeline {
         graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
+
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
             "devbox".into(),
             "".into(),
-            vec![],
+            deps,
         ));
+
+        if graph.size() > 2 {
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+        }
 
         let devbox = Devbox { id: ID(id) };
         Ok(devbox)
@@ -109,12 +159,24 @@ impl Pipeline {
         graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
+
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
             "devenv".into(),
             "".into(),
-            vec![],
+            deps,
         ));
+
+        if graph.size() > 2 {
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+        }
 
         let devenv = Devenv { id: ID(id) };
         Ok(devenv)
@@ -127,12 +189,24 @@ impl Pipeline {
         graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
+
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
             "flox".into(),
             "".into(),
-            vec![],
+            deps,
         ));
+
+        if graph.size() > 2 {
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+        }
 
         let flox = Flox { id: ID(id) };
         Ok(flox)
@@ -176,12 +250,24 @@ impl Pipeline {
         graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
+
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
             "pkgx".into(),
             "".into(),
-            vec![],
+            deps,
         ));
+
+        if graph.size() > 2 {
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+        }
 
         let pkgx = Pkgx { id: ID(id) };
         Ok(pkgx)
@@ -261,8 +347,6 @@ impl Pipeline {
         let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();
         let rx = rx.lock().unwrap();
         let (stdout, code) = rx.recv().unwrap();
-        drop(rx);
-        drop(graph);
 
         if code != 0 {
             return Err(Error::new(format!(
@@ -281,8 +365,6 @@ impl Pipeline {
         let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();
         let rx = rx.lock().unwrap();
         let (stderr, code) = rx.recv().unwrap();
-        drop(rx);
-        drop(graph);
 
         if code != 0 {
             return Err(Error::new(format!(

@@ -21,8 +21,6 @@ impl FileQuery {
             vec![],
         ));
 
-        drop(graph);
-
         let file = File { id: ID(id), path };
         Ok(file)
     }

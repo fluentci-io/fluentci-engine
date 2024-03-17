@@ -35,8 +35,6 @@ impl DirectoryQuery {
             vec![],
         ));
 
-        drop(graph);
-
         let directory = Directory { id: ID(id), path };
         Ok(directory)
     }

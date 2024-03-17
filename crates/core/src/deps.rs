@@ -38,6 +38,7 @@ impl Graph {
     }
 
     pub fn execute(&mut self, command: GraphCommand) {
+        let skip = vec!["git", "git-checkout", "git-last-commit", "tree", "http"];
         match command {
             GraphCommand::AddVertex(id, label, command, needs) => {
                 if let Some(vertex) = self.vertices.iter_mut().find(|v| v.id == id) {
@@ -63,12 +64,17 @@ impl Graph {
                     }
                 }
                 while let Some(i) = stack.pop() {
+                    let label = &self.vertices[i].label.as_str();
                     if visited[i] {
                         continue;
                     }
                     visited[i] = true;
                     for edge in self.edges.iter().filter(|e| e.from == i) {
                         stack.push(edge.to);
+                    }
+
+                    if skip.contains(&label) {
+                        continue;
                     }
 
                     let (tx, rx) = mpsc::channel();
@@ -118,7 +124,9 @@ impl Graph {
                         stack.push(i);
                     }
                 }
+
                 while let Some(i) = stack.pop() {
+                    let label = &self.vertices[i].label.as_str();
                     if visited[i] {
                         continue;
                     }
@@ -126,6 +134,11 @@ impl Graph {
                     for edge in self.edges.iter().filter(|e| e.from == i) {
                         stack.push(edge.to);
                     }
+
+                    if skip.contains(&label) {
+                        continue;
+                    }
+
                     let (tx, rx) = mpsc::channel();
 
                     if self.vertices[i].label == "withWorkdir" {

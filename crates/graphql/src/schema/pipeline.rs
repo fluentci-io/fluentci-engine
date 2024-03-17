@@ -26,8 +26,6 @@ impl PipelineQuery {
             "".into(),
             vec![],
         ));
-
-        drop(graph);
         let pipeline = Pipeline { id: ID(id) };
         Ok(pipeline)
     }

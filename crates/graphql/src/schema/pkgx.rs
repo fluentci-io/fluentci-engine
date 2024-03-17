@@ -26,8 +26,6 @@ impl PkgxQuery {
             vec![],
         ));
 
-        drop(graph);
-
         let pkgx = Pkgx { id: ID(id) };
         Ok(pkgx)
     }

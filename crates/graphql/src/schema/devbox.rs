@@ -26,8 +26,6 @@ impl DevboxQuery {
             vec![],
         ));
 
-        drop(graph);
-
         let devbox = Devbox { id: ID(id) };
         Ok(devbox)
     }

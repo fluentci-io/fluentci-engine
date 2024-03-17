@@ -26,8 +26,6 @@ impl NixQuery {
             vec![],
         ));
 
-        drop(graph);
-
         let nix = Nix { id: ID(id) };
         Ok(nix)
     }

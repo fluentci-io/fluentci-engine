@@ -3,6 +3,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::util::{extract_git_repo, validate_git_url};
+
 use super::objects::git::Git;
 use async_graphql::{Context, Error, Object, ID};
 use fluentci_core::deps::{Graph, GraphCommand};
@@ -24,19 +26,28 @@ impl GitQuery {
             "{}/.fluentci/cache",
             dirs::home_dir().unwrap().to_str().unwrap()
         );
+
+        if !validate_git_url(&url) {
+            return Err(Error::new("Invalid git url"));
+        }
+        let repo = extract_git_repo(&url);
+        graph.work_dir = format!("{}/{}", graph.work_dir, repo);
+
         fs::create_dir_all(&graph.work_dir)?;
 
         let id = Uuid::new_v4().to_string();
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
             "git".into(),
-            url,
+            url.clone(),
             vec![],
         ));
         graph.execute_vertex(&id)?;
-
-        drop(graph);
-
+        graph.work_dir = format!(
+            "{}/{}",
+            graph.work_dir,
+            url.split("/").last().unwrap().replace(".git", "")
+        );
         let git = Git { id: ID(id) };
         Ok(git)
     }

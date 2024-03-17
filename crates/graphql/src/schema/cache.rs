@@ -21,8 +21,6 @@ impl CacheQuery {
             vec![],
         ));
 
-        drop(graph);
-
         let cache = Cache {
             id: ID(id),
             key,

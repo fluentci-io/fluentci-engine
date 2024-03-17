@@ -26,8 +26,6 @@ impl DevenvQuery {
             vec![],
         ));
 
-        drop(graph);
-
         let devenv = Devenv { id: ID(id) };
         Ok(devenv)
     }
