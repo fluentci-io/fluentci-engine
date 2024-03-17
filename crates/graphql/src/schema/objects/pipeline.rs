@@ -299,7 +299,7 @@ impl Pipeline {
         Ok(self)
     }
 
-    async fn with_work_dir(&self, ctx: &Context<'_>, path: String) -> Result<&Pipeline, Error> {
+    async fn with_workdir(&self, ctx: &Context<'_>, path: String) -> Result<&Pipeline, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
 

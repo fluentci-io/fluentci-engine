@@ -161,7 +161,7 @@ impl Directory {
         Ok(pkgx)
     }
 
-    async fn with_work_dir(&self, ctx: &Context<'_>, path: String) -> Result<&Directory, Error> {
+    async fn with_workdir(&self, ctx: &Context<'_>, path: String) -> Result<&Directory, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
 
@@ -197,7 +197,7 @@ impl Directory {
     async fn with_exec(&self, ctx: &Context<'_>, args: Vec<String>) -> Result<&Directory, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
-        println!(">> with exec");
+
         let id = Uuid::new_v4().to_string();
         let dep_id = graph.vertices[graph.size() - 1].id.clone();
         let deps = match graph.size() {

@@ -1,0 +1,40 @@
+#
+# This is a flox environment manifest.
+# Visit flox.dev/docs/concepts/manifest/
+# or see flox-edit(1) for more information
+#
+
+# List packages you wish to install in your environment inside
+# the 'install' section
+
+[install]
+# hello.pkg-path = "hello"
+# nodejs = { version = "^18.4.2", pkg-path = "nodejs_18" }
+
+# Set an environment variable.
+# These variables may not reference once another
+# and are added to the environment without expansion.
+
+[vars]
+# message = "Howdy"
+# pass-in = "$some-env-var"
+
+# An activation hook will be run when entering the environment.
+# You can define one in the 'hook' table inline via the 'script' field,
+# or provide a file using the 'file' field.
+# If 'file' is provided, the path should be relative to this file.
+# If both 'file' and 'script' are provided,
+# only the hook defined in 'file' will be run .
+
+[hook]
+# script = """
+#   echo "it's gettin flox in here";
+# """
+
+# An environment that works on one system is guaranteed to work on the
+# same type of system,
+# but other systems may not have the same packages available, etc.
+# In order to use the environment on a system you must explicitly
+# add it to this list.
+[options]
+systems = ["x86_64-linux"]

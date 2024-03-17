@@ -46,7 +46,7 @@ impl Pkgx {
         Ok(self)
     }
 
-    async fn with_work_dir(&self, ctx: &Context<'_>, path: String) -> Result<&Pkgx, Error> {
+    async fn with_workdir(&self, ctx: &Context<'_>, path: String) -> Result<&Pkgx, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
 

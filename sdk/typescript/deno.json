@@ -1,0 +1,8 @@
+{
+  "name": "@fluentci/sdk",
+  "version": "0.1.0",
+  "exports": "./mod.ts",
+  "tasks": {
+    "dev": "deno run --watch main.ts"
+  }
+}

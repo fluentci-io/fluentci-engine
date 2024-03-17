@@ -35,6 +35,7 @@ impl DirectoryQuery {
             vec![],
         ));
 
+        let path = canonicalize(path).unwrap().to_str().unwrap().to_string();
         let directory = Directory { id: ID(id), path };
         Ok(directory)
     }

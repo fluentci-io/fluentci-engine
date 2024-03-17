@@ -46,7 +46,7 @@ impl Devenv {
         Ok(self)
     }
 
-    async fn with_work_dir(&self, ctx: &Context<'_>, path: String) -> Result<&Devenv, Error> {
+    async fn with_workdir(&self, ctx: &Context<'_>, path: String) -> Result<&Devenv, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
 

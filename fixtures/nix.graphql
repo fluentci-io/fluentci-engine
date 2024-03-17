@@ -1,7 +1,7 @@
 query Nix {
   pipeline(name: "Demo") {
     nix {
-      withWorkDir(path: "./nix-demo") {
+      withWorkdir(path: "./nix-demo") {
         withExec(args: ["nix", "--version"]) {
           withExec(args: ["which", "deno"]) {
             id

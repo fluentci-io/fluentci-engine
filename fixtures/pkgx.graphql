@@ -1,7 +1,7 @@
 query Pkgx {
   pipeline(name: "Demo") {
     pkgx {
-      withWorkDir(path: "./pkgx-demo") {
+      withWorkdir(path: "./pkgx-demo") {
         withExec(args: ["pkgx", "--version"]) {
           withExec(args: ["which", "deno"]) {
             id
