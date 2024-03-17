@@ -41,7 +41,7 @@ impl Extension for Pkgx {
             return Ok(ExitStatus::default());
         }
 
-        let cmd = format!("eval \"$(pkgx --shellcode)\" && {}", cmd);
+        let cmd = format!("eval \"$(pkgx --shellcode)\" && dev ; {}", cmd);
         exec(&cmd, tx, out, last_cmd, work_dir)
     }
 
