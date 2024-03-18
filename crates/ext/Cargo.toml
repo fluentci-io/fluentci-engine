@@ -1,6 +1,9 @@
 [package]
 authors = ["Tsiry Sandratraina <tsiry.sndr@fluentci.io>"]
+categories = ["command-line-utilities", "development-tools"]
+description = "Programmable CI/CD engine without Containers, built on top of Nix ❄️"
 edition = "2021"
+keywords = ["nix", "environment", "ci", "cd", "devops"]
 license = "MPL-2.0"
 name = "fluentci-ext"
 repository = "https://github.com/fluentci-io/fluentci"
@@ -10,7 +13,7 @@ version = "0.1.0"
 
 [dependencies]
 anyhow = "1.0.80"
-fluentci-types = {path = "../types"}
+fluentci-types = {path = "../types", version = "0.1.0"}
 owo-colors = "4.0.0"
 regex = "1.10.3"
 reqwest = {version = "0.11.26", features = ["rustls-tls", "blocking"], default-features = false}

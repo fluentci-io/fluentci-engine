@@ -1,5 +1,10 @@
 [package]
+authors = ["Tsiry Sandratraina <tsiry.sndr@fluentci.io>"]
+categories = ["command-line-utilities"]
+description = "Programmable CI/CD engine without Containers, built on top of Nix ❄️"
 edition = "2021"
+keywords = ["nix", "environment", "ci", "cd", "devops"]
+license = "MPL-2.0"
 name = "fluentci-types"
 version = "0.1.0"
 
