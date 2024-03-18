@@ -877,10 +877,13 @@ dependencies = [
 
 [[package]]
 name = "fluentci-engine"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
+ "anyhow",
  "clap",
  "fluentci-server",
+ "get-port",
+ "regex",
  "tokio",
 ]
 
@@ -915,7 +918,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-server"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "actix-cors",
  "actix-web",
@@ -1018,6 +1021,12 @@ dependencies = [
  "typenum",
  "version_check",
 ]
+
+[[package]]
+name = "get-port"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "888123007db34fbff15b5a347d46364dfbad531d6cb43de52cc0b62558f570e2"
 
 [[package]]
 name = "getrandom"

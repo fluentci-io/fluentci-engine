@@ -34,7 +34,7 @@ FluentCI Engine is a programmable CI/CD engine that is designed to be simple, fl
 # Clone the repository
 git clone https://github.com/fluentci-io/fluentci-engine.git
 # Go to the project directory
-cd fluentci-engine
+cd fluentci-engine serve
 # Install dependencies
 nix develop
 cargo run -p fluentci-engine

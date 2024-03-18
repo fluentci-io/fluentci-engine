@@ -16,7 +16,7 @@ git clone https://github.com/fluentci-io/fluentci-engine
 cd fluentci-engine/fixtures
 # you can get this binary from the releases page
 # start the engine
-fluentci-engine
+fluentci-engine serve
 ```
 
 Now you can save the following code to a file called `main.ts` and run it with `deno run -A main.ts`:

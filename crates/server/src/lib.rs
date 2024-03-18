@@ -54,7 +54,7 @@ async fn index_ws(
     GraphQLSubscription::new(Schema::clone(&*schema)).start(&req, payload)
 }
 
-pub async fn start() -> std::io::Result<()> {
+pub async fn start(listen: &str) -> std::io::Result<()> {
     let banner = r#"
 
     ________                 __  __________   ______            _          
@@ -65,14 +65,18 @@ pub async fn start() -> std::io::Result<()> {
                                                       /____/               
 
   "#;
+
     println!("{}", banner.bright_green());
-    let port = env::var("FLUENTCI_ENGINE_PORT").unwrap_or("6880".to_string());
+    let port =
+        env::var("FLUENTCI_ENGINE_PORT").unwrap_or(listen.split(":").last().unwrap().to_string());
+    let host =
+        env::var("FLUENTCI_ENGINE_HOST").unwrap_or(listen.split(":").next().unwrap().to_string());
+    let addr = format!("{}:{}", host, port);
     println!(
         "Server is running on {}",
-        format!("localhost:{}", port).bright_green()
+        format!("{}", addr).bright_green()
     );
-    let host = env::var("FLUENTCI_ENGINE_HOST").unwrap_or("127.0.0.1".to_string());
-    let addr = format!("{}:{}", host, port);
+
     let (tx, rx) = mpsc::channel();
 
     let graph = Arc::new(Mutex::new(Graph::new(

@@ -301,7 +301,7 @@ export async function e2e(
       dag.host().file("./target/release/fluentci-engine")
     )
     .withEnvVariable("FLUENTCI_ENGINE_HOST", "0.0.0.0")
-    .withExec(["/fluentci-engine"])
+    .withExec(["/fluentci-engine", "serve"])
     .withExposedPort(6880)
     .asService();
 
