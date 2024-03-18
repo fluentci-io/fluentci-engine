@@ -11,6 +11,7 @@ export enum Job {
   build = "build",
   llvmCov = "llvm_cov",
   e2e = "e2e",
+  typescriptE2e = "typescript_e2e",
 }
 
 export const exclude = ["target", ".git", ".devbox", ".fluentci"];
@@ -238,6 +239,23 @@ export async function e2e(
     .withExposedPort(6880)
     .asService();
 
+  const democontext = await getDirectory("./sdk/typescript");
+  const democtr = await dag
+    .pipeline(Job.typescriptE2e)
+    .container()
+    .from("denoland/deno:1.41.1")
+    .withDirectory("/app", democontext, { exclude })
+    .withWorkdir("/app/demo")
+    .withServiceBinding("fluentci-engine", engine)
+    .sync();
+
+  const demo = await democtr
+    .withEnvVariable("FLUENTCI_SESSION_HOST", "fluentci-engine")
+    .withExec(["deno", "run", "-A", "main.ts"])
+    .stdout();
+
+  console.log(demo);
+
   const ctr = await dag
     .pipeline(Job.e2e)
     .container()
@@ -310,6 +328,57 @@ export async function e2e(
   return stdout;
 }
 
+/**
+ *  Run e2e tests for typescript sdk
+ *
+ * @function
+ * @description Run e2e tests for typescript sdk
+ * @param {string | Directory | undefined} src
+ * @param {string[]} options
+ * @returns {string}
+ */
+export async function typescriptE2e(
+  src: string | Directory | undefined = ".",
+  options: string[] = []
+): Promise<string> {
+  let context = await getDirectory("./fixtures");
+  const engine = dag
+    .container()
+    .from("debian:bookworm")
+    .withExec(["apt-get", "update"])
+    .withExec(["apt-get", "install", "-y", "curl", "ca-certificates", "git"])
+    .withDirectory("/app", context, { exclude })
+    .withWorkdir("/app")
+    .withFile(
+      "/fluentci-engine",
+      dag.host().file("./target/release/fluentci-engine")
+    )
+    .withEnvVariable("FLUENTCI_ENGINE_HOST", "0.0.0.0")
+    .withExec(["/fluentci-engine"])
+    .withExposedPort(6880)
+    .asService();
+
+  context = await getDirectory(env.get("WORK_DIR"));
+
+  const ctr = await dag
+    .pipeline(Job.typescriptE2e)
+    .container()
+    .from("denoland/deno:1.41.1")
+    .withDirectory("/app", context, { exclude })
+    .withWorkdir("/app/demo")
+    .withServiceBinding("fluentci-engine", engine)
+    .sync();
+
+  const stdout = await ctr
+    .withEnvVariable("FLUENTCI_SESSION_HOST", "fluentci-engine")
+    .withExec(["deno", "run", "-A", "main.ts"])
+    .stdout();
+
+  console.log(stdout);
+
+  return stdout;
+}
+
 export type JobExec =
   | ((src?: string | Directory | undefined) => Promise<Directory | string>)
   | ((src?: string | Directory | undefined) => Promise<File | string>)
@@ -319,6 +388,7 @@ export const runnableJobs: Record<Job, JobExec> = {
   [Job.clippy]: clippy,
   [Job.test]: test,
   [Job.e2e]: e2e,
+  [Job.typescriptE2e]: typescriptE2e,
   [Job.build]: build,
   [Job.llvmCov]: llvmCov,
 };
@@ -327,6 +397,7 @@ export const jobDescriptions: Record<Job, string> = {
   [Job.clippy]: "Run clippy",
   [Job.test]: "Run tests",
   [Job.e2e]: "Run e2e tests",
+  [Job.typescriptE2e]: "Run e2e tests for typescript sdk",
   [Job.build]: "Build the project",
   [Job.llvmCov]: "Generate llvm coverage report",
 };

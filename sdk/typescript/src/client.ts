@@ -1,7 +1,8 @@
-import { GraphQLClient } from "../deps.ts";
+import { GraphQLClient, env } from "../deps.ts";
 
 export function createGQLClient(port: number, token: string): GraphQLClient {
-  return new GraphQLClient(`http://127.0.0.1:${port}/graphql`, {
+  const host = env.get("FLUENTCI_SESSION_HOST") || "127.0.0.1";
+  return new GraphQLClient(`http://${host}:${port}/graphql`, {
     headers: {
       Authorization: "Basic " + btoa(token + ":"),
     },

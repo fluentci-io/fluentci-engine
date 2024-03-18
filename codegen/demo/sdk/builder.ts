@@ -11,8 +11,8 @@ export function initDefaultContext(): Context {
   let ctx = new Context();
 
   // Prefer FLUENTCI_SESSION_PORT if set
-  const daggerSessionPort = env.get("FLUENTCI_SESSION_PORT");
-  if (daggerSessionPort) {
+  const fluentciSessionPort = env.get("FLUENTCI_SESSION_PORT");
+  if (fluentciSessionPort) {
     const sessionToken = env.get("FLUENTCI_SESSION_TOKEN");
     if (!sessionToken) {
       throw new Error(
@@ -21,7 +21,7 @@ export function initDefaultContext(): Context {
     }
 
     ctx = new Context({
-      client: createGQLClient(Number(daggerSessionPort), sessionToken),
+      client: createGQLClient(Number(fluentciSessionPort), sessionToken),
     });
   } else {
     throw new Error("FLUENTCI_SESSION_PORT must be set");

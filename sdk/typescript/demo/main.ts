@@ -14,36 +14,6 @@ async function main() {
 
   console.log(demo);
 
-  const nix = await dag
-    .pipeline("nix-demo")
-    .nix()
-    .withWorkdir("./nix-demo")
-    .withExec(["nix", "--version"])
-    .withExec(["which", "deno"])
-    .stdout();
-
-  console.log(nix);
-
-  const devbox = await dag
-    .pipeline("devbox-demo")
-    .devbox()
-    .withWorkdir("./devbox-demo")
-    .withExec(["devbox", "version"])
-    .withExec(["which", "jq"])
-    .stdout();
-
-  console.log(devbox);
-
-  const flox = await dag
-    .pipeline("flox-demo")
-    .flox()
-    .withWorkdir("./flox-demo")
-    .withExec(["flox", "--version"])
-    .withExec(["which", "jq"])
-    .stdout();
-
-  console.log(flox);
-
   const pkgx = await dag
     .pipeline("pkgx-demo")
     .pkgx()
@@ -73,6 +43,36 @@ async function main() {
   const dir = await dag.directory(".").entries();
 
   console.log(dir);
+
+  const nix = await dag
+    .pipeline("nix-demo")
+    .nix()
+    .withWorkdir("./nix-demo")
+    .withExec(["nix", "--version"])
+    .withExec(["which", "deno"])
+    .stdout();
+
+  console.log(nix);
+
+  const devbox = await dag
+    .pipeline("devbox-demo")
+    .devbox()
+    .withWorkdir("./devbox-demo")
+    .withExec(["devbox", "version"])
+    .withExec(["which", "jq"])
+    .stdout();
+
+  console.log(devbox);
+
+  const flox = await dag
+    .pipeline("flox-demo")
+    .flox()
+    .withWorkdir("./flox-demo")
+    .withExec(["flox", "--version"])
+    .withExec(["which", "jq"])
+    .stdout();
+
+  console.log(flox);
 }
 
 // Learn more at https://deno.land/manual/examples/module_metadata#concepts

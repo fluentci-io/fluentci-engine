@@ -1,6 +1,6 @@
 use std::{
     process::{Command, ExitStatus, Stdio},
-    sync::mpsc::{self, Receiver, Sender},
+    sync::mpsc::Sender,
 };
 
 use crate::{exec, nix::Nix, Extension};
