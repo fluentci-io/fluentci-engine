@@ -1,5 +1,5 @@
 {
-  description = "FluentCI Engine - CI/CD engine without container and VM, built on top of Nix";
+  description = "FluentCI Engine - CI/CD engine without containers, built on top of Nix";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
