@@ -15,8 +15,8 @@ async function main() {
   console.log(demo);
 
   const pixi = await dag
-    .pipeline("pkgx-demo")
-    .pkgx()
+    .pipeline("pixi-demo")
+    .pixi()
     .withWorkdir("./pixi-demo")
     .withExec(["pixi", "--version"])
     .withExec(["which", "php"])
@@ -26,7 +26,7 @@ async function main() {
 
   const mise = await dag
     .pipeline("mise-demo")
-    .pkgx()
+    .mise()
     .withWorkdir("./mise-demo")
     .withExec(["mise", "--version"])
     .withExec(["which", "bun"])

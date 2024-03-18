@@ -26,16 +26,20 @@ impl Extension for Mise {
             return Ok(ExitStatus::default());
         }
 
-        let mut child = Command::new("sh")
+        let mut child = Command::new("bash")
             .arg("-c")
             .arg("mise install")
+            .current_dir(work_dir)
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .spawn()?;
         child.wait()?;
 
-        let cmd = format!("eval \"$(~/.local/bin/mise activate bash)\" && {}", cmd);
+        let cmd = format!(
+            "eval \"$(~/.local/bin/mise activate bash)\" && mise x -- {}",
+            cmd
+        );
         exec(&cmd, tx, out, last_cmd, work_dir)
     }
 

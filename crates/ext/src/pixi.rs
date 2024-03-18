@@ -26,16 +26,17 @@ impl Extension for Pixi {
             return Ok(ExitStatus::default());
         }
 
-        let mut child = Command::new("sh")
+        let mut child = Command::new("bash")
             .arg("-c")
             .arg("pixi install")
+            .current_dir(work_dir)
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .spawn()?;
         child.wait()?;
 
-        let cmd = format!("eval \"$(pixi shell-hook)\" && {}", cmd);
+        let cmd = format!("eval \"$(pixi shell-hook)\" ; {}", cmd);
         exec(&cmd, tx, out, last_cmd, work_dir)
     }
 
