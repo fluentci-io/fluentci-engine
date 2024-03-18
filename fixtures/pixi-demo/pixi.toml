@@ -1,0 +1,13 @@
+[project]
+name = "pixidemo"
+version = "0.1.0"
+description = "Add a short description here"
+authors = ["Tsiry Sandratraina <tsiry.sndr@fluentci.io>"]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tasks]
+
+[dependencies]
+deno = ">=1.41.3,<1.42"
+php = ">=8.1.13,<8.2"

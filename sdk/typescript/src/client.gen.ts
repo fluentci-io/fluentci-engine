@@ -555,6 +555,30 @@ export class Directory extends BaseClient {
     });
   };
 
+  pixi = (): Pixi => {
+    return new Pixi({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "pixi",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  mise = (): Mise => {
+    return new Mise({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "mise",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   withExec = (args: string[]): Pipeline => {
     return new Pipeline({
       queryTree: [
@@ -1076,6 +1100,30 @@ export class Pipeline extends BaseClient {
     });
   };
 
+  pixi = (): Pixi => {
+    return new Pixi({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "pixi",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  mise = (): Mise => {
+    return new Mise({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "mise",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   withExec = (args: string[]): Pipeline => {
     return new Pipeline({
       queryTree: [
@@ -1228,6 +1276,228 @@ export class Pkgx extends BaseClient {
 
   withCache = (cacheId: string): Pkgx => {
     return new Pkgx({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withCache",
+          args: { cache: cacheId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  stdout = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "stdout",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  stderr = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "stderr",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  asService = (): Service => {
+    return new Service({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "asService",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+}
+
+export class Pixi extends BaseClient {
+  private readonly _id?: string = undefined;
+
+  constructor(parent?: { queryTree?: QueryTree[]; ctx: Context }) {
+    super(parent);
+  }
+
+  id = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "id",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  withExec = (args: string[]): Pixi => {
+    return new Pixi({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withExec",
+          args: { args },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withWorkdir = (path: string): Pixi => {
+    return new Pixi({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withWorkdir",
+          args: { path },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withService = (serviceId: string): Pixi => {
+    return new Pixi({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withService",
+          args: { service: serviceId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withCache = (cacheId: string): Pixi => {
+    return new Pixi({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withCache",
+          args: { cache: cacheId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  stdout = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "stdout",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  stderr = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "stderr",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  asService = (): Service => {
+    return new Service({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "asService",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+}
+
+export class Mise extends BaseClient {
+  private readonly _id?: string = undefined;
+
+  constructor(parent?: { queryTree?: QueryTree[]; ctx: Context }) {
+    super(parent);
+  }
+
+  id = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "id",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  withExec = (args: string[]): Mise => {
+    return new Mise({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withExec",
+          args: { args },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withWorkdir = (path: string): Mise => {
+    return new Mise({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withWorkdir",
+          args: { path },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withService = (serviceId: string): Mise => {
+    return new Mise({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withService",
+          args: { service: serviceId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withCache = (cacheId: string): Mise => {
+    return new Mise({
       queryTree: [
         ...this.queryTree,
         {

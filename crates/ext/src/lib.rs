@@ -16,7 +16,9 @@ pub mod git;
 pub mod git_checkout;
 pub mod git_last_commit;
 pub mod http;
+pub mod mise;
 pub mod nix;
+pub mod pixi;
 pub mod pkgx;
 pub mod runner;
 

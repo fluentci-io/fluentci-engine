@@ -1,0 +1,9 @@
+[env]
+# supports arbitrary env vars so mise can be used like direnv/dotenv
+NODE_ENV = 'production'
+
+[tools]
+# specify single or multiple versions
+bun = '1.0.33'
+#node = '18.19.1'
+#terraform = '1.7.5'
