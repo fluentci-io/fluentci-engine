@@ -1,0 +1,14 @@
+query Pixi {
+  pipeline(name: "Demo") {
+    pixi {
+      withWorkdir(path: "./pixi-demo") {
+        withExec(args: ["pixi", "--version"]) {
+          withExec(args: ["which", "php"]) {
+            id
+            stdout
+          }
+        }
+      }
+    }
+  }
+}

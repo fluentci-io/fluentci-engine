@@ -1,0 +1,14 @@
+query Mise {
+  pipeline(name: "Demo") {
+    mise {
+      withWorkdir(path: "./mise-demo") {
+        withExec(args: ["mise", "--version"]) {
+          withExec(args: ["which", "bun"]) {
+            id
+            stdout
+          }
+        }
+      }
+    }
+  }
+}

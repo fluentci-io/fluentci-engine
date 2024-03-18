@@ -14,6 +14,26 @@ async function main() {
 
   console.log(demo);
 
+  const pixi = await dag
+    .pipeline("pkgx-demo")
+    .pkgx()
+    .withWorkdir("./pixi-demo")
+    .withExec(["pixi", "--version"])
+    .withExec(["which", "php"])
+    .stdout();
+
+  console.log(pixi);
+
+  const mise = await dag
+    .pipeline("mise-demo")
+    .pkgx()
+    .withWorkdir("./mise-demo")
+    .withExec(["mise", "--version"])
+    .withExec(["which", "bun"])
+    .stdout();
+
+  console.log(mise);
+
   const pkgx = await dag
     .pipeline("pkgx-demo")
     .pkgx()

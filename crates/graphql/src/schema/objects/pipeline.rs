@@ -11,17 +11,19 @@ use fluentci_ext::devenv::Devenv as DevenvExt;
 use fluentci_ext::flox::Flox as FloxExt;
 use fluentci_ext::git::Git as GitExt;
 use fluentci_ext::http::Http as HttpExt;
+use fluentci_ext::mise::Mise as MiseExt;
 use fluentci_ext::nix::Nix as NixExt;
+use fluentci_ext::pixi::Pixi as PixiExt;
 use fluentci_ext::pkgx::Pkgx as PkgxExt;
 use fluentci_types::Output;
 use uuid::Uuid;
 
 use crate::{
-    schema::objects::{file::File, git::Git},
+    schema::objects::{file::File, git::Git, mise::Mise},
     util::{extract_git_repo, validate_git_url},
 };
 
-use super::{devbox::Devbox, devenv::Devenv, flox::Flox, nix::Nix, pkgx::Pkgx};
+use super::{devbox::Devbox, devenv::Devenv, flox::Flox, nix::Nix, pixi::Pixi, pkgx::Pkgx};
 
 #[derive(Debug, Clone, Default)]
 pub struct Pipeline {
@@ -271,6 +273,66 @@ impl Pipeline {
 
         let pkgx = Pkgx { id: ID(id) };
         Ok(pkgx)
+    }
+
+    async fn pixi(&self, ctx: &Context<'_>) -> Result<Pixi, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(PixiExt::default()));
+        graph.runner.setup()?;
+
+        let id = Uuid::new_v4().to_string();
+
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
+        graph.execute(GraphCommand::AddVertex(
+            id.clone(),
+            "pixi".into(),
+            "".into(),
+            deps,
+        ));
+
+        if graph.size() > 2 {
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+        }
+
+        let pixi = Pixi { id: ID(id) };
+        Ok(pixi)
+    }
+
+    async fn mise(&self, ctx: &Context<'_>) -> Result<Mise, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(MiseExt::default()));
+        graph.runner.setup()?;
+
+        let id = Uuid::new_v4().to_string();
+
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
+        graph.execute(GraphCommand::AddVertex(
+            id.clone(),
+            "mise".into(),
+            "".into(),
+            deps,
+        ));
+
+        if graph.size() > 2 {
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+        }
+
+        let mise = Mise { id: ID(id) };
+        Ok(mise)
     }
 
     async fn with_exec(&self, ctx: &Context<'_>, args: Vec<String>) -> Result<&Pipeline, Error> {

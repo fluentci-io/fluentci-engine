@@ -349,6 +349,22 @@ export async function e2e(
 
   console.log(await directory.stdout());
 
+  const mise = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat mise.graphql)" --ignore-stdin --pretty format`,
+  ]);
+
+  console.log(await mise.stdout());
+
+  const pixi = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat pixi.graphql)" --ignore-stdin --pretty format`,
+  ]);
+
+  console.log(await pixi.stdout());
+
   const pkgx = ctr.withExec([
     "bash",
     "-c",
