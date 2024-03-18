@@ -4,6 +4,7 @@
  */
 
 import { dag, env, Directory, DirectoryID, File } from "../../deps.ts";
+import { buildRustFlags } from "./lib.ts";
 
 export enum Job {
   clippy = "clippy",
@@ -169,45 +170,110 @@ export async function test(
  * @param {string} packageName
  * @param {string} target
  * @param {string[]} options
- * @returns {string}
+ * @returns {Promise<string>}
  */
-export async function build(
-  src: string | Directory | undefined = ".",
-  packageName?: string,
-  target = "x86_64-unknown-linux-gnu",
-  options: string[] = []
-): Promise<Directory | string> {
+export const build = async (src = "."): Promise<string> => {
+  const rustflags = buildRustFlags();
   const context = await getDirectory(src);
   const ctr = dag
     .pipeline(Job.build)
     .container()
-    .from("rust:latest")
+    .from("rust:1.76-bullseye")
+    .withExec(["dpkg", "--add-architecture", "armhf"])
+    .withExec(["dpkg", "--add-architecture", "arm64"])
+    .withExec(["apt-get", "update"])
+    .withExec([
+      "apt-get",
+      "install",
+      "-y",
+      "build-essential",
+      "protobuf-compiler",
+    ])
+    .withExec([
+      "apt-get",
+      "install",
+      "-y",
+      "-qq",
+      "gcc-arm-linux-gnueabihf",
+      "libc6-armhf-cross",
+      "libc6-dev-armhf-cross",
+      "gcc-aarch64-linux-gnu",
+      "libc6-arm64-cross",
+      "libc6-dev-arm64-cross",
+      "libc6-armel-cross",
+      "libc6-dev-armel-cross",
+      "binutils-arm-linux-gnueabi",
+      "gcc-arm-linux-gnueabi",
+      "libncurses5-dev",
+      "bison",
+      "flex",
+      "libssl-dev",
+      "bc",
+      "pkg-config",
+      "libudev-dev",
+    ])
+    .withExec(["mkdir", "-p", "/build/sysroot"])
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
     .withMountedCache("/app/target", dag.cacheVolume("target"))
     .withMountedCache("/root/cargo/registry", dag.cacheVolume("registry"))
-    .withExec(
-      env.has("PACKAGE_NAME") || packageName
-        ? [
-            "cargo",
-            "build",
-            "--release",
-            "-p",
-            env.get("PACKAGE_NAME") || packageName!,
-            "--target",
-            target,
-            ...options,
-          ]
-        : ["cargo", "build", "--release", "--target", target, ...options]
+    .withMountedCache("/assets", dag.cacheVolume("gh-release-assets"))
+    .withEnvVariable("RUSTFLAGS", rustflags)
+    .withEnvVariable(
+      "PKG_CONFIG_ALLOW_CROSS",
+      env.get("TARGET") !== "x86_64-unknown-linux-gnu" ? "1" : "0"
     )
-    .withExec(["cp", "-r", `/app/target/${target}`, "/"]);
+    .withEnvVariable(
+      "C_INCLUDE_PATH",
+      env.get("TARGET") !== "x86_64-unknown-linux-gnu"
+        ? "/build/sysroot/usr/include"
+        : "/usr/include"
+    )
+    .withEnvVariable("TAG", env.get("TAG") || "latest")
+    .withEnvVariable("TARGET", env.get("TARGET") || "x86_64-unknown-linux-gnu")
+    .withExec(["sh", "-c", "rustup target add $TARGET"])
+    .withExec([
+      "sh",
+      "-c",
+      "cargo build -p fluentci-engine --release --target $TARGET",
+    ])
+    .withExec(["sh", "-c", "cp target/${TARGET}/release/fluentci-engine ."])
+    .withExec([
+      "sh",
+      "-c",
+      "tar czvf /assets/fluentci-engine_${TAG}_${TARGET}.tar.gz fluentci-engine",
+    ])
+    .withExec([
+      "sh",
+      "-c",
+      "shasum -a 256 /assets/fluentci-engine_${TAG}_${TARGET}.tar.gz > /assets/fluentci-engine_${TAG}_${TARGET}.tar.gz.sha256",
+    ])
+    .withExec([
+      "sh",
+      "-c",
+      "cp /assets/fluentci-engine_${TAG}_${TARGET}.tar.gz .",
+    ])
+    .withExec([
+      "sh",
+      "-c",
+      "cp /assets/fluentci-engine_${TAG}_${TARGET}.tar.gz.sha256 .",
+    ]);
 
-  const result = await ctr.stdout();
+  const exe = await ctr.file(
+    `/app/fluentci-engine_${env.get("TAG")}_${env.get("TARGET")}.tar.gz`
+  );
+  await exe.export(
+    `./fluentci-engine_${env.get("TAG")}_${env.get("TARGET")}.tar.gz`
+  );
 
-  console.log(result);
-  await ctr.directory(`/${target}`).export("./target");
-  return ctr.directory(`/${target}`).id();
-}
+  const sha = await ctr.file(
+    `/app/fluentci-engine_${env.get("TAG")}_${env.get("TARGET")}.tar.gz.sha256`
+  );
+  await sha.export(
+    `./fluentci-engine_${env.get("TAG")}_${env.get("TARGET")}.tar.gz.sha256`
+  );
+  return ctr.stdout();
+};
 
 /**
  * Run e2e tests
@@ -382,7 +448,8 @@ export async function typescriptE2e(
 export type JobExec =
   | ((src?: string | Directory | undefined) => Promise<Directory | string>)
   | ((src?: string | Directory | undefined) => Promise<File | string>)
-  | ((src?: string | Directory | undefined) => Promise<string>);
+  | ((src?: string | Directory | undefined) => Promise<string>)
+  | ((src?: string) => Promise<string>);
 
 export const runnableJobs: Record<Job, JobExec> = {
   [Job.clippy]: clippy,
