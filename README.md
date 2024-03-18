@@ -34,10 +34,10 @@ FluentCI Engine is a programmable CI/CD engine that is designed to be simple, fl
 # Clone the repository
 git clone https://github.com/fluentci-io/fluentci-engine.git
 # Go to the project directory
-cd fluentci-engine serve
+cd fluentci-engine
 # Install dependencies
 nix develop
-cargo run -p fluentci-engine
+cargo run -p fluentci-engine -- serve
 # Open the browser and go to http://localhost:6880/graphiql
 # See ./fixtures for some GraphQL queries examples
 ```
