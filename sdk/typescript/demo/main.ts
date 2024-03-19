@@ -14,6 +14,16 @@ async function main() {
 
   console.log(demo);
 
+  const envhub = await dag
+    .pipeline("envhub-demo")
+    .envhub()
+    .use("github.com:tsirysndr/dotfiles-example")
+    .withExec(["envhub", "--version"])
+    .withExec(["which", "hello"])
+    .stdout();
+
+  console.log(envhub);
+
   const pixi = await dag
     .pipeline("pixi-demo")
     .pixi()

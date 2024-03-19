@@ -23,7 +23,9 @@ use crate::{
     util::{extract_git_repo, validate_git_url},
 };
 
-use super::{devbox::Devbox, devenv::Devenv, flox::Flox, nix::Nix, pixi::Pixi, pkgx::Pkgx};
+use super::{
+    devbox::Devbox, devenv::Devenv, envhub::Envhub, flox::Flox, nix::Nix, pixi::Pixi, pkgx::Pkgx,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct Pipeline {
@@ -333,6 +335,36 @@ impl Pipeline {
 
         let mise = Mise { id: ID(id) };
         Ok(mise)
+    }
+
+    async fn envhub(&self, ctx: &Context<'_>) -> Result<Envhub, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(MiseExt::default()));
+        graph.runner.setup()?;
+
+        let id = Uuid::new_v4().to_string();
+
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
+        graph.execute(GraphCommand::AddVertex(
+            id.clone(),
+            "envhub".into(),
+            "".into(),
+            deps,
+        ));
+
+        if graph.size() > 2 {
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+        }
+
+        let envhub = Envhub { id: ID(id) };
+        Ok(envhub)
     }
 
     async fn with_exec(&self, ctx: &Context<'_>, args: Vec<String>) -> Result<&Pipeline, Error> {

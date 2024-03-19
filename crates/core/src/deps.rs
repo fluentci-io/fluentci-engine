@@ -3,6 +3,7 @@ use std::path::Path;
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
 
+use fluentci_ext::envhub::Envhub;
 use fluentci_ext::Extension;
 use fluentci_types::Output;
 
@@ -86,6 +87,18 @@ impl Graph {
                             break;
                         }
                         self.work_dir = self.vertices[i].command.clone();
+                        continue;
+                    }
+
+                    if self.vertices[i].label == "useEnv" {
+                        match Envhub::default().r#use(&self.vertices[i].command, &self.work_dir) {
+                            Ok(_) => {}
+                            Err(e) => {
+                                println!("Error: {}", e);
+                                self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                                break;
+                            }
+                        }
                         continue;
                     }
 

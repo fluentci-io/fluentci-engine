@@ -10,6 +10,19 @@ use fluentci_types::Output;
 #[derive(Default)]
 pub struct Envhub {}
 
+impl Envhub {
+    pub fn r#use(&self, environment: &str, work_dir: &str) -> Result<ExitStatus, Error> {
+        let mut child = Command::new("bash")
+            .arg("-c")
+            .arg(format!("envhub use {}", environment))
+            .current_dir(work_dir)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()?;
+        child.wait().map_err(Error::from)
+    }
+}
+
 impl Extension for Envhub {
     fn exec(
         &self,
@@ -33,7 +46,7 @@ impl Extension for Envhub {
         Pkgx::default().install(vec!["curl", "git"])?;
         let mut child = Command::new("sh")
             .arg("-c")
-            .arg("curl -sSL https://install.envhub.sh | bash")
+            .arg("type envhub > /dev/null || curl -sSL https://install.envhub.sh | bash")
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())

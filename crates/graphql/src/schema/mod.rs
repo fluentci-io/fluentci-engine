@@ -10,6 +10,7 @@ pub mod cache;
 pub mod devbox;
 pub mod devenv;
 pub mod directory;
+pub mod envhub;
 pub mod file;
 pub mod flox;
 pub mod git;

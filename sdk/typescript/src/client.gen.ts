@@ -579,6 +579,18 @@ export class Directory extends BaseClient {
     });
   };
 
+  envhub = (): Envhub => {
+    return new Envhub({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "envhub",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   withExec = (args: string[]): Pipeline => {
     return new Pipeline({
       queryTree: [
@@ -1124,6 +1136,18 @@ export class Pipeline extends BaseClient {
     });
   };
 
+  envhub = (): Envhub => {
+    return new Envhub({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "envhub",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   withExec = (args: string[]): Pipeline => {
     return new Pipeline({
       queryTree: [
@@ -1498,6 +1522,130 @@ export class Mise extends BaseClient {
 
   withCache = (cacheId: string): Mise => {
     return new Mise({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withCache",
+          args: { cache: cacheId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  stdout = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "stdout",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  stderr = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "stderr",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  asService = (): Service => {
+    return new Service({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "asService",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+}
+
+export class Envhub extends BaseClient {
+  private readonly _id?: string = undefined;
+
+  constructor(parent?: { queryTree?: QueryTree[]; ctx: Context }) {
+    super(parent);
+  }
+
+  id = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "id",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  use = (environment: string): Envhub => {
+    return new Envhub({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "use",
+          args: { environment },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withExec = (args: string[]): Envhub => {
+    return new Envhub({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withExec",
+          args: { args },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withWorkdir = (path: string): Envhub => {
+    return new Envhub({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withWorkdir",
+          args: { path },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withService = (serviceId: string): Envhub => {
+    return new Envhub({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withService",
+          args: { service: serviceId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withCache = (cacheId: string): Envhub => {
+    return new Envhub({
       queryTree: [
         ...this.queryTree,
         {
