@@ -8,6 +8,7 @@ use async_graphql::{Context, Error, Object, ID};
 use fluentci_core::deps::{Graph, GraphCommand};
 use fluentci_ext::devbox::Devbox as DevboxExt;
 use fluentci_ext::devenv::Devenv as DevenvExt;
+use fluentci_ext::envhub::Envhub as EnvhubExt;
 use fluentci_ext::flox::Flox as FloxExt;
 use fluentci_ext::git::Git as GitExt;
 use fluentci_ext::http::Http as HttpExt;
@@ -340,7 +341,7 @@ impl Pipeline {
     async fn envhub(&self, ctx: &Context<'_>) -> Result<Envhub, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
-        graph.runner = Arc::new(Box::new(MiseExt::default()));
+        graph.runner = Arc::new(Box::new(EnvhubExt::default()));
         graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
