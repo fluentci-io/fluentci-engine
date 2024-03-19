@@ -1,0 +1,16 @@
+query Envhub {
+  pipeline(name: "Demo") {
+    envhub {
+      withWorkdir(path: "./envhub-demo") {
+        use(environment: ".") {
+          withExec(args: ["envhub", "--version"]) {
+            withExec(args: ["which", "hello"]) {
+              id
+              stdout
+            }
+          }
+        }
+      }
+    }
+  }
+}

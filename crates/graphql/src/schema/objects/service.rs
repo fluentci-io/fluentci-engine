@@ -1,4 +1,4 @@
-use async_graphql::{Error, Object, ID};
+use async_graphql::{Object, ID};
 
 #[derive(Debug, Clone, Default)]
 pub struct Service {

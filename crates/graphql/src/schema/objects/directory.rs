@@ -17,7 +17,7 @@ use fluentci_ext::pkgx::Pkgx as PkgxExt;
 use fluentci_types::Output;
 use uuid::Uuid;
 
-use crate::schema::objects::mise::Mise;
+use crate::schema::objects::{envhub::Envhub, mise::Mise};
 
 use super::{devbox::Devbox, devenv::Devenv, flox::Flox, nix::Nix, pixi::Pixi, pkgx::Pkgx};
 
@@ -223,6 +223,36 @@ impl Directory {
 
         let mise = Mise { id: ID(id) };
         Ok(mise)
+    }
+
+    async fn envhub(&self, ctx: &Context<'_>) -> Result<Envhub, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(MiseExt::default()));
+        graph.runner.setup()?;
+
+        let id = Uuid::new_v4().to_string();
+
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
+        graph.execute(GraphCommand::AddVertex(
+            id.clone(),
+            "envhub".into(),
+            "".into(),
+            deps,
+        ));
+
+        if graph.size() > 2 {
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+        }
+
+        let envhub = Envhub { id: ID(id) };
+        Ok(envhub)
     }
 
     async fn with_workdir(&self, ctx: &Context<'_>, path: String) -> Result<&Directory, Error> {
