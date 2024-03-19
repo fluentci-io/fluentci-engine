@@ -349,6 +349,14 @@ export async function e2e(
 
   console.log(await directory.stdout());
 
+  const envhub = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat envhub.graphql)" --ignore-stdin --pretty format`,
+  ]);
+
+  console.log(await envhub.stdout());
+
   const mise = ctr.withExec([
     "bash",
     "-c",
