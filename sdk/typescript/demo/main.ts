@@ -17,7 +17,7 @@ async function main() {
   const envhub = await dag
     .pipeline("envhub-demo")
     .envhub()
-    .use("github.com:tsirysndr/dotfiles-example")
+    .use("github:tsirysndr/dotfiles-example")
     .withExec(["envhub", "--version"])
     .withExec(["which", "hello"])
     .stdout();
