@@ -73,7 +73,7 @@ impl Extension for Devenv {
 
         Command::new("sh")
             .arg("-c")
-            .arg("nix profile install --accept-flake-config github:cachix/devenv/latest")
+            .arg("nix profile install --accept-flake-config tarball+https://install.devenv.sh/latest")
             .spawn()?
             .wait()?;
 
