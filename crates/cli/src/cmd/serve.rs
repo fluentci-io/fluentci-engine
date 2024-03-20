@@ -9,5 +9,5 @@ pub async fn serve(listen: &str) -> Result<(), Error> {
     {
         return Err(Error::msg("Invalid listen address"));
     }
-    start(listen).await.map_err(Error::from)
+    start(listen).await
 }

@@ -213,6 +213,38 @@ export const build = async (src = "."): Promise<string> => {
       "libudev-dev",
     ])
     .withExec(["mkdir", "-p", "/build/sysroot"])
+    .withExec([
+      "apt-get",
+      "download",
+      "libssl-dev:armhf",
+      "libssl1.1:armhf",
+      "libssl-dev:arm64",
+      "libssl1.1:arm64",
+    ])
+    .withExec([
+      "dpkg",
+      "-x",
+      "libssl1.1_1.1.1w-0+deb11u1_arm64.deb",
+      "/build/sysroot/",
+    ])
+    .withExec([
+      "dpkg",
+      "-x",
+      "libssl-dev_1.1.1w-0+deb11u1_arm64.deb",
+      "/build/sysroot/",
+    ])
+    .withExec([
+      "dpkg",
+      "-x",
+      "libssl1.1_1.1.1w-0+deb11u1_armhf.deb",
+      "/build/sysroot/",
+    ])
+    .withExec([
+      "dpkg",
+      "-x",
+      "libssl-dev_1.1.1w-0+deb11u1_armhf.deb",
+      "/build/sysroot/",
+    ])
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
     .withMountedCache("/app/target", dag.cacheVolume("target"))
