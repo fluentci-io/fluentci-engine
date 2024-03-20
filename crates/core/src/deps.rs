@@ -1,3 +1,8 @@
+use opentelemetry::{
+    global,
+    trace::{Span, TraceContextExt, Tracer, TracerProvider},
+    Context, KeyValue,
+};
 use std::env::current_dir;
 use std::path::Path;
 use std::sync::mpsc::{self, Sender};
@@ -65,6 +70,14 @@ impl Graph {
     }
 
     pub fn execute_graph(&mut self, output: Output) {
+        let tracer_provider = global::tracer_provider();
+        let tracer = tracer_provider.versioned_tracer(
+            "fluentci-core",
+            Some(env!("CARGO_PKG_VERSION")),
+            Some("https://opentelemetry.io/schemas/1.17.0"),
+            None,
+        );
+
         let skip = vec!["git", "git-checkout", "git-last-commit", "tree", "http"];
         let mut visited = vec![false; self.vertices.len()];
         let mut stack = Vec::new();
@@ -73,6 +86,9 @@ impl Graph {
                 stack.push(i);
             }
         }
+        let root_span = tracer.start("root");
+        let context = Context::current_with_span(root_span);
+
         while let Some(i) = stack.pop() {
             let label = &self.vertices[i].label.as_str();
             if visited[i] {
@@ -88,26 +104,34 @@ impl Graph {
             }
 
             let (tx, rx) = mpsc::channel();
+            let mut span = tracer.start_with_context(label.to_string(), &context);
+            span.set_attribute(KeyValue::new("command", self.vertices[i].command.clone()));
 
             if self.vertices[i].label == "withWorkdir" {
                 if !Path::new(&self.vertices[i].command).exists() {
                     println!("Error: {}", self.vertices[i].id);
+                    span.end();
                     self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
                     break;
                 }
                 self.work_dir = self.vertices[i].command.clone();
+                span.end();
                 continue;
             }
 
             if self.vertices[i].label == "useEnv" {
                 match Envhub::default().r#use(&self.vertices[i].command, &self.work_dir) {
-                    Ok(_) => {}
+                    Ok(_) => {
+                        span.end();
+                    }
                     Err(e) => {
                         println!("Error: {}", e);
+                        span.end();
                         self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
                         break;
                     }
                 }
+                span.end();
                 continue;
             }
 
@@ -121,12 +145,14 @@ impl Graph {
                 Ok(status) => {
                     if !status.success() {
                         println!("Error: {}", self.vertices[i].id);
+                        span.end();
                         self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
                         break;
                     }
                 }
                 Err(e) => {
                     println!("Error: {}", e);
+                    span.end();
                     self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
                     break;
                 }
@@ -136,10 +162,19 @@ impl Graph {
                 let command_output = rx.recv().unwrap();
                 self.tx.send((command_output, 0)).unwrap();
             }
+            span.end();
         }
     }
 
     pub fn execute_vertex(&mut self, id: &str) -> Result<(), String> {
+        let tracer_provider = global::tracer_provider();
+        let tracer = tracer_provider.versioned_tracer(
+            "fluentci-core",
+            Some(env!("CARGO_PKG_VERSION")),
+            Some("https://opentelemetry.io/schemas/1.17.0"),
+            None,
+        );
+
         let mut visited = vec![false; self.vertices.len()];
         let mut stack = Vec::new();
         let mut index = 0;
@@ -159,12 +194,17 @@ impl Graph {
                 stack.push(edge.to);
             }
             let (tx, _rx) = mpsc::channel();
+            let label = self.vertices[i].label.clone();
+            let mut span = tracer.start(label);
+            span.set_attribute(KeyValue::new("command", self.vertices[i].command.clone()));
 
             if self.vertices[i].label == "withWorkdir" {
                 if !Path::new(&self.vertices[i].command).exists() {
+                    span.end();
                     return Err(format!("Error: {}", self.vertices[i].id));
                 }
                 self.work_dir = self.vertices[i].command.clone();
+                span.end();
                 continue;
             }
 
@@ -177,10 +217,12 @@ impl Graph {
             ) {
                 Ok(status) => {
                     if !status.success() {
+                        span.end();
                         return Err(format!("Error: {}", self.vertices[i].id));
                     }
                 }
                 Err(e) => {
+                    span.end();
                     return Err(format!("Error: {}", e));
                 }
             };

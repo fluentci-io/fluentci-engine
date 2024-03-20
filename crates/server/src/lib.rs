@@ -5,6 +5,7 @@ use actix_web::{
     web::{self, Data},
     App, HttpRequest, HttpResponse, HttpServer, Result,
 };
+use anyhow::Error;
 use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use fluentci_core::deps::Graph;
@@ -54,7 +55,8 @@ async fn index_ws(
     GraphQLSubscription::new(Schema::clone(&*schema)).start(&req, payload)
 }
 
-pub async fn start(listen: &str) -> std::io::Result<()> {
+pub async fn start(listen: &str) -> Result<(), Error> {
+    fluentci_core::init_tracer().map_err(|e| Error::msg(e.to_string()))?;
     let banner = r#"
 
     ________                 __  __________   ______            _          
@@ -110,4 +112,5 @@ pub async fn start(listen: &str) -> std::io::Result<()> {
     .bind(addr)?
     .run()
     .await
+    .map_err(|e| Error::msg(e.to_string()))
 }

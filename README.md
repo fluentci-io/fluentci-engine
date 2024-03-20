@@ -29,6 +29,7 @@ FluentCI Engine is a programmable CI/CD engine that is designed to be simple, fl
 - [ ] Cache support
 - [x] SDK for writing pipelines in TypeScript, see [@fluentci/sdk](./sdk/typescript)
 - [x] GraphQL API
+- [x] OpenTelemetry tracing
 
 ## 🚀 Quick Start
 
@@ -46,3 +47,10 @@ cargo run -p fluentci-engine -- serve
 
 > [!TIP]
 > Quickly setup Nix on your machine with [DeterminateSystems Nix installer](https://github.com/DeterminateSystems/nix-installer)
+
+## 🔭 OpenTelemetry Tracing
+
+FluentCI Engine supports OpenTelemetry tracing. To enable it, set the `OOTEL_EXPORTER_OTLP_ENDPOINT` or `OTEL_EXPORTER_ZIPKIN_ENDPOINT` (if you want to use Zipkin) environment variable to the desired endpoint.
+
+![jaeger](./.github/assets/jaeger.png)
+![zipkin](./.github/assets/zipkin.png)
