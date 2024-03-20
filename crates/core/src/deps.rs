@@ -39,7 +39,6 @@ impl Graph {
     }
 
     pub fn execute(&mut self, command: GraphCommand) {
-        let skip = vec!["git", "git-checkout", "git-last-commit", "tree", "http"];
         match command {
             GraphCommand::AddVertex(id, label, command, needs) => {
                 if let Some(vertex) = self.vertices.iter_mut().find(|v| v.id == id) {
@@ -57,139 +56,85 @@ impl Graph {
                 self.edges.push(Edge { from, to });
             }
             GraphCommand::Execute(Output::Stdout) => {
-                let mut visited = vec![false; self.vertices.len()];
-                let mut stack = Vec::new();
-                for (i, vertex) in self.vertices.iter().enumerate() {
-                    if vertex.needs.is_empty() {
-                        stack.push(i);
-                    }
-                }
-                while let Some(i) = stack.pop() {
-                    let label = &self.vertices[i].label.as_str();
-                    if visited[i] {
-                        continue;
-                    }
-                    visited[i] = true;
-                    for edge in self.edges.iter().filter(|e| e.from == i) {
-                        stack.push(edge.to);
-                    }
-
-                    if skip.contains(&label) {
-                        continue;
-                    }
-
-                    let (tx, rx) = mpsc::channel();
-
-                    if self.vertices[i].label == "withWorkdir" {
-                        if !Path::new(&self.vertices[i].command).exists() {
-                            println!("Error: {}", self.vertices[i].id);
-                            self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                            break;
-                        }
-                        self.work_dir = self.vertices[i].command.clone();
-                        continue;
-                    }
-
-                    if self.vertices[i].label == "useEnv" {
-                        match Envhub::default().r#use(&self.vertices[i].command, &self.work_dir) {
-                            Ok(_) => {}
-                            Err(e) => {
-                                println!("Error: {}", e);
-                                self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                                break;
-                            }
-                        }
-                        continue;
-                    }
-
-                    match self.vertices[i].run(
-                        self.runner.clone(),
-                        tx,
-                        Output::Stdout,
-                        stack.len() == 1,
-                        &self.work_dir,
-                    ) {
-                        Ok(status) => {
-                            if !status.success() {
-                                println!("Error: {}", self.vertices[i].id);
-                                self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                                break;
-                            }
-                        }
-                        Err(e) => {
-                            println!("Error: {}", e);
-                            self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                            break;
-                        }
-                    };
-
-                    if stack.len() == 1 {
-                        let stdout = rx.recv().unwrap();
-                        self.tx.send((stdout, 0)).unwrap();
-                    }
-                }
+                self.execute_graph(Output::Stdout);
             }
             GraphCommand::Execute(Output::Stderr) => {
-                let mut visited = vec![false; self.vertices.len()];
-                let mut stack = Vec::new();
-                for (i, vertex) in self.vertices.iter().enumerate() {
-                    if vertex.needs.is_empty() {
-                        stack.push(i);
+                self.execute_graph(Output::Stderr);
+            }
+        }
+    }
+
+    pub fn execute_graph(&mut self, output: Output) {
+        let skip = vec!["git", "git-checkout", "git-last-commit", "tree", "http"];
+        let mut visited = vec![false; self.vertices.len()];
+        let mut stack = Vec::new();
+        for (i, vertex) in self.vertices.iter().enumerate() {
+            if vertex.needs.is_empty() {
+                stack.push(i);
+            }
+        }
+        while let Some(i) = stack.pop() {
+            let label = &self.vertices[i].label.as_str();
+            if visited[i] {
+                continue;
+            }
+            visited[i] = true;
+            for edge in self.edges.iter().filter(|e| e.from == i) {
+                stack.push(edge.to);
+            }
+
+            if skip.contains(&label) {
+                continue;
+            }
+
+            let (tx, rx) = mpsc::channel();
+
+            if self.vertices[i].label == "withWorkdir" {
+                if !Path::new(&self.vertices[i].command).exists() {
+                    println!("Error: {}", self.vertices[i].id);
+                    self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                    break;
+                }
+                self.work_dir = self.vertices[i].command.clone();
+                continue;
+            }
+
+            if self.vertices[i].label == "useEnv" {
+                match Envhub::default().r#use(&self.vertices[i].command, &self.work_dir) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("Error: {}", e);
+                        self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                        break;
                     }
                 }
+                continue;
+            }
 
-                while let Some(i) = stack.pop() {
-                    let label = &self.vertices[i].label.as_str();
-                    if visited[i] {
-                        continue;
-                    }
-                    visited[i] = true;
-                    for edge in self.edges.iter().filter(|e| e.from == i) {
-                        stack.push(edge.to);
-                    }
-
-                    if skip.contains(&label) {
-                        continue;
-                    }
-
-                    let (tx, rx) = mpsc::channel();
-
-                    if self.vertices[i].label == "withWorkdir" {
-                        if !Path::new(&self.vertices[i].command).exists() {
-                            println!("Error: {}", self.vertices[i].id);
-                            self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                            break;
-                        }
-                        self.work_dir = self.vertices[i].command.clone();
-                        continue;
-                    }
-
-                    match self.vertices[i].run(
-                        self.runner.clone(),
-                        tx,
-                        Output::Stderr,
-                        stack.len() == 1,
-                        &self.work_dir,
-                    ) {
-                        Ok(status) => {
-                            if !status.success() {
-                                println!("Error: {}", self.vertices[i].id);
-                                self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                                break;
-                            }
-                        }
-                        Err(e) => {
-                            println!("Error: {}", e);
-                            self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                            break;
-                        }
-                    };
-
-                    if stack.len() == 1 {
-                        let stderr = rx.recv().unwrap();
-                        self.tx.send((stderr, 0)).unwrap();
+            match self.vertices[i].run(
+                self.runner.clone(),
+                tx,
+                output.clone(),
+                stack.len() == 1,
+                &self.work_dir,
+            ) {
+                Ok(status) => {
+                    if !status.success() {
+                        println!("Error: {}", self.vertices[i].id);
+                        self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                        break;
                     }
                 }
+                Err(e) => {
+                    println!("Error: {}", e);
+                    self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                    break;
+                }
+            };
+
+            if stack.len() == 1 {
+                let command_output = rx.recv().unwrap();
+                self.tx.send((command_output, 0)).unwrap();
             }
         }
     }
