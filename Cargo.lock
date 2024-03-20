@@ -900,6 +900,7 @@ dependencies = [
  "clap",
  "fluentci-server",
  "get-port",
+ "md5",
  "regex",
  "tokio",
 ]
@@ -910,9 +911,11 @@ version = "0.1.2"
 dependencies = [
  "anyhow",
  "fluentci-types",
+ "md5",
  "owo-colors",
  "regex",
  "reqwest",
+ "sha2",
  "sha256",
  "users",
 ]
@@ -1407,6 +1410,12 @@ name = "log"
 version = "0.4.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
+
+[[package]]
+name = "md5"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
 
 [[package]]
 name = "memchr"

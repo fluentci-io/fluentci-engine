@@ -1,5 +1,5 @@
 use std::{
-    fs::canonicalize,
+    fs::{canonicalize, metadata},
     path::Path,
     sync::{Arc, Mutex},
 };
@@ -7,6 +7,7 @@ use std::{
 use super::objects::directory::Directory;
 use async_graphql::{Context, Error, Object, ID};
 use fluentci_core::deps::{Graph, GraphCommand};
+use fluentci_ext::runner::Runner;
 use uuid::Uuid;
 
 #[derive(Default, Clone)]
@@ -17,6 +18,14 @@ impl DirectoryQuery {
     async fn directory(&self, ctx: &Context<'_>, path: String) -> Result<Directory, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
+        graph.reset();
+        graph.runner = Arc::new(Box::new(Runner::default()));
+        graph.runner.setup()?;
+
+        let md = metadata(path.clone()).map_err(|e| Error::new(e.to_string()))?;
+        if !md.is_dir() {
+            return Err(Error::new(format!("Path `{}` is not a directory", path)));
+        }
 
         if !Path::new(&path).exists() && !path.starts_with("/") {
             let dir = canonicalize(".").unwrap();

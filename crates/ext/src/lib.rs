@@ -8,6 +8,7 @@ use std::{
 use anyhow::Error;
 use fluentci_types::Output;
 
+pub mod archive;
 pub mod devbox;
 pub mod devenv;
 pub mod envhub;
@@ -15,6 +16,7 @@ pub mod flox;
 pub mod git;
 pub mod git_checkout;
 pub mod git_last_commit;
+pub mod hash;
 pub mod http;
 pub mod mise;
 pub mod nix;
