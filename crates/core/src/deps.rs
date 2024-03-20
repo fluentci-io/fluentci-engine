@@ -1,3 +1,4 @@
+use anyhow::Error;
 use opentelemetry::{
     global,
     trace::{Span, TraceContextExt, Tracer, TracerProvider},
@@ -78,7 +79,15 @@ impl Graph {
             None,
         );
 
-        let skip = vec!["git", "git-checkout", "git-last-commit", "tree", "http"];
+        let skip = vec![
+            "git",
+            "git-checkout",
+            "git-last-commit",
+            "tree",
+            "http",
+            "file",
+            "directory",
+        ];
         let mut visited = vec![false; self.vertices.len()];
         let mut stack = Vec::new();
         for (i, vertex) in self.vertices.iter().enumerate() {
@@ -166,7 +175,7 @@ impl Graph {
         }
     }
 
-    pub fn execute_vertex(&mut self, id: &str) -> Result<(), String> {
+    pub fn execute_vertex(&mut self, id: &str) -> Result<String, Error> {
         let tracer_provider = global::tracer_provider();
         let tracer = tracer_provider.versioned_tracer(
             "fluentci-core",
@@ -175,6 +184,7 @@ impl Graph {
             None,
         );
 
+        let mut result = String::from("");
         let mut visited = vec![false; self.vertices.len()];
         let mut stack = Vec::new();
         let mut index = 0;
@@ -193,7 +203,7 @@ impl Graph {
             for edge in self.edges.iter().filter(|e| e.from == i) {
                 stack.push(edge.to);
             }
-            let (tx, _rx) = mpsc::channel();
+            let (tx, rx) = mpsc::channel();
             let label = self.vertices[i].label.clone();
             let mut span = tracer.start(label);
             span.set_attribute(KeyValue::new("command", self.vertices[i].command.clone()));
@@ -201,7 +211,7 @@ impl Graph {
             if self.vertices[i].label == "withWorkdir" {
                 if !Path::new(&self.vertices[i].command).exists() {
                     span.end();
-                    return Err(format!("Error: {}", self.vertices[i].id));
+                    return Err(Error::msg(format!("Error: {}", self.vertices[i].id)));
                 }
                 self.work_dir = self.vertices[i].command.clone();
                 span.end();
@@ -212,22 +222,24 @@ impl Graph {
                 self.runner.clone(),
                 tx,
                 Output::Stdout,
-                false,
+                true,
                 &self.work_dir,
             ) {
                 Ok(status) => {
                     if !status.success() {
                         span.end();
-                        return Err(format!("Error: {}", self.vertices[i].id));
+                        return Err(Error::msg(format!("Error: {}", self.vertices[i].id)));
                     }
+                    result = rx.recv()?;
                 }
                 Err(e) => {
                     span.end();
-                    return Err(format!("Error: {}", e));
+                    return Err(Error::msg(format!("Error: {}", e)));
                 }
             };
         }
-        Ok(())
+
+        Ok(result)
     }
     pub fn size(&self) -> usize {
         self.vertices.len()

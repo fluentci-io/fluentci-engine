@@ -7,6 +7,8 @@ use std::{
 use async_graphql::{Context, Error, Object, ID};
 use fluentci_core::deps::{Graph, GraphCommand};
 
+use fluentci_ext::archive::tar::czvf::TarCzvf as TarCzvfExt;
+use fluentci_ext::archive::zip::Zip as ZipExt;
 use fluentci_ext::devbox::Devbox as DevboxExt;
 use fluentci_ext::devenv::Devenv as DevenvExt;
 use fluentci_ext::envhub::Envhub as EnvhubExt;
@@ -18,7 +20,7 @@ use fluentci_ext::pkgx::Pkgx as PkgxExt;
 use fluentci_types::Output;
 use uuid::Uuid;
 
-use crate::schema::objects::{envhub::Envhub, mise::Mise};
+use crate::schema::objects::{envhub::Envhub, file::File, mise::Mise};
 
 use super::{devbox::Devbox, devenv::Devenv, flox::Flox, nix::Nix, pixi::Pixi, pkgx::Pkgx};
 
@@ -357,5 +359,80 @@ impl Directory {
         }
 
         Ok(stderr)
+    }
+
+    async fn zip(&self, ctx: &Context<'_>) -> Result<File, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(ZipExt::default()));
+        graph.runner.setup()?;
+
+        let parent_dir = self.path.split('/').collect::<Vec<&str>>();
+        let parent_dir = parent_dir[..parent_dir.len() - 1].join("/");
+        graph.work_dir = parent_dir.clone();
+
+        let id = Uuid::new_v4().to_string();
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+
+        graph.execute(GraphCommand::AddVertex(
+            id.clone(),
+            "zip".into(),
+            self.path.clone(),
+            vec![dep_id],
+        ));
+
+        let x = graph.size() - 2;
+        let y = graph.size() - 1;
+        graph.execute(GraphCommand::AddEdge(x, y));
+
+        graph.execute_vertex(&id)?;
+
+        let output_file = match self.path.split('/').last() {
+            Some(file) => format!("{}.zip", file),
+            None => format!("{}.zip", self.path),
+        };
+
+        let file = File {
+            id: ID(id),
+            path: format!("{}/{}", parent_dir, output_file),
+        };
+        Ok(file)
+    }
+
+    async fn tar_czvf(&self, ctx: &Context<'_>) -> Result<File, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(TarCzvfExt::default()));
+        graph.runner.setup()?;
+
+        let id = Uuid::new_v4().to_string();
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+
+        graph.execute(GraphCommand::AddVertex(
+            id.clone(),
+            "tar czvf".into(),
+            self.path.clone(),
+            vec![dep_id],
+        ));
+
+        let x = graph.size() - 2;
+        let y = graph.size() - 1;
+        graph.execute(GraphCommand::AddEdge(x, y));
+
+        graph.execute_vertex(&id)?;
+
+        let output_file = match self.path.split('/').last() {
+            Some(file) => format!("{}.tar.gz", file),
+            None => format!("{}.tar.gz", self.path),
+        };
+
+        let parent_dir = self.path.split('/').collect::<Vec<&str>>();
+        let parent_dir = parent_dir[..parent_dir.len() - 1].join("/");
+
+        let file = File {
+            id: ID(id),
+            path: format!("{}/{}", parent_dir, output_file),
+        };
+        Ok(file)
     }
 }
