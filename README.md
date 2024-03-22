@@ -50,7 +50,7 @@ cargo run -p fluentci-engine -- serve
 
 ## 🔭 OpenTelemetry Tracing
 
-FluentCI Engine supports OpenTelemetry tracing. To enable it, set the `OOTEL_EXPORTER_OTLP_ENDPOINT` or `OTEL_EXPORTER_ZIPKIN_ENDPOINT` (if you want to use Zipkin) environment variable to the desired endpoint.
+FluentCI Engine supports OpenTelemetry tracing. To enable it, set the `OTEL_EXPORTER_OTLP_ENDPOINT` or `OTEL_EXPORTER_ZIPKIN_ENDPOINT` (if you want to use Zipkin) environment variable to the desired endpoint.
 
 ![jaeger](./.github/assets/jaeger.png)
 ![zipkin](./.github/assets/zipkin.png)
