@@ -248,6 +248,7 @@ impl Graph {
     pub fn reset(&mut self) {
         self.vertices.clear();
         self.edges.clear();
+        self.work_dir = current_dir().unwrap().to_str().unwrap().to_string();
     }
 }
 
