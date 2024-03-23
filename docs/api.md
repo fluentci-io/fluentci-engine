@@ -158,8 +158,8 @@ Fields of the Directory object:
 | mise       |           | [Mise](#mise-1)     | Setup Mise from the directory    |
 | envhub     |           | [Envhub](#envhub) | Setup Envhub from the directory    |
 | withWorkdir  | path: String!           | [Directory](#directory-1)       | Change the work directory  |
-| tarCzvf     |                     | [File](#file-1)              | Compress the file to a tar gzip archive. |
-| zip          | []
+| tarCzvf     |                     | [File](#file-1)              | Compress the directory to a tar gzip archive. |
+| zip          |                    | [File](#file-1)              | Compress the directory to a zip archive.      |
 | withExec    |  args: `[String!]!`    | [Envhub](#envhub)   | Add command to execute.             |
 | withWorkdir |  path: `String`        | [Envhub](#envhub)   | Set the working directory.          |
 | stdout      |                        | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
