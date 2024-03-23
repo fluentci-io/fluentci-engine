@@ -9,7 +9,6 @@ use fluentci_ext::archive::unzip::Unzip as UnzipExt;
 use fluentci_ext::archive::zip::Zip as ZipExt;
 use fluentci_ext::hash::md5::Md5 as Md5Ext;
 use fluentci_ext::hash::sha256::Sha256 as Sha256Ext;
-use fluentci_types::Output;
 use uuid::Uuid;
 
 use crate::schema::objects::directory::Directory;
