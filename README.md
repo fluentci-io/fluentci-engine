@@ -28,7 +28,7 @@ FluentCI Engine is a programmable CI/CD engine that is designed to be simple, fl
 - [x] Built-in support for Nix, Pkgx, Devbox, Flox, Devenv, Envhub, Mise and Pixi
 - [ ] Cache support
 - [x] SDK for writing pipelines in TypeScript, see [@fluentci/sdk](./sdk/typescript)
-- [x] GraphQL API
+- [x] GraphQL API, see [API Documentation](./docs/api.md)
 - [x] OpenTelemetry tracing
 
 ## 🚀 Quick Start
@@ -47,6 +47,10 @@ cargo run -p fluentci-engine -- serve
 
 > [!TIP]
 > Quickly setup Nix on your machine with [DeterminateSystems Nix installer](https://github.com/DeterminateSystems/nix-installer)
+
+## 📚 Documentation
+
+- [API Documentation](./docs/api.md)
 
 ## 🔭 OpenTelemetry Tracing
 
