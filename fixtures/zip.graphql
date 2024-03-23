@@ -1,0 +1,10 @@
+query Zip {
+  directory(path: "./pkgx-demo") {
+    zip {
+      id
+      path
+      md5
+      sha256
+    }
+  }
+}

@@ -1,0 +1,10 @@
+query TarCzvf {
+  directory(path: "./pkgx-demo") {
+    tarCzvf {
+      id
+      path
+      md5
+      sha256
+    }
+  }
+}

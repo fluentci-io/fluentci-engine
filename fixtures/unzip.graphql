@@ -1,0 +1,8 @@
+query Unzip {
+  file(path: "./pkgx-demo.zip") {
+    unzip(outputDir: "./pkgx-demo-output-zip") {
+      id
+      entries
+    }
+  }
+}

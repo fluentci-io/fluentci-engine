@@ -1,0 +1,8 @@
+query TarXzvf {
+  file(path: "./pkgx-demo.tar.gz") {
+    tarXzvf(outputDir: "./pkgx-demo-output-tar") {
+      id
+      entries
+    }
+  }
+}

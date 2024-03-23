@@ -1,0 +1,5 @@
+query Sha256 {
+  file(path: "./pkgx-demo.zip") {
+    sha256
+  }
+}
