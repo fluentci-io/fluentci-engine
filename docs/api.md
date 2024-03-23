@@ -123,7 +123,7 @@ Fields of the Devbox object:
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)               | Unique identifier.                  |
 | withExec    |  args: `[String!]!` | [Devbox](#devbox-1) | Add command to execute.             |
-| withWorkdir |  path: `String`     | [Devbox](#devbox-1) | Set the working directory.          |
+| withWorkdir |  path: `String!`     | [Devbox](#devbox-1) | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -135,7 +135,7 @@ Fields of the Devenv object:
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)               | Unique identifier.                  |
 | withExec    |  args: `[String!]!` | [Devenv](#devenv-1) | Add command to execute.             |
-| withWorkdir |  path: `String`     | [Devenv](#devenv-1) | Set the working directory.          |
+| withWorkdir |  path: `String!`     | [Devenv](#devenv-1) | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)           | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -161,7 +161,7 @@ Fields of the Directory object:
 | tarCzvf     |                     | [File](#file-1)              | Compress the directory to a tar gzip archive. |
 | zip          |                    | [File](#file-1)              | Compress the directory to a zip archive.      |
 | withExec    |  args: `[String!]!`    | [Envhub](#envhub)   | Add command to execute.             |
-| withWorkdir |  path: `String`        | [Envhub](#envhub)   | Set the working directory.          |
+| withWorkdir |  path: `String!`        | [Envhub](#envhub)   | Set the working directory.          |
 | stdout      |                        | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
 | stderr      |                        | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -174,7 +174,7 @@ Fields of the Envhub object:
 | id          |                        | [ID](https://spec.graphql.org/October2021/#sec-ID)               | Unique identifier.                  |
 | use         | environment: `String!` | [Envhub](#envhub)   | Use the environment.                |
 | withExec    |  args: `[String!]!`    | [Envhub](#envhub)   | Add command to execute.             |
-| withWorkdir |  path: `String`        | [Envhub](#envhub)   | Set the working directory.          |
+| withWorkdir |  path: `String!`        | [Envhub](#envhub)   | Set the working directory.          |
 | stdout      |                        | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
 | stderr      |                        | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -201,7 +201,7 @@ Fields of the Flox object:
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)             | Unique identifier.                  |
 | withExec    |  args: `[String!]!` | [Flox](#flox-1)     | Add command to execute.             |
-| withWorkdir |  path: `String`     | [Flox](#flox-1)     | Set the working directory.          |
+| withWorkdir |  path: `String!`     | [Flox](#flox-1)     | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)           | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -225,7 +225,7 @@ Fields of the Mise object:
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)              | Unique identifier.                  |
 | withExec    |  args: `[String!]!` | [Mise](#mise-1)     | Add command to execute.             |
-| withWorkdir |  path: `String`     | [Mise](#mise-1)     | Set the working directory.          |
+| withWorkdir |  path: `String!`     | [Mise](#mise-1)     | Set the working directory.          |
 | stdout      |                     |[String](https://spec.graphql.org/October2021/#sec-String)           | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)          | Get the standard error output.      |
 
@@ -237,7 +237,7 @@ Fields of the Nix object:
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)              | Unique identifier.                  |
 | withExec    |  args: `[String!]!` | [Nix](#nix-1) | Add command to execute.             |
-| withWorkdir |  path: `String`     | [Nix](#nix-1) | Set the working directory.          |
+| withWorkdir |  path: `String!`     | [Nix](#nix-1) | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -249,7 +249,7 @@ Fields of the Pipeline object:
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)               | Unique identifier.                  |
 | withExec    |  args: `[String!]!` | [Pipeline](#pipeline-1) | Add command to execute.             |
-| withWorkdir |  path: `String`     | [Pipeline](#pipeline-1) | Set the working directory.          |
+| withWorkdir |  path: `String!`     | [Pipeline](#pipeline-1) | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)           | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -262,7 +262,7 @@ Fields of the Pixi object:
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)                | Unique identifier.                  |
 | withExec    |  args: `[String!]!` | [Pixi](#pixi-1) | Add command to execute.             |
-| withWorkdir |  path: `String`     | [Pixi](#pixi-1) | Set the working directory.          |
+| withWorkdir |  path: `String!`     | [Pixi](#pixi-1) | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -274,6 +274,6 @@ Fields of the Pixi object:
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)                | Unique identifier.                  |
 | withExec    |  args: `[String!]!` | [Pixi](#pixi-1)     | Add command to execute.             |
-| withWorkdir |  path: `String`     | [Pixi](#pixi-1)     | Set the working directory.          |
+| withWorkdir |  path: `String!`     | [Pixi](#pixi-1)     | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
