@@ -318,7 +318,7 @@ export const build = async (src = "."): Promise<string> => {
  */
 export async function e2e(
   src: string | Directory | undefined = ".",
-  options: string[] = []
+  _options: string[] = []
 ): Promise<string> {
   const context = await getDirectory(env.get("WORK_DIR") || src);
   const engine = dag
@@ -364,6 +364,54 @@ export async function e2e(
     .withWorkdir("/app")
     .withServiceBinding("fluentci-engine", engine)
     .sync();
+
+  const zip = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat zip.graphql)" --ignore-stdin --pretty format`,
+  ]);
+
+  console.log(await zip.stdout());
+
+  const tarCzvf = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat tar-czvf.graphql)" --ignore-stdin --pretty format`,
+  ]);
+
+  console.log(await tarCzvf.stdout());
+
+  const unzip = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat unzip.graphql)" --ignore-stdin --pretty format`,
+  ]);
+
+  console.log(await unzip.stdout());
+
+  const tarXzvf = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat tar-xzvf.graphql)" --ignore-stdin --pretty format`,
+  ]);
+
+  console.log(await tarXzvf.stdout());
+
+  const md5 = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat md5.graphql)" --ignore-stdin --pretty format`,
+  ]);
+
+  console.log(await md5.stdout());
+
+  const sha256 = ctr.withExec([
+    "bash",
+    "-c",
+    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat sha256.graphql)" --ignore-stdin --pretty format`,
+  ]);
+
+  console.log(await sha256.stdout());
 
   const git = ctr.withExec([
     "bash",

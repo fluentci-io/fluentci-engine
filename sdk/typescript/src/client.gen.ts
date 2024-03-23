@@ -668,6 +668,32 @@ export class Directory extends BaseClient {
     );
     return response;
   };
+
+  zip = async (): Promise<File> => {
+    const response: Awaited<File> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "zip",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  tarCzvf = async (): Promise<File> => {
+    const response: Awaited<File> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "tarCzvf",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
 }
 
 export class Service extends BaseClient {
@@ -717,6 +743,90 @@ export class File extends BaseClient {
         ...this.queryTree,
         {
           operation: "path",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  zip = async (): Promise<File> => {
+    const response: Awaited<File> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "zip",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  tarCzvf = async (): Promise<File> => {
+    const response: Awaited<File> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "tarCzvf",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  unzip = async (outputDir?: String): Promise<Directory> => {
+    const response: Awaited<Directory> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "unzip",
+          args: {
+            outputDir,
+          },
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  tarXzvf = async (outputDir?: String): Promise<Directory> => {
+    const response: Awaited<Directory> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "tarXzvf",
+          args: {
+            outputDir,
+          },
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  md5 = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "md5",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  sha256 = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "sha256",
         },
       ],
       await this._ctx.connection()

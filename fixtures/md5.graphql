@@ -1,0 +1,5 @@
+query md5 {
+  file(path: "./pkgx-demo.zip") {
+    md5
+  }
+}
