@@ -71,9 +71,7 @@ For more information, see "[Forming calls with GraphQL](https://docs.github.com/
 
 ### devbox
 
-**type**: [Devbox](#devbox-1) 
-
-" 
+**type**: [Devbox](#devbox-1)
 
 ### devenv
 
