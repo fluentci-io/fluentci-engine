@@ -1,6 +1,6 @@
 use std::{fs::File, io::Read, process::ExitStatus, sync::mpsc::Sender};
 
-use crate::{exec, Extension};
+use crate::Extension;
 use anyhow::Error;
 use fluentci_types::Output;
 use sha2::Digest;

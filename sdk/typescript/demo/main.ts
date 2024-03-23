@@ -34,25 +34,27 @@ async function main() {
 
   console.log(pixi);
 
-  const zip = await dag.directory("./pixi-demo").zip();
+  const zip = await dag.directory("./pixi-demo").zip().path();
 
-  console.log(await zip.path());
+  console.log(zip);
 
-  const tarCzvf = await dag.directory("./pixi-demo").tarCzvf();
+  const tarCzvf = await dag.directory("./pixi-demo").tarCzvf().path();
 
-  console.log(await tarCzvf.path());
+  console.log(tarCzvf);
 
   const unzip = await dag
     .file("./pixi-demo.zip")
-    .unzip("./pixi-demo-output-zip");
+    .unzip("./pixi-demo-output-zip")
+    .entries();
 
-  console.log(await unzip.entries());
+  console.log(unzip);
 
   const tarXzvf = await dag
     .file("./pixi-demo.tar.gz")
-    .unzip("./pixi-demo-output-tar");
+    .unzip("./pixi-demo-output-tar")
+    .entries();
 
-  console.log(await tarXzvf.entries());
+  console.log(tarXzvf);
 
   const md5 = await dag.file("./pixi-demo.tar.gz").md5();
 

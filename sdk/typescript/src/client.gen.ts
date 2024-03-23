@@ -669,30 +669,28 @@ export class Directory extends BaseClient {
     return response;
   };
 
-  zip = async (): Promise<File> => {
-    const response: Awaited<File> = await computeQuery(
-      [
+  zip = (): File => {
+    return new File({
+      queryTree: [
         ...this.queryTree,
         {
           operation: "zip",
         },
       ],
-      await this._ctx.connection()
-    );
-    return response;
+      ctx: this._ctx,
+    });
   };
 
-  tarCzvf = async (): Promise<File> => {
-    const response: Awaited<File> = await computeQuery(
-      [
+  tarCzvf = (): File => {
+    return new File({
+      queryTree: [
         ...this.queryTree,
         {
           operation: "tarCzvf",
         },
       ],
-      await this._ctx.connection()
-    );
-    return response;
+      ctx: this._ctx,
+    });
   };
 }
 
@@ -750,35 +748,33 @@ export class File extends BaseClient {
     return response;
   };
 
-  zip = async (): Promise<File> => {
-    const response: Awaited<File> = await computeQuery(
-      [
+  zip = (): File => {
+    return new File({
+      queryTree: [
         ...this.queryTree,
         {
           operation: "zip",
         },
       ],
-      await this._ctx.connection()
-    );
-    return response;
+      ctx: this._ctx,
+    });
   };
 
-  tarCzvf = async (): Promise<File> => {
-    const response: Awaited<File> = await computeQuery(
-      [
+  tarCzvf = (): File => {
+    return new File({
+      queryTree: [
         ...this.queryTree,
         {
           operation: "tarCzvf",
         },
       ],
-      await this._ctx.connection()
-    );
-    return response;
+      ctx: this._ctx,
+    });
   };
 
-  unzip = async (outputDir?: String): Promise<Directory> => {
-    const response: Awaited<Directory> = await computeQuery(
-      [
+  unzip = (outputDir?: String): Directory => {
+    return new Directory({
+      queryTree: [
         ...this.queryTree,
         {
           operation: "unzip",
@@ -787,14 +783,13 @@ export class File extends BaseClient {
           },
         },
       ],
-      await this._ctx.connection()
-    );
-    return response;
+      ctx: this._ctx,
+    });
   };
 
-  tarXzvf = async (outputDir?: String): Promise<Directory> => {
-    const response: Awaited<Directory> = await computeQuery(
-      [
+  tarXzvf = (outputDir?: String): Directory => {
+    return new Directory({
+      queryTree: [
         ...this.queryTree,
         {
           operation: "tarXzvf",
@@ -803,9 +798,8 @@ export class File extends BaseClient {
           },
         },
       ],
-      await this._ctx.connection()
-    );
-    return response;
+      ctx: this._ctx,
+    });
   };
 
   md5 = async (): Promise<string> => {
