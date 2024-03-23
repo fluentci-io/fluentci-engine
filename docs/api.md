@@ -214,7 +214,7 @@ Fields of the Mise object:
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)! | Unique identifier.                  |
 | branch      | name: String! | [Git](#git-1)! | Checkout the branch.                |
 | commit      |               | [String](https://spec.graphql.org/October2021/#sec-String)! | Get the last commit hash.           |
-| tree       | [Directory](#directory-1)! | Get the tree of the repository.      |
+| tree       |     | [Directory](#directory-1)! | Get the tree of the repository.      |
 
 
 ### Mise
