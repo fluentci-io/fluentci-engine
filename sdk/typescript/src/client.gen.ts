@@ -80,13 +80,13 @@ export class Client extends BaseClient {
     });
   };
 
-  cache = (key: string, path: string): Cache => {
+  cache = (key: string): Cache => {
     return new Cache({
       queryTree: [
         ...this.queryTree,
         {
           operation: "cache",
-          args: { key, path },
+          args: { key },
         },
       ],
       ctx: this._ctx,
@@ -225,6 +225,19 @@ export class Cache extends BaseClient {
     );
     return response;
   };
+
+  key = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this.queryTree,
+        {
+          operation: "key",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
 }
 
 export class Devbox extends BaseClient {
@@ -286,13 +299,13 @@ export class Devbox extends BaseClient {
     });
   };
 
-  withCache = (cacheId: string): Devbox => {
+  withCache = (path: string, cacheId: string): Devbox => {
     return new Devbox({
       queryTree: [
         ...this.queryTree,
         {
           operation: "withCache",
-          args: { cache: cacheId },
+          args: { path, cacheId },
         },
       ],
       ctx: this._ctx,
@@ -397,13 +410,13 @@ export class Devenv extends BaseClient {
     });
   };
 
-  withCache = (cacheId: string): Devenv => {
+  withCache = (path: string, cacheId: string): Devenv => {
     return new Devenv({
       queryTree: [
         ...this.queryTree,
         {
           operation: "withCache",
-          args: { cache: cacheId },
+          args: { path, cacheId },
         },
       ],
       ctx: this._ctx,
@@ -630,13 +643,13 @@ export class Directory extends BaseClient {
     });
   };
 
-  withCache = (cacheId: string): Pipeline => {
+  withCache = (path: string, cacheId: string): Pipeline => {
     return new Pipeline({
       queryTree: [
         ...this.queryTree,
         {
           operation: "withCache",
-          args: { cache: cacheId },
+          args: { path, cacheId },
         },
       ],
       ctx: this._ctx,
@@ -888,13 +901,13 @@ export class Flox extends BaseClient {
     });
   };
 
-  withCache = (cacheId: string): Flox => {
+  withCache = (path: string, cacheId: string): Flox => {
     return new Flox({
       queryTree: [
         ...this.queryTree,
         {
           operation: "withCache",
-          args: { cache: cacheId },
+          args: { path, cacheId },
         },
       ],
       ctx: this._ctx,
@@ -1058,13 +1071,13 @@ export class Nix extends BaseClient {
     });
   };
 
-  withCache = (cacheId: string): Nix => {
+  withCache = (path: string, cacheId: string): Nix => {
     return new Nix({
       queryTree: [
         ...this.queryTree,
         {
           operation: "withCache",
-          args: { cache: cacheId },
+          args: { path, cacheId },
         },
       ],
       ctx: this._ctx,
@@ -1291,13 +1304,13 @@ export class Pipeline extends BaseClient {
     });
   };
 
-  withCache = (cacheId: string): Pipeline => {
+  withCache = (path: string, cacheId: string): Pipeline => {
     return new Pipeline({
       queryTree: [
         ...this.queryTree,
         {
           operation: "withCache",
-          args: { cache: cacheId },
+          args: { path, cacheId },
         },
       ],
       ctx: this._ctx,
@@ -1402,13 +1415,13 @@ export class Pkgx extends BaseClient {
     });
   };
 
-  withCache = (cacheId: string): Pkgx => {
+  withCache = (path: string, cacheId: string): Pkgx => {
     return new Pkgx({
       queryTree: [
         ...this.queryTree,
         {
           operation: "withCache",
-          args: { cache: cacheId },
+          args: { path, cacheId },
         },
       ],
       ctx: this._ctx,
@@ -1513,13 +1526,13 @@ export class Pixi extends BaseClient {
     });
   };
 
-  withCache = (cacheId: string): Pixi => {
+  withCache = (path: string, cacheId: string): Pixi => {
     return new Pixi({
       queryTree: [
         ...this.queryTree,
         {
           operation: "withCache",
-          args: { cache: cacheId },
+          args: { path, cacheId },
         },
       ],
       ctx: this._ctx,
@@ -1624,13 +1637,13 @@ export class Mise extends BaseClient {
     });
   };
 
-  withCache = (cacheId: string): Mise => {
+  withCache = (path: string, cacheId: string): Mise => {
     return new Mise({
       queryTree: [
         ...this.queryTree,
         {
           operation: "withCache",
-          args: { cache: cacheId },
+          args: { path, cacheId },
         },
       ],
       ctx: this._ctx,
@@ -1748,13 +1761,13 @@ export class Envhub extends BaseClient {
     });
   };
 
-  withCache = (cacheId: string): Envhub => {
+  withCache = (path: string, cacheId: string): Envhub => {
     return new Envhub({
       queryTree: [
         ...this.queryTree,
         {
           operation: "withCache",
-          args: { cache: cacheId },
+          args: { path, cacheId },
         },
       ],
       ctx: this._ctx,

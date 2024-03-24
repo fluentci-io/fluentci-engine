@@ -4,6 +4,10 @@ async function main() {
   Deno.env.set("FLUENTCI_SESSION_PORT", "6880");
   Deno.env.set("FLUENTCI_SESSION_TOKEN", "token");
 
+  const cacheId = await dag.cache("flox").id();
+
+  console.log("cacheId: ", cacheId);
+
   const demo = await dag
     .pipeline("demo")
     .withWorkdir("./")
@@ -141,6 +145,7 @@ async function main() {
     .pipeline("flox-demo")
     .flox()
     .withWorkdir("./flox-demo")
+    .withCache("./.flox", cacheId)
     .withExec(["flox", "--version"])
     .withExec(["which", "jq"])
     .stdout();
