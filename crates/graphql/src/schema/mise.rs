@@ -24,6 +24,7 @@ impl MiseQuery {
             "mise".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(MiseExt::default())),
         ));
 
         let mise = Mise { id: ID(id) };

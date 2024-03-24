@@ -9,7 +9,7 @@ pub struct Unzip {}
 
 impl Extension for Unzip {
     fn exec(
-        &self,
+        &mut self,
         path: &str,
         tx: Sender<String>,
         out: Output,

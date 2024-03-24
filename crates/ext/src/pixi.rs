@@ -13,7 +13,7 @@ pub struct Pixi {}
 
 impl Extension for Pixi {
     fn exec(
-        &self,
+        &mut self,
         cmd: &str,
         tx: Sender<String>,
         out: Output,

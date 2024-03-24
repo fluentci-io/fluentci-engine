@@ -12,7 +12,7 @@ pub struct Flox {}
 
 impl Extension for Flox {
     fn exec(
-        &self,
+        &mut self,
         cmd: &str,
         tx: Sender<String>,
         out: Output,

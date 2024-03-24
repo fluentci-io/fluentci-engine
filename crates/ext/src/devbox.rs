@@ -26,7 +26,7 @@ impl Devbox {
 
 impl Extension for Devbox {
     fn exec(
-        &self,
+        &mut self,
         cmd: &str,
         tx: Sender<String>,
         out: Output,

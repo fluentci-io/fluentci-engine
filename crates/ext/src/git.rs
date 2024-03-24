@@ -26,7 +26,7 @@ impl Git {
 
 impl Extension for Git {
     fn exec(
-        &self,
+        &mut self,
         url: &str,
         tx: Sender<String>,
         out: Output,

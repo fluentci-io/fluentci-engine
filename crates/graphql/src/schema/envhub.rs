@@ -24,6 +24,7 @@ impl EnvhubQuery {
             "envhub".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(EnvhubExt::default())),
         ));
 
         let envhub = Envhub { id: ID(id) };

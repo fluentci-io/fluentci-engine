@@ -42,6 +42,7 @@ impl DirectoryQuery {
             "directory".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(Runner::default())),
         ));
 
         let path = canonicalize(path).unwrap().to_str().unwrap().to_string();

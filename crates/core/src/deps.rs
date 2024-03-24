@@ -16,9 +16,14 @@ use fluentci_types::Output;
 use super::edge::Edge;
 use super::vertex::{Runnable, Vertex};
 
-#[derive(Debug)]
 pub enum GraphCommand {
-    AddVertex(String, String, String, Vec<String>),
+    AddVertex(
+        String,
+        String,
+        String,
+        Vec<String>,
+        Arc<Box<dyn Extension + Send + Sync>>,
+    ),
     AddEdge(usize, usize),
     Execute(Output),
 }
@@ -46,7 +51,15 @@ impl Graph {
 
     pub fn execute(&mut self, command: GraphCommand) {
         match command {
-            GraphCommand::AddVertex(id, label, command, needs) => {
+            GraphCommand::AddVertex(id, label, command, needs, runner) => {
+                if label == "cache"
+                    && self
+                        .vertices
+                        .iter()
+                        .any(|v| v.command == command && v.label == "cache")
+                {
+                    return;
+                }
                 if let Some(vertex) = self.vertices.iter_mut().find(|v| v.id == id) {
                     vertex.needs.extend(needs);
                 } else {
@@ -55,6 +68,7 @@ impl Graph {
                         label,
                         command,
                         needs,
+                        runner,
                     });
                 }
             }
@@ -87,6 +101,7 @@ impl Graph {
             "http",
             "file",
             "directory",
+            "cache",
         ];
         let mut visited = vec![false; self.vertices.len()];
         let mut stack = Vec::new();
@@ -144,13 +159,7 @@ impl Graph {
                 continue;
             }
 
-            match self.vertices[i].run(
-                self.runner.clone(),
-                tx,
-                output.clone(),
-                stack.len() == 1,
-                &self.work_dir,
-            ) {
+            match self.vertices[i].run(tx, output.clone(), stack.len() == 1, &self.work_dir) {
                 Ok(status) => {
                     if !status.success() {
                         println!("Error: {}", self.vertices[i].id);
@@ -168,11 +177,19 @@ impl Graph {
             };
 
             if stack.len() == 1 {
-                let command_output = rx.recv().unwrap();
-                self.tx.send((command_output, 0)).unwrap();
+                if let Ok(command_output) = rx.recv() {
+                    match self.tx.send((command_output, 0)) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            println!("Error: {}", e);
+                        }
+                    }
+                }
             }
             span.end();
         }
+
+        self.post_execute(&context);
     }
 
     pub fn execute_vertex(&mut self, id: &str) -> Result<String, Error> {
@@ -218,13 +235,7 @@ impl Graph {
                 continue;
             }
 
-            match self.vertices[i].run(
-                self.runner.clone(),
-                tx,
-                Output::Stdout,
-                true,
-                &self.work_dir,
-            ) {
+            match self.vertices[i].run(tx, Output::Stdout, true, &self.work_dir) {
                 Ok(status) => {
                     if !status.success() {
                         span.end();
@@ -241,12 +252,63 @@ impl Graph {
 
         Ok(result)
     }
+
+    pub fn post_execute(&mut self, ctx: &Context) {
+        let tracer_provider = global::tracer_provider();
+        let tracer = tracer_provider.versioned_tracer(
+            "fluentci-core",
+            Some(env!("CARGO_PKG_VERSION")),
+            Some("https://opentelemetry.io/schemas/1.17.0"),
+            None,
+        );
+
+        let only = vec!["withCache"];
+
+        let mut visited = vec![false; self.vertices.len()];
+        let mut stack = Vec::new();
+        for (i, vertex) in self.vertices.iter().enumerate() {
+            if vertex.needs.is_empty() {
+                stack.push(i);
+            }
+        }
+
+        while let Some(i) = stack.pop() {
+            let label = &self.vertices[i].label.as_str();
+            if visited[i] {
+                continue;
+            }
+            visited[i] = true;
+            for edge in self.edges.iter().filter(|e| e.from == i) {
+                stack.push(edge.to);
+            }
+
+            if !only.contains(&label) {
+                continue;
+            }
+
+            let mut span = tracer.start_with_context(label.to_string(), &ctx);
+            span.set_attribute(KeyValue::new("command", self.vertices[i].command.clone()));
+            let (tx, rx) = mpsc::channel();
+            match self.vertices[i].runner.post_setup(tx) {
+                Ok(_) => {
+                    span.end();
+                }
+                Err(e) => {
+                    println!("Error: {}", e);
+                    span.end();
+                    break;
+                }
+            }
+            rx.recv().unwrap();
+        }
+    }
+
     pub fn size(&self) -> usize {
         self.vertices.len()
     }
 
     pub fn reset(&mut self) {
-        self.vertices.clear();
+        self.vertices.retain(|v| v.label == "cache");
         self.edges.clear();
         self.work_dir = current_dir().unwrap().to_str().unwrap().to_string();
     }
@@ -269,24 +331,28 @@ mod tests {
             "A".into(),
             "echo A".into(),
             vec![],
+            Arc::new(Box::new(Runner::default())),
         ));
         graph.execute(GraphCommand::AddVertex(
             "2".into(),
             "B".into(),
             "echo B".into(),
             vec!["1".into()],
+            Arc::new(Box::new(Runner::default())),
         ));
         graph.execute(GraphCommand::AddVertex(
             "3".into(),
             "C".into(),
             "echo C".into(),
             vec!["1".into()],
+            Arc::new(Box::new(Runner::default())),
         ));
         graph.execute(GraphCommand::AddVertex(
             "4".into(),
             "D".into(),
             "echo D".into(),
             vec!["2".into(), "3".into()],
+            Arc::new(Box::new(Runner::default())),
         ));
         graph.execute(GraphCommand::AddEdge(0, 1));
         graph.execute(GraphCommand::AddEdge(0, 2));
@@ -308,6 +374,8 @@ mod tests {
         assert_eq!(graph.vertices[3].command, "echo D");
 
         graph.execute(GraphCommand::Execute(Output::Stdout));
+
+        graph.reset();
 
         assert_eq!(graph.size(), 0);
     }

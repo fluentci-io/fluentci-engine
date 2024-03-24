@@ -25,7 +25,7 @@ impl Envhub {
 
 impl Extension for Envhub {
     fn exec(
-        &self,
+        &mut self,
         cmd: &str,
         tx: Sender<String>,
         out: Output,

@@ -24,6 +24,7 @@ impl NixQuery {
             "nix".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(NixExt::default())),
         ));
 
         let nix = Nix { id: ID(id) };

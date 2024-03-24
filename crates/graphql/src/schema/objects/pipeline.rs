@@ -16,6 +16,7 @@ use fluentci_ext::mise::Mise as MiseExt;
 use fluentci_ext::nix::Nix as NixExt;
 use fluentci_ext::pixi::Pixi as PixiExt;
 use fluentci_ext::pkgx::Pkgx as PkgxExt;
+use fluentci_ext::{cache::Cache as CacheExt, runner::Runner};
 use fluentci_types::Output;
 use uuid::Uuid;
 
@@ -62,6 +63,7 @@ impl Pipeline {
             "http".into(),
             url,
             deps,
+            Arc::new(Box::new(HttpExt::default())),
         ));
         graph.execute_vertex(&id)?;
 
@@ -108,6 +110,7 @@ impl Pipeline {
             "git".into(),
             url.clone(),
             deps,
+            Arc::new(Box::new(GitExt::default())),
         ));
         graph.execute_vertex(&id)?;
 
@@ -145,6 +148,7 @@ impl Pipeline {
             "devbox".into(),
             "".into(),
             deps,
+            Arc::new(Box::new(DevboxExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -175,6 +179,7 @@ impl Pipeline {
             "devenv".into(),
             "".into(),
             deps,
+            Arc::new(Box::new(DevenvExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -205,6 +210,7 @@ impl Pipeline {
             "flox".into(),
             "".into(),
             deps,
+            Arc::new(Box::new(FloxExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -236,6 +242,7 @@ impl Pipeline {
             "nix".into(),
             "".into(),
             deps,
+            Arc::new(Box::new(NixExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -266,6 +273,7 @@ impl Pipeline {
             "pkgx".into(),
             "".into(),
             deps,
+            Arc::new(Box::new(PkgxExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -296,6 +304,7 @@ impl Pipeline {
             "pixi".into(),
             "".into(),
             deps,
+            Arc::new(Box::new(PixiExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -326,6 +335,7 @@ impl Pipeline {
             "mise".into(),
             "".into(),
             deps,
+            Arc::new(Box::new(MiseExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -356,6 +366,7 @@ impl Pipeline {
             "envhub".into(),
             "".into(),
             deps,
+            Arc::new(Box::new(EnvhubExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -383,6 +394,7 @@ impl Pipeline {
             "exec".into(),
             args.join(" "),
             deps,
+            Arc::new(Box::new(Runner::default())),
         ));
 
         if graph.size() > 2 {
@@ -405,6 +417,10 @@ impl Pipeline {
             return Err(Error::new(format!("Path `{}` does not exist", dir)));
         }
 
+        if !Path::new(&path).exists() {
+            return Err(Error::new(format!("Path `{}` does not exist", path)));
+        }
+
         let id = Uuid::new_v4().to_string();
         let dep_id = graph.vertices[graph.size() - 1].id.clone();
         let deps = match graph.size() {
@@ -416,6 +432,7 @@ impl Pipeline {
             "withWorkdir".into(),
             path,
             deps,
+            Arc::new(Box::new(Runner::default())),
         ));
 
         if graph.size() > 2 {
@@ -427,12 +444,48 @@ impl Pipeline {
         Ok(self)
     }
 
-    async fn with_service(&self, service: ID) -> Result<&Pipeline, Error> {
+    async fn with_service(&self, _service_id: ID) -> Result<&Pipeline, Error> {
         Ok(self)
     }
 
-    async fn with_cache(&self, cache: ID) -> Result<&Pipeline, Error> {
-        Ok(self)
+    async fn with_cache(
+        &self,
+        ctx: &Context<'_>,
+        path: String,
+        cache_id: ID,
+    ) -> Result<&Pipeline, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        let runner = graph.runner.clone();
+        graph.runner = Arc::new(Box::new(CacheExt::default()));
+        graph.runner.setup()?;
+
+        if let Some(cache) = graph.vertices.iter().find(|v| ID(v.id.clone()) == cache_id) {
+            let id = Uuid::new_v4().to_string();
+            let dep_id = graph.vertices[graph.size() - 1].id.clone();
+            let deps = match graph.size() {
+                1 => vec![],
+                _ => vec![dep_id],
+            };
+            let cache_key_path = format!("{}:{}", cache.command, path);
+            graph.execute(GraphCommand::AddVertex(
+                id.clone(),
+                "withCache".into(),
+                cache_key_path,
+                deps,
+                Arc::new(Box::new(CacheExt::default())),
+            ));
+
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+
+            graph.execute_vertex(&id)?;
+            graph.runner = runner;
+            return Ok(self);
+        }
+
+        return Err(Error::new("Cache not found"));
     }
 
     async fn stdout(&self, ctx: &Context<'_>) -> Result<String, Error> {

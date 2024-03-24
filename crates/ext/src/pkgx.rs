@@ -28,7 +28,7 @@ impl Pkgx {
 
 impl Extension for Pkgx {
     fn exec(
-        &self,
+        &mut self,
         cmd: &str,
         tx: Sender<String>,
         out: Output,

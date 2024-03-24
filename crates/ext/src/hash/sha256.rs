@@ -10,7 +10,7 @@ pub struct Sha256 {}
 
 impl Extension for Sha256 {
     fn exec(
-        &self,
+        &mut self,
         file_path: &str,
         tx: Sender<String>,
         _out: Output,
