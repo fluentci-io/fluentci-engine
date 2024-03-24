@@ -12,7 +12,7 @@ pub struct Devenv {}
 
 impl Extension for Devenv {
     fn exec(
-        &self,
+        &mut self,
         cmd: &str,
         tx: Sender<String>,
         out: Output,

@@ -1,5 +1,4 @@
 use std::env;
-use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
 
 use async_graphql::{Context, Error, Object, ID};
@@ -43,6 +42,7 @@ impl File {
             "zip".into(),
             self.path.clone(),
             vec![dep_id],
+            Arc::new(Box::new(ZipExt::default())),
         ));
 
         let x = graph.size() - 2;
@@ -80,6 +80,7 @@ impl File {
             "tar czvf".into(),
             self.path.clone(),
             vec![dep_id],
+            Arc::new(Box::new(TarCzvfExt::default())),
         ));
 
         let x = graph.size() - 2;
@@ -121,6 +122,7 @@ impl File {
             "unzip".into(),
             self.path.clone(),
             vec![dep_id],
+            Arc::new(Box::new(UnzipExt::default())),
         ));
 
         let x = graph.size() - 2;
@@ -164,6 +166,7 @@ impl File {
             "tar xzvf".into(),
             self.path.clone(),
             vec![dep_id],
+            Arc::new(Box::new(TarXzvfExt::default())),
         ));
 
         let x = graph.size() - 2;
@@ -203,6 +206,7 @@ impl File {
             "md5".into(),
             self.path.clone(),
             vec![dep_id],
+            Arc::new(Box::new(Md5Ext::default())),
         ));
 
         let x = graph.size() - 2;
@@ -228,6 +232,7 @@ impl File {
             "sha256".into(),
             self.path.clone(),
             vec![dep_id],
+            Arc::new(Box::new(Sha256Ext::default())),
         ));
 
         let x = graph.size() - 2;

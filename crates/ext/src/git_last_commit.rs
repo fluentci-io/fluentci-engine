@@ -9,7 +9,7 @@ pub struct GitLastCommit {}
 
 impl Extension for GitLastCommit {
     fn exec(
-        &self,
+        &mut self,
         branch: &str,
         tx: Sender<String>,
         out: Output,

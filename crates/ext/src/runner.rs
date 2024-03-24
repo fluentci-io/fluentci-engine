@@ -9,7 +9,7 @@ pub struct Runner {}
 
 impl Extension for Runner {
     fn exec(
-        &self,
+        &mut self,
         cmd: &str,
         tx: Sender<String>,
         out: Output,

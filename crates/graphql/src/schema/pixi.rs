@@ -24,6 +24,7 @@ impl PixiQuery {
             "pixi".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(PixiExt::default())),
         ));
 
         let pixi = Pixi { id: ID(id) };

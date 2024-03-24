@@ -17,8 +17,7 @@ pub struct VertexExecOutput {
 
 pub trait Runnable {
     fn run(
-        &self,
-        runner: Arc<Box<dyn Extension + Send + Sync>>,
+        &mut self,
         tx: Sender<String>,
         out: Output,
         last_cmd: bool,
@@ -26,18 +25,18 @@ pub trait Runnable {
     ) -> Result<ExitStatus, Error>;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Vertex {
     pub id: String,
     pub label: String,
     pub command: String,
     pub needs: Vec<String>,
+    pub runner: Arc<Box<dyn Extension + Send + Sync>>,
 }
 
 impl Runnable for Vertex {
     fn run(
-        &self,
-        runner: Arc<Box<dyn Extension + Send + Sync>>,
+        &mut self,
         tx: Sender<String>,
         out: Output,
         last_cmd: bool,
@@ -47,6 +46,10 @@ impl Runnable for Vertex {
         println!("{} {}", label.cyan(), self.id.bright_yellow());
         println!("{} {}", label.cyan(), self.command.bright_green());
 
-        runner.exec(&self.command, tx, out, last_cmd, work_dir)
+        if let Some(runner) = Arc::get_mut(&mut self.runner) {
+            runner.exec(&self.command, tx, out, last_cmd, work_dir)
+        } else {
+            Err(Error::msg("Failed to obtain mutable reference to runner"))
+        }
     }
 }

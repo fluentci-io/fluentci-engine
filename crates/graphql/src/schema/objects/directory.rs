@@ -7,8 +7,8 @@ use std::{
 use async_graphql::{Context, Error, Object, ID};
 use fluentci_core::deps::{Graph, GraphCommand};
 
-use fluentci_ext::archive::tar::czvf::TarCzvf as TarCzvfExt;
 use fluentci_ext::archive::zip::Zip as ZipExt;
+use fluentci_ext::cache::Cache as CacheExt;
 use fluentci_ext::devbox::Devbox as DevboxExt;
 use fluentci_ext::devenv::Devenv as DevenvExt;
 use fluentci_ext::envhub::Envhub as EnvhubExt;
@@ -17,6 +17,7 @@ use fluentci_ext::mise::Mise as MiseExt;
 use fluentci_ext::nix::Nix as NixExt;
 use fluentci_ext::pixi::Pixi as PixiExt;
 use fluentci_ext::pkgx::Pkgx as PkgxExt;
+use fluentci_ext::{archive::tar::czvf::TarCzvf as TarCzvfExt, runner::Runner};
 use fluentci_types::Output;
 use uuid::Uuid;
 
@@ -77,6 +78,7 @@ impl Directory {
             "devbox".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(DevboxExt::default())),
         ));
 
         let devbox = Devbox { id: ID(id) };
@@ -95,6 +97,7 @@ impl Directory {
             "devenv".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(DevenvExt::default())),
         ));
 
         let devenv = Devenv { id: ID(id) };
@@ -113,6 +116,7 @@ impl Directory {
             "flox".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(FloxExt::default())),
         ));
 
         let flox = Flox { id: ID(id) };
@@ -138,6 +142,7 @@ impl Directory {
             "nix".into(),
             "".into(),
             deps,
+            Arc::new(Box::new(NixExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -162,6 +167,7 @@ impl Directory {
             "pkgx".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(PkgxExt::default())),
         ));
 
         let pkgx = Pkgx { id: ID(id) };
@@ -186,6 +192,7 @@ impl Directory {
             "pixi".into(),
             "".into(),
             deps,
+            Arc::new(Box::new(PixiExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -216,6 +223,7 @@ impl Directory {
             "mise".into(),
             "".into(),
             deps,
+            Arc::new(Box::new(MiseExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -246,6 +254,7 @@ impl Directory {
             "envhub".into(),
             "".into(),
             deps,
+            Arc::new(Box::new(EnvhubExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -269,6 +278,10 @@ impl Directory {
             return Err(Error::new(format!("Path `{}` does not exist", dir)));
         }
 
+        if !Path::new(&path).exists() {
+            return Err(Error::new(format!("Path `{}` does not exist", path)));
+        }
+
         let id = Uuid::new_v4().to_string();
         let dep_id = graph.vertices[graph.size() - 1].id.clone();
         let deps = match graph.size() {
@@ -280,6 +293,7 @@ impl Directory {
             "withWorkdir".into(),
             path,
             deps,
+            Arc::new(Box::new(Runner::default())),
         ));
 
         if graph.size() > 2 {
@@ -306,6 +320,7 @@ impl Directory {
             "exec".into(),
             args.join(" "),
             deps,
+            Arc::new(Box::new(Runner::default())),
         ));
 
         if graph.size() > 2 {
@@ -317,12 +332,48 @@ impl Directory {
         Ok(self)
     }
 
-    async fn with_service(&self, service: ID) -> Result<&Directory, Error> {
+    async fn with_service(&self, _service: ID) -> Result<&Directory, Error> {
         Ok(self)
     }
 
-    async fn with_cache(&self, cache: ID) -> Result<&Directory, Error> {
-        Ok(self)
+    async fn with_cache(
+        &self,
+        ctx: &Context<'_>,
+        path: String,
+        cache_id: ID,
+    ) -> Result<&Directory, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        let runner = graph.runner.clone();
+        graph.runner = Arc::new(Box::new(CacheExt::default()));
+        graph.runner.setup()?;
+
+        if let Some(cache) = graph.vertices.iter().find(|v| ID(v.id.clone()) == cache_id) {
+            let id = Uuid::new_v4().to_string();
+            let dep_id = graph.vertices[graph.size() - 1].id.clone();
+            let deps = match graph.size() {
+                1 => vec![],
+                _ => vec![dep_id],
+            };
+            let cache_key_path = format!("{}:{}", cache.command, path);
+            graph.execute(GraphCommand::AddVertex(
+                id.clone(),
+                "withCache".into(),
+                cache_key_path,
+                deps,
+                Arc::new(Box::new(CacheExt::default())),
+            ));
+
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+
+            graph.execute_vertex(&id)?;
+            graph.runner = runner;
+            return Ok(self);
+        }
+
+        return Err(Error::new("Cache not found"));
     }
 
     async fn stdout(&self, ctx: &Context<'_>) -> Result<String, Error> {
@@ -379,6 +430,7 @@ impl Directory {
             "zip".into(),
             self.path.clone(),
             vec![dep_id],
+            Arc::new(Box::new(ZipExt::default())),
         ));
 
         let x = graph.size() - 2;
@@ -413,6 +465,7 @@ impl Directory {
             "tar czvf".into(),
             self.path.clone(),
             vec![dep_id],
+            Arc::new(Box::new(TarCzvfExt::default())),
         ));
 
         let x = graph.size() - 2;

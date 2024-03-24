@@ -14,7 +14,7 @@ pub struct Nix {}
 
 impl Extension for Nix {
     fn exec(
-        &self,
+        &mut self,
         cmd: &str,
         tx: Sender<String>,
         out: Output,

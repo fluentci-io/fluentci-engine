@@ -30,13 +30,18 @@ impl HttpQuery {
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
             "http".into(),
-            url,
+            url.clone(),
             vec![],
+            Arc::new(Box::new(HttpExt::default())),
         ));
         graph.execute_vertex(&id)?;
+
+        let filename = sha256::digest(url).to_string();
+        let work_dir = graph.work_dir.clone();
+
         let file = File {
             id: ID(id),
-            path: "/file".into(),
+            path: format!("{}/{}", work_dir, filename),
         };
         Ok(file)
     }

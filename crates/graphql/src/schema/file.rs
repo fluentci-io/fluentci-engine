@@ -38,6 +38,7 @@ impl FileQuery {
             "file".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(Runner::default()))
         ));
 
         let file = File { id: ID(id), path };

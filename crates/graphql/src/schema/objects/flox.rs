@@ -6,6 +6,8 @@ use std::{
 
 use async_graphql::{Context, Error, Object, ID};
 use fluentci_core::deps::{Graph, GraphCommand};
+use fluentci_ext::cache::Cache as CacheExt;
+use fluentci_ext::flox::Flox as FloxExt;
 use fluentci_types::Output;
 use uuid::Uuid;
 
@@ -35,6 +37,7 @@ impl Flox {
             "exec".into(),
             args.join(" "),
             deps,
+            Arc::new(Box::new(FloxExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -57,6 +60,10 @@ impl Flox {
             return Err(Error::new(format!("Path `{}` does not exist", dir)));
         }
 
+        if !Path::new(&path).exists() {
+            return Err(Error::new(format!("Path `{}` does not exist", path)));
+        }
+
         let id = Uuid::new_v4().to_string();
         let dep_id = graph.vertices[graph.size() - 1].id.clone();
         let deps = match graph.size() {
@@ -68,6 +75,7 @@ impl Flox {
             "withWorkdir".into(),
             path,
             deps,
+            Arc::new(Box::new(FloxExt::default())),
         ));
 
         if graph.size() > 2 {
@@ -79,12 +87,47 @@ impl Flox {
         Ok(self)
     }
 
-    async fn with_service(&self, service: ID) -> Result<&Flox, Error> {
+    async fn with_service(&self, _service: ID) -> Result<&Flox, Error> {
         Ok(self)
     }
 
-    async fn with_cache(&self, cache: ID) -> Result<&Flox, Error> {
-        Ok(self)
+    async fn with_cache(
+        &self,
+        ctx: &Context<'_>,
+        path: String,
+        cache_id: ID,
+    ) -> Result<&Flox, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        let runner = graph.runner.clone();
+        graph.runner = Arc::new(Box::new(CacheExt::default()));
+        graph.runner.setup()?;
+
+        if let Some(cache) = graph.vertices.iter().find(|v| ID(v.id.clone()) == cache_id) {
+            let id = Uuid::new_v4().to_string();
+            let dep_id = graph.vertices[graph.size() - 1].id.clone();
+            let deps = match graph.size() {
+                1 => vec![],
+                _ => vec![dep_id],
+            };
+            let cache_key_path = format!("{}:{}", cache.command, path);
+            graph.execute(GraphCommand::AddVertex(
+                id.clone(),
+                "withCache".into(),
+                cache_key_path,
+                deps,
+                Arc::new(Box::new(CacheExt::default())),
+            ));
+
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+
+            graph.runner = runner;
+            return Ok(self);
+        }
+
+        return Err(Error::new("Cache not found"));
     }
 
     async fn stdout(&self, ctx: &Context<'_>) -> Result<String, Error> {

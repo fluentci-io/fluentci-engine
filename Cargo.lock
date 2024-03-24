@@ -877,7 +877,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-core"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "chrono",
@@ -907,9 +907,10 @@ dependencies = [
 
 [[package]]
 name = "fluentci-ext"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
+ "dirs",
  "fluentci-types",
  "md5",
  "owo-colors",
@@ -922,7 +923,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-graphql"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -932,13 +933,14 @@ dependencies = [
  "fluentci-ext",
  "fluentci-types",
  "regex",
+ "sha256",
  "tokio",
  "uuid",
 ]
 
 [[package]]
 name = "fluentci-server"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "actix-cors",
  "actix-web",

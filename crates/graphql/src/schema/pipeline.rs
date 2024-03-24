@@ -25,6 +25,7 @@ impl PipelineQuery {
             name.into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(Runner::default())),
         ));
         let pipeline = Pipeline { id: ID(id) };
         Ok(pipeline)

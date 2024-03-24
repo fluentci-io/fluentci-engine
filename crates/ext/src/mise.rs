@@ -13,7 +13,7 @@ pub struct Mise {}
 
 impl Extension for Mise {
     fn exec(
-        &self,
+        &mut self,
         cmd: &str,
         tx: Sender<String>,
         out: Output,

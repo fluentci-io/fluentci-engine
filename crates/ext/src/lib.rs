@@ -9,6 +9,7 @@ use anyhow::Error;
 use fluentci_types::Output;
 
 pub mod archive;
+pub mod cache;
 pub mod devbox;
 pub mod devenv;
 pub mod envhub;
@@ -26,7 +27,7 @@ pub mod runner;
 
 pub trait Extension {
     fn exec(
-        &self,
+        &mut self,
         cmd: &str,
         tx: Sender<String>,
         out: Output,
@@ -34,6 +35,10 @@ pub trait Extension {
         work_dir: &str,
     ) -> Result<ExitStatus, Error>;
     fn setup(&self) -> Result<(), Error>;
+    fn post_setup(&self, tx: Sender<String>) -> Result<ExitStatus, Error> {
+        tx.send("".into())?;
+        Ok(ExitStatus::default())
+    }
 }
 
 pub fn exec(
@@ -69,7 +74,12 @@ pub fn exec(
             stdout.push_str("\n");
         }
         if out_clone == Output::Stdout && last_cmd {
-            tx_clone.send(stdout).unwrap();
+            match tx_clone.send(stdout) {
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                }
+            }
         }
     });
 
@@ -81,7 +91,12 @@ pub fn exec(
             stderr.push_str("\n");
         }
         if out == Output::Stderr && last_cmd {
-            tx.send(stderr).unwrap();
+            match tx.send(stderr) {
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                }
+            }
         }
     });
 

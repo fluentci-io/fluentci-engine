@@ -9,7 +9,7 @@ pub struct TarXzvf {}
 
 impl Extension for TarXzvf {
     fn exec(
-        &self,
+        &mut self,
         path: &str,
         tx: Sender<String>,
         out: Output,

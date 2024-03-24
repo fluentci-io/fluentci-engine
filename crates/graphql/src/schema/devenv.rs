@@ -24,6 +24,7 @@ impl DevenvQuery {
             "devenv".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(DevenvExt::default())),
         ));
 
         let devenv = Devenv { id: ID(id) };

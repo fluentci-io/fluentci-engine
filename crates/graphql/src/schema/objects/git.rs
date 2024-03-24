@@ -38,6 +38,7 @@ impl Git {
             "git-checkout".into(),
             name,
             deps,
+            Arc::new(Box::new(GitCheckoutExt::default())),
         ));
         graph.execute_vertex(&id)?;
 
@@ -68,6 +69,7 @@ impl Git {
             "git-last-commit".into(),
             "".into(),
             deps,
+            Arc::new(Box::new(GitLastCommitExt::default())),
         ));
         graph.execute_vertex(&id)?;
 
@@ -92,6 +94,7 @@ impl Git {
             "tree".into(),
             "".into(),
             vec![dep_id],
+            Arc::new(Box::new(RunnerExt::default())),
         ));
 
         let x = graph.size() - 2;

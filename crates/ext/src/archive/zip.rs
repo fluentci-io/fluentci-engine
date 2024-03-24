@@ -9,7 +9,7 @@ pub struct Zip {}
 
 impl Extension for Zip {
     fn exec(
-        &self,
+        &mut self,
         path: &str,
         tx: Sender<String>,
         out: Output,

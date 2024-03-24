@@ -24,7 +24,7 @@ impl Http {
 
 impl Extension for Http {
     fn exec(
-        &self,
+        &mut self,
         url: &str,
         tx: Sender<String>,
         out: Output,

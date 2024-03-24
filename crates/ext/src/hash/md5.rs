@@ -9,7 +9,7 @@ pub struct Md5 {}
 
 impl Extension for Md5 {
     fn exec(
-        &self,
+        &mut self,
         file_path: &str,
         tx: Sender<String>,
         _out: Output,

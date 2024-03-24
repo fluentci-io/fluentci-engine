@@ -24,6 +24,7 @@ impl DevboxQuery {
             "devbox".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(DevboxExt::default())),
         ));
 
         let devbox = Devbox { id: ID(id) };

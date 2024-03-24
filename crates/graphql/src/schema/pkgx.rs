@@ -24,6 +24,7 @@ impl PkgxQuery {
             "pkgx".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(PkgxExt::default())),
         ));
 
         let pkgx = Pkgx { id: ID(id) };

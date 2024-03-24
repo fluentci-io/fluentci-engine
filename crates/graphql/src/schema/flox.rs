@@ -24,6 +24,7 @@ impl FloxQuery {
             "flox".into(),
             "".into(),
             vec![],
+            Arc::new(Box::new(FloxExt::default())),
         ));
 
         let flox = Flox { id: ID(id) };

@@ -41,6 +41,7 @@ impl GitQuery {
             "git".into(),
             url.clone(),
             vec![],
+            Arc::new(Box::new(GitExt::default())),
         ));
         graph.execute_vertex(&id)?;
         graph.work_dir = format!(

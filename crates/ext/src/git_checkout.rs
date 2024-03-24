@@ -9,7 +9,7 @@ pub struct GitCheckout {}
 
 impl Extension for GitCheckout {
     fn exec(
-        &self,
+        &mut self,
         branch: &str,
         tx: Sender<String>,
         out: Output,
