@@ -179,7 +179,6 @@ export const build = async (src = "."): Promise<string> => {
     .pipeline(Job.build)
     .container()
     .from("rust:1.76-bullseye")
-
     .withExec([
       "wget",
       "https://github.com/mozilla/sccache/releases/download/v0.7.7/sccache-v0.7.7-x86_64-unknown-linux-musl.tar.gz",
