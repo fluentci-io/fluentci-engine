@@ -17,7 +17,7 @@ jobs:
       - name: Setup Fluent CI CLI
         uses: fluentci-io/setup-fluentci@v4
       - name: Installing needed dependencies
-        run: brew install protobuf
+        run: brew install protobuf sccache
       - name: Installing Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -32,6 +32,8 @@ jobs:
           command: build
           toolchain: stable
           args: --release --target ${{ matrix.target }}
+        env:
+          RUSTC_WRAPPER: /usr/local/bin/sccache
       - name: Install aarch64-apple-darwin toolchain
         if: matrix.target == 'aarch64-apple-darwin'
         run: rustup target add aarch64-apple-darwin

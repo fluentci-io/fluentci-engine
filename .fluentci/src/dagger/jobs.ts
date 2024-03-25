@@ -179,6 +179,23 @@ export const build = async (src = "."): Promise<string> => {
     .pipeline(Job.build)
     .container()
     .from("rust:1.76-bullseye")
+
+    .withExec([
+      "wget",
+      "https://github.com/mozilla/sccache/releases/download/v0.7.7/sccache-v0.7.7-x86_64-unknown-linux-musl.tar.gz",
+    ])
+    .withExec([
+      "tar",
+      "-xvf",
+      "sccache-v0.7.7-x86_64-unknown-linux-musl.tar.gz",
+    ])
+    .withExec([
+      "mv",
+      "sccache-v0.7.7-x86_64-unknown-linux-musl/sccache",
+      "/usr/local/bin",
+    ])
+    .withEnvVariable("RUSTC_WRAPPER", "/usr/local/bin/sccache")
+    .withMountedCache("/root/.cache/sccache", dag.cacheVolume("sccache"))
     .withExec(["dpkg", "--add-architecture", "armhf"])
     .withExec(["dpkg", "--add-architecture", "arm64"])
     .withExec(["apt-get", "update"])
