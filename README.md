@@ -26,7 +26,7 @@ FluentCI Engine is a programmable CI/CD engine that is designed to be simple, fl
 - [x] Flexible
 - [x] No containerization or virtualization
 - [x] Built-in support for Nix, Pkgx, Devbox, Flox, Devenv, Envhub, Mise and Pixi
-- [ ] Cache support
+- [x] Cache support
 - [x] SDK for writing pipelines in TypeScript, see [@fluentci/sdk](./sdk/typescript)
 - [x] GraphQL API, see [API Documentation](./docs/api.md)
 - [x] OpenTelemetry tracing
