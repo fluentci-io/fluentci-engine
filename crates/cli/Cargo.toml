@@ -8,14 +8,14 @@ license = "MPL-2.0"
 name = "fluentci-engine"
 readme = "../../README.md"
 repository = "https://github.com/fluentci-io/fluentci-engine"
-version = "0.1.2"
+version = "0.1.3"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1.0.81"
 clap = "3.2.20"
-fluentci-server = { path = "../server", version = "0.1.2" }
+fluentci-server = {path = "../server", version = "0.1.3"}
 get-port = "4.0.0"
 md5 = "0.7.0"
 regex = "1.10.3"

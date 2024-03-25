@@ -113,7 +113,6 @@ Fields of the Cache object:
 | ------ |--------- | ----------------------------------- |
 | id     | [ID](https://spec.graphql.org/October2021/#sec-ID)     | The unique identifier of the cache. |
 | key    | [String](https://spec.graphql.org/October2021/#sec-String) | The key of the cache.               |
-| path   | [String](https://spec.graphql.org/October2021/#sec-String) | The path of the cache.              |
 
 ### Devbox
 
@@ -121,7 +120,8 @@ Fields of the Devbox object:
 
 | Name        | Arguments           | Type                | Description                         |
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
-| id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)               | Unique identifier.                  |
+| id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID) | Unique identifier.                  |
+| withCache   |  path: `String!`, cacheId: `ID!` | [Devbox](#devbox-1) | Add Cache            |
 | withExec    |  args: `[String!]!` | [Devbox](#devbox-1) | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Devbox](#devbox-1) | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
@@ -134,6 +134,7 @@ Fields of the Devenv object:
 | Name        | Arguments           | Type                | Description                         |
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)               | Unique identifier.                  |
+| withCache   |  path: `String!`, cacheId: `ID!` | [Devbox](#devbox-1) | Add Cache            |
 | withExec    |  args: `[String!]!` | [Devenv](#devenv-1) | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Devenv](#devenv-1) | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)           | Get the standard output.            |
@@ -157,6 +158,7 @@ Fields of the Directory object:
 | pixi       |           | [Pixi](#pixi-1)     | Setup Pixi from the directory    |
 | mise       |           | [Mise](#mise-1)     | Setup Mise from the directory    |
 | envhub     |           | [Envhub](#envhub) | Setup Envhub from the directory    |
+| withCache   |  path: `String!`, cacheId: `ID!` | [Devbox](#devbox-1) | Add Cache            |
 | withWorkdir  | path: String!           | [Directory](#directory-1)       | Change the work directory  |
 | tarCzvf     |                     | [File](#file-1)              | Compress the directory to a tar gzip archive. |
 | zip          |                    | [File](#file-1)              | Compress the directory to a zip archive.      |
@@ -173,6 +175,7 @@ Fields of the Envhub object:
 | ----------- | ---------------------- |-------------------- | ----------------------------------- |
 | id          |                        | [ID](https://spec.graphql.org/October2021/#sec-ID)               | Unique identifier.                  |
 | use         | environment: `String!` | [Envhub](#envhub)   | Use the environment.                |
+| withCache   |  path: `String!`, cacheId: `ID!` | [Devbox](#devbox-1) | Add Cache            |
 | withExec    |  args: `[String!]!`    | [Envhub](#envhub)   | Add command to execute.             |
 | withWorkdir |  path: `String!`        | [Envhub](#envhub)   | Set the working directory.          |
 | stdout      |                        | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
@@ -200,6 +203,7 @@ Fields of the Flox object:
 | Name        | Arguments           | Type                | Description                         |
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)             | Unique identifier.                  |
+| withCache   |  path: `String!`, cacheId: `ID!` | [Devbox](#devbox-1) | Add Cache            |
 | withExec    |  args: `[String!]!` | [Flox](#flox-1)     | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Flox](#flox-1)     | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)           | Get the standard output.            |
@@ -224,6 +228,7 @@ Fields of the Mise object:
 | Name        | Arguments           | Type                | Description                         |
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)              | Unique identifier.                  |
+| withCache   |  path: `String!`, cacheId: `ID!` | [Devbox](#devbox-1) | Add Cache            |
 | withExec    |  args: `[String!]!` | [Mise](#mise-1)     | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Mise](#mise-1)     | Set the working directory.          |
 | stdout      |                     |[String](https://spec.graphql.org/October2021/#sec-String)           | Get the standard output.            |
@@ -236,6 +241,7 @@ Fields of the Nix object:
 | Name        | Arguments           | Type                | Description                         |
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)              | Unique identifier.                  |
+| withCache   |  path: `String!`, cacheId: `ID!` | [Devbox](#devbox-1) | Add Cache            |
 | withExec    |  args: `[String!]!` | [Nix](#nix-1) | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Nix](#nix-1) | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
@@ -248,6 +254,7 @@ Fields of the Pipeline object:
 | Name        | Arguments           | Type                | Description                         |
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)               | Unique identifier.                  |
+| withCache   |  path: `String!`, cacheId: `ID!` | [Devbox](#devbox-1) | Add Cache            |
 | withExec    |  args: `[String!]!` | [Pipeline](#pipeline-1) | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Pipeline](#pipeline-1) | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)           | Get the standard output.            |
@@ -261,6 +268,7 @@ Fields of the Pixi object:
 | Name        | Arguments           | Type                | Description                         |
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)                | Unique identifier.                  |
+| withCache   |  path: `String!`, cacheId: `ID!` | [Devbox](#devbox-1) | Add Cache            |
 | withExec    |  args: `[String!]!` | [Pixi](#pixi-1) | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Pixi](#pixi-1) | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
@@ -273,6 +281,7 @@ Fields of the Pixi object:
 | Name        | Arguments           | Type                | Description                         |
 | ----------- | ------------------- |-------------------- | ----------------------------------- |
 | id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)                | Unique identifier.                  |
+| withCache   |  path: `String!`, cacheId: `ID!` | [Devbox](#devbox-1) | Add Cache            |
 | withExec    |  args: `[String!]!` | [Pixi](#pixi-1)     | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Pixi](#pixi-1)     | Set the working directory.          |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
