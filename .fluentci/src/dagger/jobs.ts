@@ -365,137 +365,36 @@ export async function e2e(
     .withServiceBinding("fluentci-engine", engine)
     .sync();
 
-  const zip = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat zip.graphql)" --ignore-stdin --pretty format`,
-  ]);
+  const queries = [
+    "zip",
+    "tar-czvf",
+    "unzip",
+    "tar-xzvf",
+    "md5",
+    "sha256",
+    "git",
+    "directory",
+    "envhub",
+    "mise",
+    "pixi",
+    "pkgx",
+    "nix",
+    "flox",
+    "devenv",
+    "devbox",
+  ];
 
-  console.log(await zip.stdout());
+  for (const item of queries) {
+    const query = ctr.withExec([
+      "bash",
+      "-c",
+      `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat ${item}.graphql)" --ignore-stdin --pretty format`,
+    ]);
 
-  const tarCzvf = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat tar-czvf.graphql)" --ignore-stdin --pretty format`,
-  ]);
+    console.log(await query.stdout());
+  }
 
-  console.log(await tarCzvf.stdout());
-
-  const unzip = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat unzip.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  console.log(await unzip.stdout());
-
-  const tarXzvf = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat tar-xzvf.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  console.log(await tarXzvf.stdout());
-
-  const md5 = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat md5.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  console.log(await md5.stdout());
-
-  const sha256 = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat sha256.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  console.log(await sha256.stdout());
-
-  const git = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat git.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  console.log(await git.stdout());
-
-  const directory = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat directory.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  console.log(await directory.stdout());
-
-  const envhub = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat envhub.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  console.log(await envhub.stdout());
-
-  const mise = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat mise.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  console.log(await mise.stdout());
-
-  const pixi = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat pixi.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  console.log(await pixi.stdout());
-
-  const pkgx = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat pkgx.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  console.log(await pkgx.stdout());
-
-  const nix = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat nix.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  console.log(await nix.stdout());
-
-  const flox = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat flox.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  console.log(await flox.stdout());
-
-  const devenv = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devenv.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  console.log(await devenv.stdout());
-
-  const devbox = ctr.withExec([
-    "bash",
-    "-c",
-    `http POST http://fluentci-engine:6880/graphql Content-Type:application/json query="$(cat devbox.graphql)" --ignore-stdin --pretty format`,
-  ]);
-
-  const stdout = await devbox.stdout();
-
-  console.log(stdout);
-
-  return stdout;
+  return "";
 }
 
 /**
@@ -524,7 +423,7 @@ export async function typescriptE2e(
       dag.host().file("./target/release/fluentci-engine")
     )
     .withEnvVariable("FLUENTCI_ENGINE_HOST", "0.0.0.0")
-    .withExec(["/fluentci-engine"])
+    .withExec(["/fluentci-engine", "serve"])
     .withExposedPort(6880)
     .asService();
 
