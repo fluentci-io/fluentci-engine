@@ -25,8 +25,8 @@ For more information, see "[Forming calls with GraphQL](https://docs.github.com/
 
 | Name  | type     | Description |
 | ----- | -------- | ----------- |
-| key   | [String](https://spec.graphql.org/October2021/#sec-String)! | The key of the cache. |
-| path  | [String](https://spec.graphql.org/October2021/#sec-String)! | The path to be cached. |
+| key   | [String](https://spec.graphql.org/October2021/#sec-String)! | A unique key to identify the cache. |
+
 
 ### http
 
