@@ -34,7 +34,7 @@ jobs:
         env:
           PACKAGE_NAME: fluentci-engine
           WORK_DIR: ./fixtures
-          # DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+          DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}
   publish:
     needs: tests
     runs-on: ubuntu-latest
