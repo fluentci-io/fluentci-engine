@@ -9,6 +9,8 @@ For more information, see "[Forming calls with GraphQL](https://docs.github.com/
 
 ### pipeline
 
+Creates a named sub-pipeline.
+
 **type**: [Pipeline](#pipeline-1)
 
 **Arguments for `pipeline`**
@@ -18,6 +20,8 @@ For more information, see "[Forming calls with GraphQL](https://docs.github.com/
 | name  | [String](https://spec.graphql.org/October2021/#sec-String)! | The name of the pipeline. |
 
 ### cache
+
+Constructs a cache for a given cache key.
 
 **type**: [Cache](#cache-1)
 
@@ -30,6 +34,8 @@ For more information, see "[Forming calls with GraphQL](https://docs.github.com/
 
 ### http
 
+Returns a file containing an http remote url content.
+
 **type**: [File](#file-1)
 
 **Arguments for `file`**
@@ -39,6 +45,8 @@ For more information, see "[Forming calls with GraphQL](https://docs.github.com/
 | url      | [String](https://spec.graphql.org/October2021/#sec-String)! | The URL of the file to download. |
 
 ### directory
+
+Constructs a directory object for a given path.
 
 **type**: [Directory](#directory-1)
 
@@ -50,6 +58,8 @@ For more information, see "[Forming calls with GraphQL](https://docs.github.com/
 
 ### file
 
+Constructs a file object for a given path.
+
 **Arguments for `File`**
 
 **type**: [File](#file-1)
@@ -60,6 +70,8 @@ For more information, see "[Forming calls with GraphQL](https://docs.github.com/
 
 ### git
 
+Constructs a git object for a given repository URL.
+
 **type**: [Git](#git-1)
 
 **Arguments for `git`**
@@ -68,32 +80,45 @@ For more information, see "[Forming calls with GraphQL](https://docs.github.com/
 | ------- | ----------- | ------------ |
 | url    | [String](https://spec.graphql.org/October2021/#sec-String)! | The url of the repository to access |
 
-
 ### devbox
+
+Creates a devbox environment.
 
 **type**: [Devbox](#devbox-1)
 
 ### devenv
 
+Creates a devenv environment.
+
 **type**: [Devenv](#devenv-1)
 
 ### flox
+
+Creates a flox environment.
 
 **type**: [Flox](#flox-1)
 
 ### nix
 
+Creates a nix environment.
+
 **type**: [Nix](#nix-1)
 
 ### pkgx
+
+Creates a pkgx environment.
 
 **type**: [Pkgx](#pkgx-1)
 
 ### mise
 
+Creates a mise environment.
+
 **type**: [Mise](#mise-1)
 
 ### pixi
+
+Creates a pixi environment.
 
 **type**: [Pixi](#pixi-1)
 
