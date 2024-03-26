@@ -76,6 +76,11 @@ pub async fn download(key: &str) -> Result<(), Error> {
     );
 
     if let Some(CacheBackendType::CDN) = default_backend {
+        fs::create_dir_all(format!(
+            "{}/.fluentci/cache",
+            dirs::home_dir().unwrap().to_str().unwrap()
+        ))?;
+
         let prefix = format!("{}/{}", env::consts::OS, env::consts::ARCH);
         let url = std::env::var("FLUENTCI_CACHE_CDN_ENDPOINT")?;
         let filename = cache_file.split("/").last().unwrap();
