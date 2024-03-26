@@ -61,7 +61,8 @@ FluentCI Engine supports caching. To enable it, set the following environment va
 - `FLUENTCI_CACHE_S3_BUCKET` - S3 bucket name, if you are using S3-compatible storage
 - `FLUENTCI_CACHE_CDN_ENDPOINT` - CDN endpoint, if you are using CDN (optional) for downloading cache
 
-**Note:** You need to set `GOOGLE_APPLICATION_CREDENTIALS` or `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables to use GCS or S3 cache.
+> [!NOTE]
+> You need to set `GOOGLE_APPLICATION_CREDENTIALS` or `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables to use GCS or S3 cache.
 
 ## 🔭 OpenTelemetry Tracing
 
