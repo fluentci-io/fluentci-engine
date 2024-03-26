@@ -1,10 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 use super::objects::flox::Flox;
-use async_graphql::{Context, Error, Object, ID};
-use fluentci_core::deps::{Graph, GraphCommand};
-use fluentci_ext::flox::Flox as FloxExt;
-use uuid::Uuid;
+use async_graphql::{Context, Error, Object};
+use fluentci_common::flox::flox as common_flox;
+use fluentci_core::deps::Graph;
 
 #[derive(Default, Clone)]
 pub struct FloxQuery;
@@ -13,21 +12,7 @@ pub struct FloxQuery;
 impl FloxQuery {
     async fn flox(&self, ctx: &Context<'_>) -> Result<Flox, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        let mut graph = graph.lock().unwrap();
-        graph.reset();
-        graph.runner = Arc::new(Box::new(FloxExt::default()));
-        graph.runner.setup()?;
-
-        let id = Uuid::new_v4().to_string();
-        graph.execute(GraphCommand::AddVertex(
-            id.clone(),
-            "flox".into(),
-            "".into(),
-            vec![],
-            Arc::new(Box::new(FloxExt::default())),
-        ));
-
-        let flox = Flox { id: ID(id) };
-        Ok(flox)
+        let flox = common_flox(graph.clone(), true)?;
+        Ok(Flox::from(flox))
     }
 }

@@ -242,6 +242,7 @@ impl Graph {
                         return Err(Error::msg(format!("Error: {}", self.vertices[i].id)));
                     }
                     result = rx.recv()?;
+                    span.end();
                 }
                 Err(e) => {
                     span.end();

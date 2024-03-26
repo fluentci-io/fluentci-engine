@@ -1,10 +1,10 @@
 use std::{
-    fs::{self, canonicalize},
-    path::Path,
+    fs::{self},
     sync::{mpsc::Receiver, Arc, Mutex},
 };
 
 use async_graphql::{Context, Error, Object, ID};
+use fluentci_common::common;
 use fluentci_core::deps::{Graph, GraphCommand};
 use fluentci_ext::devbox::Devbox as DevboxExt;
 use fluentci_ext::devenv::Devenv as DevenvExt;
@@ -16,8 +16,8 @@ use fluentci_ext::mise::Mise as MiseExt;
 use fluentci_ext::nix::Nix as NixExt;
 use fluentci_ext::pixi::Pixi as PixiExt;
 use fluentci_ext::pkgx::Pkgx as PkgxExt;
-use fluentci_ext::{cache::Cache as CacheExt, runner::Runner};
-use fluentci_types::Output;
+use fluentci_ext::runner::Runner;
+use fluentci_types::pipeline as types;
 use uuid::Uuid;
 
 use crate::{
@@ -381,66 +381,13 @@ impl Pipeline {
 
     async fn with_exec(&self, ctx: &Context<'_>, args: Vec<String>) -> Result<&Pipeline, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        let mut graph = graph.lock().unwrap();
-
-        let id = Uuid::new_v4().to_string();
-        let dep_id = graph.vertices[graph.size() - 1].id.clone();
-        let deps = match graph.size() {
-            1 => vec![],
-            _ => vec![dep_id],
-        };
-        graph.execute(GraphCommand::AddVertex(
-            id.clone(),
-            "exec".into(),
-            args.join(" "),
-            deps,
-            Arc::new(Box::new(Runner::default())),
-        ));
-
-        if graph.size() > 2 {
-            let x = graph.size() - 2;
-            let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
-        }
-
+        common::with_exec(graph.clone(), args, Arc::new(Box::new(Runner::default())));
         Ok(self)
     }
 
     async fn with_workdir(&self, ctx: &Context<'_>, path: String) -> Result<&Pipeline, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        let mut graph = graph.lock().unwrap();
-
-        if !Path::new(&path).exists() {
-            let dir = canonicalize(".").unwrap();
-            let dir = dir.to_str().unwrap();
-            let dir = format!("{}/{}", dir, path);
-            return Err(Error::new(format!("Path `{}` does not exist", dir)));
-        }
-
-        if !Path::new(&path).exists() {
-            return Err(Error::new(format!("Path `{}` does not exist", path)));
-        }
-
-        let id = Uuid::new_v4().to_string();
-        let dep_id = graph.vertices[graph.size() - 1].id.clone();
-        let deps = match graph.size() {
-            1 => vec![],
-            _ => vec![dep_id],
-        };
-        graph.execute(GraphCommand::AddVertex(
-            id.clone(),
-            "withWorkdir".into(),
-            path,
-            deps,
-            Arc::new(Box::new(Runner::default())),
-        ));
-
-        if graph.size() > 2 {
-            let x = graph.size() - 2;
-            let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
-        }
-
+        common::with_workdir(graph.clone(), path, Arc::new(Box::new(Runner::default())))?;
         Ok(self)
     }
 
@@ -455,72 +402,27 @@ impl Pipeline {
         cache_id: ID,
     ) -> Result<&Pipeline, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        let mut graph = graph.lock().unwrap();
-        let runner = graph.runner.clone();
-        graph.runner = Arc::new(Box::new(CacheExt::default()));
-        graph.runner.setup()?;
-
-        if let Some(cache) = graph.vertices.iter().find(|v| ID(v.id.clone()) == cache_id) {
-            let id = Uuid::new_v4().to_string();
-            let dep_id = graph.vertices[graph.size() - 1].id.clone();
-            let deps = match graph.size() {
-                1 => vec![],
-                _ => vec![dep_id],
-            };
-            let cache_key_path = format!("{}:{}", cache.command, path);
-            graph.execute(GraphCommand::AddVertex(
-                id.clone(),
-                "withCache".into(),
-                cache_key_path,
-                deps,
-                Arc::new(Box::new(CacheExt::default())),
-            ));
-
-            let x = graph.size() - 2;
-            let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
-
-            graph.execute_vertex(&id)?;
-            graph.runner = runner;
-            return Ok(self);
-        }
-
-        return Err(Error::new("Cache not found"));
+        common::with_cache(graph.clone(), cache_id.into(), path)?;
+        Ok(self)
     }
 
     async fn stdout(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        let mut graph = graph.lock().unwrap();
-        graph.execute(GraphCommand::Execute(Output::Stdout));
         let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();
-        let rx = rx.lock().unwrap();
-        let (stdout, code) = rx.recv().unwrap();
-
-        if code != 0 {
-            return Err(Error::new(format!(
-                "Failed to execute command `{}`",
-                stdout
-            )));
-        }
-
-        Ok(stdout)
+        common::stdout(graph.clone(), rx.clone()).map_err(|e| Error::new(e.to_string()))
     }
 
     async fn stderr(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        let mut graph = graph.lock().unwrap();
-        graph.execute(GraphCommand::Execute(Output::Stderr));
         let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();
-        let rx = rx.lock().unwrap();
-        let (stderr, code) = rx.recv().unwrap();
+        common::stderr(graph.clone(), rx.clone()).map_err(|e| Error::new(e.to_string()))
+    }
+}
 
-        if code != 0 {
-            return Err(Error::new(format!(
-                "Failed to execute command `{}`",
-                stderr
-            )));
+impl From<types::Pipeline> for Pipeline {
+    fn from(pipeline: types::Pipeline) -> Self {
+        Self {
+            id: ID(pipeline.id),
         }
-
-        Ok(stderr)
     }
 }
