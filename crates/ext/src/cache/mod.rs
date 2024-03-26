@@ -50,7 +50,7 @@ pub fn detect_cache_backend() -> Option<CacheBackendType> {
     None
 }
 
-pub async fn download(key: &str, tx: Sender<String>) -> Result<(), Error> {
+pub async fn download(key: &str) -> Result<(), Error> {
     let default_backend: Option<CacheBackendType> = detect_cache_backend();
 
     if default_backend.is_none() {
@@ -169,12 +169,11 @@ impl Extension for Cache {
         );
 
         if !Path::new(&cache_file).exists() {
-            let tx_clone = tx.clone();
             let key = self.key.clone();
             let (dtx, drx) = mpsc::channel();
             thread::spawn(move || {
                 let rt = tokio::runtime::Runtime::new().unwrap();
-                rt.block_on(download(&key, tx_clone)).unwrap();
+                rt.block_on(download(&key)).unwrap();
                 dtx.send(0).unwrap();
             });
             drx.recv().unwrap();
