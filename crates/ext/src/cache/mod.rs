@@ -16,6 +16,12 @@ use owo_colors::OwoColorize;
 pub mod gcs;
 pub mod s3;
 
+pub enum CacheBackendType {
+    CDN,
+    S3,
+    GCS,
+}
+
 #[async_trait]
 pub trait CacheBackend {
     async fn restore(&self, path: &str) -> Result<(), Error>;
@@ -28,20 +34,24 @@ pub struct Cache {
     path: String,
 }
 
-pub async fn download(key: &str, tx: Sender<String>) -> Result<(), Error> {
-    let mut default_backend: Option<&str> = None;
-
+pub fn detect_cache_backend() -> Option<CacheBackendType> {
     if let Ok(_) = std::env::var("FLUENTCI_CACHE_CDN_ENDPOINT") {
-        default_backend = Some("CDN");
+        return Some(CacheBackendType::CDN);
     }
 
     if let Ok(_) = std::env::var("FLUENTCI_CACHE_S3_ENDPOINT") {
-        default_backend = Some("S3");
+        return Some(CacheBackendType::S3);
     }
 
     if let Ok(_) = std::env::var("FLUENTCI_CACHE_GCS_BUCKET") {
-        default_backend = Some("GCS");
+        return Some(CacheBackendType::GCS);
     }
+
+    None
+}
+
+pub async fn download(key: &str, tx: Sender<String>) -> Result<(), Error> {
+    let default_backend: Option<CacheBackendType> = detect_cache_backend();
 
     if default_backend.is_none() {
         println!("-> No cache backend found, skipping download");
@@ -65,7 +75,7 @@ pub async fn download(key: &str, tx: Sender<String>) -> Result<(), Error> {
         key.bright_yellow()
     );
 
-    if let Some("CDN") = default_backend {
+    if let Some(CacheBackendType::CDN) = default_backend {
         let prefix = format!("{}/{}", env::consts::OS, env::consts::ARCH);
         let url = std::env::var("FLUENTCI_CACHE_CDN_ENDPOINT")?;
         let filename = cache_file.split("/").last().unwrap();
@@ -76,8 +86,8 @@ pub async fn download(key: &str, tx: Sender<String>) -> Result<(), Error> {
     }
 
     let backend: Box<dyn CacheBackend> = match default_backend {
-        Some("S3") => Box::new(s3::new().await?),
-        Some("GCS") => Box::new(gcs::new().await?),
+        Some(CacheBackendType::S3) => Box::new(s3::new().await?),
+        Some(CacheBackendType::GCS) => Box::new(gcs::new().await?),
         _ => Box::new(s3::new().await?),
     };
     backend.restore(&cache_file).await?;
