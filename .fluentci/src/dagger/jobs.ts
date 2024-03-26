@@ -349,6 +349,20 @@ export async function e2e(
       dag.host().file("./target/release/fluentci-engine")
     )
     .withEnvVariable("FLUENTCI_ENGINE_HOST", "0.0.0.0")
+    .withEnvVariable(
+      "FLUENTCI_CACHE_CDN_ENDPOINT",
+      env.get("FLUENTCI_CACHE_CDN_ENDPOINT")!
+    )
+    .withEnvVariable(
+      "FLUENTCI_CACHE_S3_ENDPOINT",
+      env.get("FLUENTCI_CACHE_S3_ENDPOINT")!
+    )
+    .withEnvVariable(
+      "FLUENTCI_CACHE_S3_BUCKET",
+      env.get("FLUENTCI_CACHE_S3_BUCKET")!
+    )
+    .withEnvVariable("AWS_ACCESS_KEY_ID", env.get("AWS_ACCESS_KEY_ID")!)
+    .withEnvVariable("AWS_SECRET_ACCESS_KEY", env.get("AWS_SECRET_ACCESS_KEY")!)
     .withExec(["/fluentci-engine", "serve"])
     .withExposedPort(6880)
     .asService();
@@ -439,6 +453,20 @@ export async function typescriptE2e(
       dag.host().file("./target/release/fluentci-engine")
     )
     .withEnvVariable("FLUENTCI_ENGINE_HOST", "0.0.0.0")
+    .withEnvVariable(
+      "FLUENTCI_CACHE_CDN_ENDPOINT",
+      env.get("FLUENTCI_CACHE_CDN_ENDPOINT")!
+    )
+    .withEnvVariable(
+      "FLUENTCI_CACHE_S3_ENDPOINT",
+      env.get("FLUENTCI_CACHE_S3_ENDPOINT")!
+    )
+    .withEnvVariable(
+      "FLUENTCI_CACHE_S3_BUCKET",
+      env.get("FLUENTCI_CACHE_S3_BUCKET")!
+    )
+    .withEnvVariable("AWS_ACCESS_KEY_ID", env.get("AWS_ACCESS_KEY_ID")!)
+    .withEnvVariable("AWS_SECRET_ACCESS_KEY", env.get("AWS_SECRET_ACCESS_KEY")!)
     .withExec(["/fluentci-engine", "serve"])
     .withExposedPort(6880)
     .asService();

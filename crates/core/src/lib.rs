@@ -36,6 +36,7 @@ pub fn init_tracer() -> Result<(), TraceError> {
     }
 
     if let Ok(endpoint) = env::var("OTEL_EXPORTER_JAEGER_AGENT_HOST") {
+        #[allow(deprecated)]
         let _ = opentelemetry_jaeger::new_agent_pipeline()
             .with_endpoint(endpoint)
             .with_service_name("fluentci-core")

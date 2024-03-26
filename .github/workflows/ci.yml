@@ -35,6 +35,12 @@ jobs:
           PACKAGE_NAME: fluentci-engine
           WORK_DIR: ./fixtures
           DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+          FLUENTCI_CACHE_CDN_ENDPOINT: https://cache.fluentci.io
+          FLUENTCI_CACHE_S3_ENDPOINT: https://fe5b1e2ce9f94f4c0415ab94ce402012.r2.cloudflarestorage.com
+          FLUENTCI_CACHE_S3_BUCKET: cache
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
   publish:
     needs: tests
     runs-on: ubuntu-latest

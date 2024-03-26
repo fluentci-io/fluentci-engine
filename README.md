@@ -26,7 +26,7 @@ FluentCI Engine is a programmable CI/CD engine that is designed to be simple, fl
 - [x] Flexible
 - [x] No containerization or virtualization
 - [x] Built-in support for Nix, Pkgx, Devbox, Flox, Devenv, Envhub, Mise and Pixi
-- [x] Cache support
+- [x] Cache support (backends: local, S3, GCS, R2)
 - [x] SDK for writing pipelines in TypeScript, see [@fluentci/sdk](./sdk/typescript)
 - [x] GraphQL API, see [API Documentation](./docs/api.md)
 - [x] OpenTelemetry tracing
@@ -51,6 +51,17 @@ cargo run -p fluentci-engine -- serve
 ## 📚 Documentation
 
 - [API Documentation](./docs/api.md)
+
+## ⚡ Caching
+
+FluentCI Engine supports caching. To enable it, set the following environment variables:
+
+- `FLUENTCI_CACHE_GCS_BUCKET` - GCS bucket name, if you are using Google Cloud Storage
+- `FLUENTCI_CACHE_S3_ENDPOINT` - S3 endpoint, if you are using S3-compatible storage
+- `FLUENTCI_CACHE_S3_BUCKET` - S3 bucket name, if you are using S3-compatible storage
+- `FLUENTCI_CACHE_CDN_ENDPOINT` - CDN endpoint, if you are using CDN (optional) for downloading cache
+
+**Note:** You need to set `GOOGLE_APPLICATION_CREDENTIALS` or `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables to use GCS or S3 cache.
 
 ## 🔭 OpenTelemetry Tracing
 

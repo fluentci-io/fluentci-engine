@@ -4,7 +4,7 @@ async function main() {
   Deno.env.set("FLUENTCI_SESSION_PORT", "6880");
   Deno.env.set("FLUENTCI_SESSION_TOKEN", "token");
 
-  const cacheId = await dag.cache("flox").id();
+  const cacheId = await dag.cache("pixi").id();
 
   console.log("cacheId: ", cacheId);
 
@@ -32,39 +32,40 @@ async function main() {
     .pipeline("pixi-demo")
     .pixi()
     .withWorkdir("./pixi-demo")
+    .withCache("./.pixi", cacheId)
     .withExec(["pixi", "--version"])
     .withExec(["which", "php"])
     .stdout();
 
   console.log(pixi);
 
-  const zip = await dag.directory("./pixi-demo").zip().path();
+  const zip = await dag.directory("./flox-demo").zip().path();
 
   console.log(zip);
 
-  const tarCzvf = await dag.directory("./pixi-demo").tarCzvf().path();
+  const tarCzvf = await dag.directory("./flox-demo").tarCzvf().path();
 
   console.log(tarCzvf);
 
   const unzip = await dag
-    .file("./pixi-demo.zip")
-    .unzip("./pixi-demo-output-zip")
+    .file("./flox-demo.zip")
+    .unzip("./flox-demo-output-zip")
     .entries();
 
   console.log(unzip);
 
   const tarXzvf = await dag
-    .file("./pixi-demo.tar.gz")
-    .tarXzvf("./pixi-demo-output-tar")
+    .file("./flox-demo.tar.gz")
+    .tarXzvf("./flox-demo-output-tar")
     .entries();
 
   console.log(tarXzvf);
 
-  const md5 = await dag.file("./pixi-demo.tar.gz").md5();
+  const md5 = await dag.file("./flox-demo.tar.gz").md5();
 
   console.log(md5);
 
-  const sha256 = await dag.file("./pixi-demo.tar.gz").sha256();
+  const sha256 = await dag.file("./flox-demo.tar.gz").sha256();
 
   console.log(sha256);
 
@@ -74,10 +75,10 @@ async function main() {
     .withExec([
       "rm",
       "-rf",
-      "pixi-demo-output-zip",
-      "pixi-demo-output-tar",
-      "pixi-demo.zip",
-      "pixi-demo.tar.gz",
+      "flox-demo-output-zip",
+      "flox-demo-output-tar",
+      "flox-demo.zip",
+      "flox-demo.tar.gz",
     ])
     .stdout();
 
@@ -145,7 +146,6 @@ async function main() {
     .pipeline("flox-demo")
     .flox()
     .withWorkdir("./flox-demo")
-    .withCache("./.flox", cacheId)
     .withExec(["flox", "--version"])
     .withExec(["which", "jq"])
     .stdout();
