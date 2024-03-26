@@ -2,7 +2,7 @@ use std::{
     env,
     fs::{self, metadata},
     path::Path,
-    process::ExitStatus,
+    process::{Command, ExitStatus, Stdio},
     sync::mpsc::{self, Sender},
     thread,
 };
@@ -81,7 +81,17 @@ pub async fn download(key: &str, tx: Sender<String>) -> Result<(), Error> {
         let filename = cache_file.split("/").last().unwrap();
         let url = format!("{}/{}/{}", url, prefix, filename);
         let cmd = format!("wget {} -O {}", url, cache_file);
-        exec(&cmd, tx, Output::Stdout, true, "/tmp")?;
+        println!("-> {}", cmd.bright_cyan());
+
+        let mut child = Command::new("bash")
+            .arg("-c")
+            .arg(&cmd)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()?;
+
+        child.wait()?;
+
         return Ok(());
     }
 
