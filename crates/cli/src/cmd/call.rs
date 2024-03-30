@@ -63,6 +63,11 @@ pub fn call(module: &str, command: &str) {
     let func = command.split_whitespace().next().unwrap();
     let args = command.split_whitespace().skip(1).collect::<Vec<&str>>();
     let args = args.join(" ");
-    let res = plugin.call::<&str, &str>(func, &args).unwrap();
-    println!("{}", res);
+    match plugin.call::<&str, &str>(func, &args) {
+        Ok(res) => println!("{}", res),
+        Err(err) => {
+            println!("{}", err);
+            std::process::exit(1);
+        }
+    }
 }

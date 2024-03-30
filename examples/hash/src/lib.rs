@@ -1,14 +1,14 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+use extism_pdk::*;
+use fluentci_client::dag;
+
+#[plugin_fn]
+pub fn md5(file: String) -> FnResult<String> {
+    let hash = dag().file(file)?.md5()?;
+    Ok(hash)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+#[plugin_fn]
+pub fn sha256(file: String) -> FnResult<String> {
+    let hash = dag().file(file)?.sha256()?;
+    Ok(hash)
 }
