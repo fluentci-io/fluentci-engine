@@ -79,6 +79,8 @@ pub fn with_workdir(
         graph.execute(GraphCommand::AddEdge(x, y));
     }
 
+    graph.execute_vertex(&id)?;
+
     Ok(())
 }
 

@@ -1,5 +1,5 @@
 use extism_pdk::*;
-use fluentci_types::pkgx as types;
+use fluentci_types::{cache::Cache, pkgx as types};
 use serde::{Deserialize, Serialize};
 
 #[host_fn]
@@ -7,7 +7,7 @@ extern "ExtismHost" {
     fn set_runner(runner: String);
     fn with_exec(args: Json<Vec<String>>);
     fn with_workdir(path: String);
-    fn with_cache(path: String, cache_id: String);
+    fn with_cache(cache: Json<Cache>);
     fn stdout() -> String;
     fn stderr() -> String;
 }
@@ -40,7 +40,13 @@ impl Pkgx {
     }
 
     pub fn with_cache(&self, path: String, cache_id: String) -> Result<Pkgx, Error> {
-        unsafe { with_cache(path, cache_id) }?;
+        unsafe {
+            with_cache(Json(Cache {
+                id: cache_id,
+                path,
+                ..Default::default()
+            }))
+        }?;
         Ok(Pkgx {
             id: self.id.clone(),
         })

@@ -14,6 +14,7 @@ use fluentci_ext::pixi::Pixi as PixiExt;
 use fluentci_ext::pkgx::Pkgx as PkgxExt;
 use fluentci_ext::runner::Runner as RunnerExt;
 use fluentci_ext::Extension;
+use fluentci_types::cache::Cache;
 use fluentci_types::file::File;
 
 use crate::state::State;
@@ -71,11 +72,12 @@ host_fn!(pub with_workdir(user_data: State; path: String) {
   Ok(())
 });
 
-host_fn!(pub with_cache(user_data: State;  path: String, cache_id: String) {
+host_fn!(pub with_cache(user_data: State;  cache: Json<Cache>) {
   let state = user_data.get()?;
   let state = state.lock().unwrap();
   let graph = state.graph.clone();
-  common::with_cache(graph, path, cache_id)?;
+  let cache = cache.into_inner();
+  common::with_cache(graph, cache.id, cache.path)?;
   Ok(())
 });
 

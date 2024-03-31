@@ -1,5 +1,5 @@
 use extism_pdk::*;
-use fluentci_types::directory as types;
+use fluentci_types::{cache::Cache, directory as types};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -23,7 +23,7 @@ extern "ExtismHost" {
     fn zip(path: String) -> Json<File>;
     fn with_exec(args: Json<Vec<String>>);
     fn with_workdir(path: String);
-    fn with_cache(path: String, cache_id: String);
+    fn with_cache(cache: Json<Cache>);
     fn stdout() -> String;
     fn stderr() -> String;
 }
@@ -121,10 +121,16 @@ impl Directory {
     }
 
     pub fn with_cache(&self, path: String, cache_id: String) -> Result<Directory, Error> {
-        unsafe { with_cache(path.clone(), cache_id) }?;
+        unsafe {
+            with_cache(Json(Cache {
+                id: cache_id,
+                path: path.clone(),
+                ..Default::default()
+            }))
+        }?;
         Ok(Directory {
             id: self.id.clone(),
-            path: path,
+            path: self.path.clone(),
         })
     }
 

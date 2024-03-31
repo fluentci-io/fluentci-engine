@@ -1,5 +1,5 @@
 use extism_pdk::*;
-use fluentci_types::pipeline as types;
+use fluentci_types::{cache::Cache, pipeline as types};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -22,7 +22,7 @@ extern "ExtismHost" {
     fn envhub() -> Json<Envhub>;
     fn with_exec(args: Json<Vec<String>>);
     fn with_workdir(path: String);
-    fn with_cache(path: String, cache_id: String);
+    fn with_cache(cache: Json<Cache>);
     fn stdout() -> String;
     fn stderr() -> String;
 }
@@ -114,7 +114,13 @@ impl Pipeline {
     }
 
     pub fn with_cache(&self, path: String, cache_id: String) -> Result<Pipeline, Error> {
-        unsafe { with_cache(path, cache_id) }?;
+        unsafe {
+            with_cache(Json(Cache {
+                id: cache_id,
+                path,   
+                ..Default::default()
+            }))
+        }?;
         Ok(Pipeline {
             id: self.id.clone(),
         })

@@ -19,6 +19,7 @@ pub fn cache(graph: Arc<Mutex<Graph>>, key: &str) -> Result<Cache, Error> {
         return Ok(Cache {
             id: cache.id.clone(),
             key: cache.command.clone(),
+            path: "".into(),
         });
     }
 
@@ -34,6 +35,7 @@ pub fn cache(graph: Arc<Mutex<Graph>>, key: &str) -> Result<Cache, Error> {
     let cache = Cache {
         id,
         key: key.into(),
+        path: "".into(),
     };
     Ok(cache)
 }

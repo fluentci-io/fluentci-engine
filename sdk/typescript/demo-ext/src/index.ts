@@ -8,9 +8,12 @@ declare const Host: {
 export function exec() {
   const command = Host.inputString();
 
+  const cacheId = dag.cache("flox").id()!;
+
   const stdout = dag
     .flox()
     .withWorkdir("./flox-demo")
+    .withCache("./.flox", cacheId)
     .withExec(command.split(" "))
     .stdout();
 

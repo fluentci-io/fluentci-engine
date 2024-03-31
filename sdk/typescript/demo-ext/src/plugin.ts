@@ -244,7 +244,11 @@ export class Devbox extends BaseClient {
   };
 
   withCache = (path: string, cacheId: String): Devbox => {
-    // todo
+    let mem = Memory.fromJsonObject({
+      path,
+      id: cacheId,
+    });
+    with_cache(mem.offset);
     return this;
   };
 
@@ -286,7 +290,11 @@ export class Devenv extends BaseClient {
   };
 
   withCache = (path: string, cacheId: String): Devenv => {
-    // todo
+    let mem = Memory.fromJsonObject({
+      path,
+      id: cacheId,
+    });
+    with_cache(mem.offset);
     return this;
   };
 
@@ -433,7 +441,11 @@ export class Directory extends BaseClient {
   };
 
   withCache = (path: string, cacheId: String): Directory => {
-    // todo
+    let mem = Memory.fromJsonObject({
+      path,
+      id: cacheId,
+    });
+    with_cache(mem.offset);
     return this;
   };
 
@@ -544,7 +556,12 @@ export class Flox extends BaseClient {
   };
 
   withCache = (path: string, cacheId: String): Flox => {
-    // todo
+    let mem = Memory.fromJsonObject({
+      path,
+      id: cacheId,
+      key: "",
+    });
+    with_cache(mem.offset);
     return this;
   };
 
@@ -619,7 +636,11 @@ export class Nix extends BaseClient {
   };
 
   withCache = (path: string, cacheId: String): Nix => {
-    // todo
+    let mem = Memory.fromJsonObject({
+      path,
+      id: cacheId,
+    });
+    with_cache(mem.offset);
     return this;
   };
 
@@ -725,7 +746,11 @@ export class Pipeline extends BaseClient {
   };
 
   withCache = (path: string, cacheId: String): Pipeline => {
-    // todo
+    let mem = Memory.fromJsonObject({
+      path,
+      id: cacheId,
+    });
+    with_cache(mem.offset);
     return this;
   };
 
@@ -767,7 +792,11 @@ export class Pkgx extends BaseClient {
   };
 
   withCache = (path: string, cacheId: String): Pkgx => {
-    // todo
+    let mem = Memory.fromJsonObject({
+      path,
+      id: cacheId,
+    });
+    with_cache(mem.offset);
     return this;
   };
 
@@ -809,7 +838,11 @@ export class Pixi extends BaseClient {
   };
 
   withCache = (path: string, cacheId: String): Pixi => {
-    // todo
+    let mem = Memory.fromJsonObject({
+      path,
+      id: cacheId,
+    });
+    with_cache(mem.offset);
     return this;
   };
 
@@ -893,7 +926,11 @@ export class Envhub extends BaseClient {
   };
 
   withCache = (path: string, cacheId: String): Envhub => {
-    // todo
+    let mem = Memory.fromJsonObject({
+      path,
+      id: cacheId,
+    });
+    with_cache(mem.offset);
     return this;
   };
 
