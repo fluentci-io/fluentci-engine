@@ -53,6 +53,59 @@ cargo run -p fluentci-engine -- serve
 
 - [API Documentation](./docs/api.md)
 
+## 🧩 Plugins
+
+FluentCI Engine supports plugins in WebAssembly. You can write your own plugins in Rust or any other language that can compile to WebAssembly. See [examples](./examples) for more information.
+
+### 🦀 Rust Plugin Example
+
+Create a new Rust project:
+
+```bash
+cargo new nix --lib
+```
+
+Install the `extism_pdk` and `fluentci_pdk` crates:
+
+```bash
+cargo add extism_pdk fluentci_pdk
+```
+
+Save the following code to `src/lib.rs`:
+
+```rust
+use extism_pdk::*;
+use fluentci_pdk::dag;
+
+#[plugin_fn]
+pub fn exec(command: String) -> FnResult<String> {
+    let stdout = dag()
+        .nix()?
+        .with_exec(command.split_whitespace().map(|s| s.to_string()).collect())?
+        .stdout()?;
+    Ok(stdout)
+}
+```
+
+Set the following in your `Cargo.toml`:
+
+```toml
+[lib]
+crate-type = ["cdylib"]
+```
+
+Compile the plugin to WebAssembly:
+
+```bash
+cargo build --release --target wasm32-unknown-unknown
+```
+
+Run th plugin:
+
+```bash
+fluentci-engine call -m ./target/wasm32-unknown-unknown/release/nix.wasm -- exec nix --version
+```
+
 ## ⚡ Caching
 
 FluentCI Engine supports caching. To enable it, set the following environment variables:
