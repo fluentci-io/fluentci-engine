@@ -358,9 +358,9 @@ export async function e2e(
     .withExec([
       "sh",
       "-c",
-      `cargo build ${plugins.map(
-        (item) => `-p ${item}`
-      )} --release --target wasm32-unknown-unknown`,
+      `cargo build ${plugins
+        .map((item) => `-p ${item}`)
+        .join(" ")} --release --target wasm32-unknown-unknown`,
     ])
     .withWorkdir("/app/fixtures")
     .withFile(
