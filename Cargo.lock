@@ -356,7 +356,7 @@ name = "archive"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-client",
+ "fluentci-pdk",
 ]
 
 [[package]]
@@ -1560,7 +1560,7 @@ name = "devbox"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-client",
+ "fluentci-pdk",
 ]
 
 [[package]]
@@ -1859,16 +1859,7 @@ name = "flox"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-client",
-]
-
-[[package]]
-name = "fluentci-client"
-version = "0.1.0"
-dependencies = [
- "extism-pdk",
- "fluentci-types",
- "serde",
+ "fluentci-pdk",
 ]
 
 [[package]]
@@ -1957,6 +1948,15 @@ dependencies = [
  "sha256",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "fluentci-pdk"
+version = "0.1.0"
+dependencies = [
+ "extism-pdk",
+ "fluentci-types",
+ "serde",
 ]
 
 [[package]]
@@ -2177,7 +2177,7 @@ name = "git"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-client",
+ "fluentci-pdk",
 ]
 
 [[package]]
@@ -2235,7 +2235,7 @@ name = "hash"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-client",
+ "fluentci-pdk",
 ]
 
 [[package]]
@@ -2766,7 +2766,7 @@ name = "mise"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-client",
+ "fluentci-pdk",
 ]
 
 [[package]]
@@ -2792,7 +2792,7 @@ name = "nix"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-client",
+ "fluentci-pdk",
 ]
 
 [[package]]
@@ -3184,7 +3184,7 @@ name = "pixi"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-client",
+ "fluentci-pdk",
 ]
 
 [[package]]
@@ -3208,7 +3208,7 @@ name = "pkgx"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-client",
+ "fluentci-pdk",
 ]
 
 [[package]]

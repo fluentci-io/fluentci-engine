@@ -1,5 +1,5 @@
 use extism_pdk::*;
-use fluentci_client::{dag, file::File};
+use fluentci_pdk::{dag, file::File};
 
 #[plugin_fn]
 pub fn tar_czvf(path: String) -> FnResult<Json<File>> {

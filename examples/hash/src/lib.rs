@@ -1,5 +1,5 @@
 use extism_pdk::*;
-use fluentci_client::dag;
+use fluentci_pdk::dag;
 
 #[plugin_fn]
 pub fn md5(file: String) -> FnResult<String> {

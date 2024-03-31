@@ -18,5 +18,7 @@ export function exec() {
 }
 
 export function git_tree() {
-  // todo
+  const url = Host.inputString();
+  const entries = dag.git(url).branch("main").tree().entries();
+  Host.outputString(JSON.stringify(entries, null, 2));
 }

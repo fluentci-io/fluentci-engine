@@ -67,6 +67,14 @@ export const {
   stdout,
   stderr,
   set_runner,
+  git,
+  branch,
+  commit,
+  tree,
+  md5,
+  sha256,
+  unzip,
+  tar_xzvf,
 } = Host.getFunctions();
 
 class BaseClient {
@@ -310,6 +318,134 @@ export class Directory extends BaseClient {
   path = () => {
     return this._path;
   };
+
+  directory = (path: string): Directory => {
+    let mem = Memory.fromString(path);
+    let offset = directory(mem.offset);
+    let response = Memory.find(offset).readJsonObject();
+    return new Directory({
+      id: response.id,
+      path: response.path,
+    });
+  };
+
+  entries = (): string[] => {
+    const mem = Memory.fromString(this._path);
+    const offset = entries(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response;
+  };
+
+  devbox = (): Devbox => {
+    const offset = devbox();
+    const response = Memory.find(offset).readJsonObject();
+    return new Devbox({
+      id: response.id,
+    });
+  };
+
+  devenv = (): Devenv => {
+    const offset = devenv();
+    const response = Memory.find(offset).readJsonObject();
+    return new Devenv({
+      id: response.id,
+    });
+  };
+
+  flox = (): Flox => {
+    const offset = flox();
+    const response = Memory.find(offset).readJsonObject();
+    return new Flox({
+      id: response.id,
+    });
+  };
+
+  nix = (): Nix => {
+    const offset = nix();
+    const response = Memory.find(offset).readJsonObject();
+    return new Nix({
+      id: response.id,
+    });
+  };
+
+  pkgx = (): Pkgx => {
+    const offset = pkgx();
+    const response = Memory.find(offset).readJsonObject();
+    return new Pkgx({
+      id: response.id,
+    });
+  };
+
+  pixi = (): Pixi => {
+    const offset = pixi();
+    const response = Memory.find(offset).readJsonObject();
+    return new Pixi({
+      id: response.id,
+    });
+  };
+
+  mise = (): Mise => {
+    const offset = mise();
+    const response = Memory.find(offset).readJsonObject();
+    return new Mise({
+      id: response.id,
+    });
+  };
+
+  envhub = (): Envhub => {
+    const offset = envhub();
+    const response = Memory.find(offset).readJsonObject();
+    return new Envhub({
+      id: response.id,
+    });
+  };
+
+  tarCzvf = (path: string): File => {
+    const mem = Memory.fromString(path);
+    const offset = tar_czvf(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return new File({
+      id: response.id,
+      path: response.path,
+    });
+  };
+
+  zip = (path: string): File => {
+    const mem = Memory.fromString(path);
+    const offset = zip(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return new File({
+      id: response.id,
+      path: response.path,
+    });
+  };
+
+  withExec = (args: string[]): Directory => {
+    const mem = Memory.fromJsonObject(args);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  withWorkdir = (path: string): Directory => {
+    const mem = Memory.fromString(path);
+    with_workdir(mem.offset);
+    return this;
+  };
+
+  withCache = (path: string, cacheId: String): Directory => {
+    // todo
+    return this;
+  };
+
+  stdout = (): string => {
+    const offset = stdout();
+    return Memory.find(offset).readString();
+  };
+
+  stderr = (): string => {
+    const offset = stderr();
+    return Memory.find(offset).readString();
+  };
 }
 
 export class Service extends BaseClient {
@@ -336,6 +472,48 @@ export class File extends BaseClient {
 
   path = () => {
     return this._path;
+  };
+
+  zip = (): File => {
+    const mem = Memory.fromString(this._path);
+    const offset = zip(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return new File({
+      id: response.id,
+      path: response.path,
+    });
+  };
+
+  unzip = (): Directory => {
+    const mem = Memory.fromString(this._path);
+    const offset = unzip(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return new Directory({
+      id: response.id,
+      path: response.path,
+    });
+  };
+
+  tarXzvf = (): Directory => {
+    const mem = Memory.fromString(this._path);
+    const offset = tar_xzvf(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return new Directory({
+      id: response.id,
+      path: response.path,
+    });
+  };
+
+  md5 = (): string => {
+    const mem = Memory.fromString(this._path);
+    const offset = md5(mem.offset);
+    return Memory.find(offset).readString();
+  };
+
+  sha256 = (): string => {
+    const mem = Memory.fromString(this._path);
+    const offset = sha256(mem.offset);
+    return Memory.find(offset).readString();
   };
 }
 
@@ -391,6 +569,26 @@ export class Git extends BaseClient {
 
   id = () => {
     return this._id;
+  };
+
+  branch = (name: string): Git => {
+    let mem = Memory.fromString(name);
+    branch(mem.offset);
+    return this;
+  };
+
+  commit = (): string => {
+    let offset = commit();
+    return Memory.find(offset).readString();
+  };
+
+  tree = (): Directory => {
+    let offset = tree();
+    let response = Memory.find(offset).readJsonObject();
+    return new Directory({
+      id: response.id,
+      path: response.path,
+    });
   };
 }
 
