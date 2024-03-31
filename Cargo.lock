@@ -1952,7 +1952,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-pdk"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "extism-pdk",
  "fluentci-types",
@@ -1992,7 +1992,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-types"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
 ]
