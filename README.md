@@ -30,7 +30,7 @@ FluentCI Engine is a programmable CI/CD engine that is designed to be simple, fl
 - [x] SDK for writing pipelines in TypeScript, see [@fluentci/sdk](./sdk/typescript)
 - [x] GraphQL API, see [API Documentation](./docs/api.md)
 - [x] OpenTelemetry tracing
-- [x] Plugin system in WebAssembly
+- [x] Plugin system in WebAssembly, see [examples](./examples)
 
 ## 🚀 Quick Start
 
