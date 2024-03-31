@@ -6,9 +6,9 @@ declare const Host: {
 };
 
 export function exec() {
-  let command = Host.inputString();
+  const command = Host.inputString();
 
-  let stdout = dag
+  const stdout = dag
     .flox()
     .withWorkdir("./flox-demo")
     .withExec(command.split(" "))

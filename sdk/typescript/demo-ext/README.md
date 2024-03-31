@@ -1,5 +1,7 @@
 # demo-ext
 
+This is a demo WebAssembly extension in TypeScript for FluentCI Engine.
+
 To install dependencies:
 
 ```bash
