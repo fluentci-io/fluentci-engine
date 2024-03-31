@@ -100,7 +100,7 @@ Compile the plugin to WebAssembly:
 cargo build --release --target wasm32-unknown-unknown
 ```
 
-Run th plugin:
+Run the plugin:
 
 ```bash
 fluentci-engine call -m ./target/wasm32-unknown-unknown/release/nix.wasm -- exec nix --version
