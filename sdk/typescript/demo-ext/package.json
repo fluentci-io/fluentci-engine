@@ -12,5 +12,9 @@
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@fluentci/sdk": "npm:@jsr/fluentci__sdk",
+    "@tsirysndr/env-js": "npm:@jsr/tsirysndr__env-js"
   }
 }

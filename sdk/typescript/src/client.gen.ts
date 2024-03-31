@@ -55,6 +55,9 @@ export type BuildArg = {
   value: string;
 };
 
+/**
+ * The root of the DAG.
+ */
 export class Client extends BaseClient {
   private readonly _checkVersionCompatibility?: boolean = undefined;
 
@@ -206,6 +209,9 @@ export class Client extends BaseClient {
   };
 }
 
+/**
+ * A directory whose contents persist across runs.
+ */
 export class Cache extends BaseClient {
   private readonly _id?: string = undefined;
 
@@ -240,6 +246,9 @@ export class Cache extends BaseClient {
   };
 }
 
+/**
+ * A devbox environment.
+ */
 export class Devbox extends BaseClient {
   private readonly _id?: string = undefined;
 
@@ -351,6 +360,9 @@ export class Devbox extends BaseClient {
   };
 }
 
+/**
+ * A devenv environment.
+ */
 export class Devenv extends BaseClient {
   private readonly _id?: string = undefined;
 
@@ -462,6 +474,9 @@ export class Devenv extends BaseClient {
   };
 }
 
+/**
+ * A directory.
+ */
 export class Directory extends BaseClient {
   private readonly _id?: string = undefined;
 
@@ -707,6 +722,9 @@ export class Directory extends BaseClient {
   };
 }
 
+/**
+ * A service.
+ */
 export class Service extends BaseClient {
   private readonly _id?: string = undefined;
 
@@ -728,6 +746,9 @@ export class Service extends BaseClient {
   };
 }
 
+/**
+ * A file.
+ */
 export class File extends BaseClient {
   private readonly _id?: string = undefined;
 
@@ -842,6 +863,9 @@ export class File extends BaseClient {
   };
 }
 
+/**
+ * A Flox environment.
+ */
 export class Flox extends BaseClient {
   private readonly _id?: string = undefined;
 
@@ -953,6 +977,9 @@ export class Flox extends BaseClient {
   };
 }
 
+/**
+ * A Git repository.
+ */
 export class Git extends BaseClient {
   private readonly _id?: string = undefined;
 
@@ -1012,6 +1039,9 @@ export class Git extends BaseClient {
   };
 }
 
+/**
+ * A Nix environment.
+ */
 export class Nix extends BaseClient {
   private readonly _id?: string = undefined;
 
@@ -1123,6 +1153,9 @@ export class Nix extends BaseClient {
   };
 }
 
+/**
+ * Creates a named sub-pipeline
+ */
 export class Pipeline extends BaseClient {
   private readonly _id?: string = undefined;
 
@@ -1356,6 +1389,9 @@ export class Pipeline extends BaseClient {
   };
 }
 
+/**
+ * A Pkgx environment.
+ */
 export class Pkgx extends BaseClient {
   private readonly _id?: string = undefined;
 
@@ -1467,6 +1503,9 @@ export class Pkgx extends BaseClient {
   };
 }
 
+/**
+ * A Pixi environment.
+ */
 export class Pixi extends BaseClient {
   private readonly _id?: string = undefined;
 
@@ -1578,6 +1617,9 @@ export class Pixi extends BaseClient {
   };
 }
 
+/**
+ * A Mise environment.
+ */
 export class Mise extends BaseClient {
   private readonly _id?: string = undefined;
 
@@ -1689,6 +1731,9 @@ export class Mise extends BaseClient {
   };
 }
 
+/**
+ * A Envhub environment.
+ */
 export class Envhub extends BaseClient {
   private readonly _id?: string = undefined;
 

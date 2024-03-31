@@ -400,14 +400,14 @@ export async function e2e(
       "call",
       "-m",
       "../target/wasm32-unknown-unknown/release/nix.wasm",
-      "which deno",
+      "exec which deno",
     ])
     .withExec([
       "fluentci-engine",
       "call",
       "-m",
       "../target/wasm32-unknown-unknown/release/devbox.wasm",
-      "which gh",
+      "exec which gh",
     ])
     .withExec([
       "fluentci-engine",
@@ -421,21 +421,21 @@ export async function e2e(
       "call",
       "-m",
       "../target/wasm32-unknown-unknown/release/mise.wasm",
-      "which bun",
+      "exec which bun",
     ])
     .withExec([
       "fluentci-engine",
       "call",
       "-m",
       "../target/wasm32-unknown-unknown/release/pixi.wasm",
-      "which php",
+      "exec which php",
     ])
     .withExec([
       "fluentci-engine",
       "call",
       "-m",
       "../target/wasm32-unknown-unknown/release/pkgx.wasm",
-      "which deno",
+      "exec which deno",
     ])
     .stdout();
 
