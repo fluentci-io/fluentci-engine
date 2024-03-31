@@ -336,7 +336,110 @@ export async function e2e(
   src: string | Directory | undefined = ".",
   _options: string[] = []
 ): Promise<string> {
-  const context = await getDirectory(env.get("WORK_DIR") || src);
+  let plugins = [
+    "archive",
+    "devbox",
+    "flox",
+    "git",
+    "hash",
+    "mise",
+    "nix",
+    "pixi",
+    "pkgx",
+  ];
+  let context = await getDirectory(".");
+  await dag
+    .pipeline("plugin-e2e")
+    .container()
+    .from("rust:1.76-bullseye")
+    .withExec(["rustup", "target", "add", "wasm32-unknown-unknown"])
+    .withDirectory("/app", context, { exclude })
+    .withWorkdir("/app")
+    .withExec([
+      "sh",
+      "-c",
+      `cargo build ${plugins.map(
+        (item) => `-p ${item}`
+      )} --release --target wasm32-unknown-unknown`,
+    ])
+    .withWorkdir("/app/fixtures")
+    .withFile(
+      "/usr/bin/fluentci-engine",
+      dag.host().file("./target/release/fluentci-engine")
+    )
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/flox.wasm",
+      "exec which jq",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/archive.wasm",
+      "tar_czvf flox-demo/.flox",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/hash.wasm",
+      "md5 flox-demo/.flox.tar.gz",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/hash.wasm",
+      "sha256 flox-demo/.flox.tar.gz",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/nix.wasm",
+      "which deno",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/devbox.wasm",
+      "which gh",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/git.wasm",
+      "git_tree https://github.com/tsirysndr/me",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/mise.wasm",
+      "which bun",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/pixi.wasm",
+      "which php",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/pkgx.wasm",
+      "which deno",
+    ])
+    .stdout();
+
+  context = await getDirectory(env.get("WORK_DIR") || src);
   const engine = dag
     .container()
     .from("debian:bookworm")
