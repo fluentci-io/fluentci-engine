@@ -1,0 +1,11 @@
+[package]
+edition = "2021"
+name = "fluentci-pdk"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+extism-pdk = "1.1.0"
+fluentci-types = {path = "../types", version = "0.1.0"}
+serde = {version = "1.0.197", features = ["serde_derive", "derive"]}

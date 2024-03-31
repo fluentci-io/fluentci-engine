@@ -16,6 +16,7 @@ anyhow = "1.0.80"
 async-graphql = "7.0.2"
 async-graphql-actix-web = "7.0.2"
 dirs = "5.0.1"
+fluentci-common = {path = "../common", version = "0.1.0"}
 fluentci-core = {path = "../core", version = "0.1.4"}
 fluentci-ext = {path = "../ext", version = "0.1.4"}
 fluentci-types = {path = "../types", version = "0.1.0"}

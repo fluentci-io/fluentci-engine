@@ -4,5 +4,10 @@
   "exports": "./mod.ts",
   "tasks": {
     "dev": "deno run --watch main.ts"
+  },
+  "publish": {
+    "exclude": [
+      "demo-ext/*"
+    ]
   }
 }

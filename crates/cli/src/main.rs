@@ -1,5 +1,6 @@
 use anyhow::Error;
 use clap::{arg, Arg, Command};
+use cmd::call::call;
 use cmd::run::run;
 use cmd::serve::serve;
 
@@ -34,6 +35,17 @@ fn cli() -> Command<'static> {
                 .about("Executes the specified command in a FluentCI Session"),
         )
         .subcommand(
+            Command::new("call")
+                .arg(arg!(--module -m <PATH> "path or url to the module to call").required(true))
+                .arg(
+                    Arg::new("command")
+                        .multiple_occurrences(true)
+                        .multiple_values(true)
+                        .required(true),
+                )
+                .about("Calls the specified function in a FluentCI Session"),
+        )
+        .subcommand(
             Command::new("serve")
                 .arg(arg!(--listen "The address to listen on").default_value("127.0.0.1:6880"))
                 .about("Starts the FluentCI Engine server"),
@@ -51,6 +63,12 @@ async fn main() -> Result<(), Error> {
         Some(("serve", args)) => {
             let listen = args.value_of("listen").unwrap();
             serve(listen).await?;
+        }
+        Some(("call", args)) => {
+            let module = args.value_of("module").unwrap();
+            let command = args.values_of("command").unwrap();
+            let command = command.collect::<Vec<_>>().join(" ");
+            call(module, &command);
         }
         _ => cli().print_help()?,
     };

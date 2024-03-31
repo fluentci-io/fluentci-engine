@@ -1,11 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 use async_graphql::{Context, Error, Object, ID};
-use fluentci_core::deps::{Graph, GraphCommand};
-use fluentci_ext::git_checkout::GitCheckout as GitCheckoutExt;
-use fluentci_ext::git_last_commit::GitLastCommit as GitLastCommitExt;
-use fluentci_ext::runner::Runner as RunnerExt;
-use uuid::Uuid;
+use fluentci_common::git as common_git;
+use fluentci_core::deps::Graph;
+use fluentci_types::git as types;
 
 use super::directory::Directory;
 
@@ -22,90 +20,25 @@ impl Git {
 
     async fn branch(&self, ctx: &Context<'_>, name: String) -> Result<&Git, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        let mut graph = graph.lock().unwrap();
-        graph.runner = Arc::new(Box::new(GitCheckoutExt::default()));
-        graph.runner.setup()?;
-
-        let id = Uuid::new_v4().to_string();
-
-        let dep_id = graph.vertices[graph.size() - 1].id.clone();
-        let deps = match graph.size() {
-            1 => vec![],
-            _ => vec![dep_id],
-        };
-        graph.execute(GraphCommand::AddVertex(
-            id.clone(),
-            "git-checkout".into(),
-            name,
-            deps,
-            Arc::new(Box::new(GitCheckoutExt::default())),
-        ));
-        graph.execute_vertex(&id)?;
-
-        if graph.size() > 2 {
-            let x = graph.size() - 2;
-            let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
-        }
-
+        common_git::branch(graph.clone(), name)?;
         Ok(&self)
     }
 
     async fn commit(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        let mut graph = graph.lock().unwrap();
-        graph.runner = Arc::new(Box::new(GitLastCommitExt::default()));
-        graph.runner.setup()?;
-
-        let id = Uuid::new_v4().to_string();
-
-        let dep_id = graph.vertices[graph.size() - 1].id.clone();
-        let deps = match graph.size() {
-            1 => vec![],
-            _ => vec![dep_id],
-        };
-        graph.execute(GraphCommand::AddVertex(
-            id.clone(),
-            "git-last-commit".into(),
-            "".into(),
-            deps,
-            Arc::new(Box::new(GitLastCommitExt::default())),
-        ));
-        graph.execute_vertex(&id)?;
-
-        if graph.size() > 2 {
-            let x = graph.size() - 2;
-            let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
-        }
-
-        Ok("".into())
+        let commit = common_git::commit(graph.clone())?;
+        Ok(commit)
     }
 
     async fn tree(&self, ctx: &Context<'_>) -> Result<Directory, Error> {
-        let id = Uuid::new_v4().to_string();
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        let mut graph = graph.lock().unwrap();
+        let directory = common_git::tree(graph.clone())?;
+        Ok(Directory::from(directory))
+    }
+}
 
-        let dep_id = graph.vertices[graph.size() - 1].id.clone();
-
-        graph.execute(GraphCommand::AddVertex(
-            id.clone(),
-            "tree".into(),
-            "".into(),
-            vec![dep_id],
-            Arc::new(Box::new(RunnerExt::default())),
-        ));
-
-        let x = graph.size() - 2;
-        let y = graph.size() - 1;
-        graph.execute(GraphCommand::AddEdge(x, y));
-        graph.runner = Arc::new(Box::new(RunnerExt::default()));
-
-        let directory = Directory {
-            id: ID(id),
-            path: graph.work_dir.clone(),
-        };
-        Ok(directory)
+impl From<types::Git> for Git {
+    fn from(git: types::Git) -> Self {
+        Self { id: ID(git.id) }
     }
 }

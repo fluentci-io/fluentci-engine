@@ -1,0 +1,20 @@
+[package]
+edition = "2021"
+name = "fluentci-shared"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+extism = "1.2.0"
+extism-pdk = "1.1.0"
+fluentci-common = {path = "../common", version = "0.1.0"}
+fluentci-core = {path = "../core", version = "0.1.4"}
+fluentci-ext = {path = "../ext", version = "0.1.4"}
+fluentci-types = {path = "../types", version = "0.1.0"}
+serde = {version = "1.0.197", features = ["serde_derive", "derive"]}
+uuid = {version = "1.8.0", features = [
+  "v4",
+  "fast-rng",
+  "macro-diagnostics",
+]}

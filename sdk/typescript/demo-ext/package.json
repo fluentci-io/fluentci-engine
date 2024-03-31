@@ -1,0 +1,16 @@
+{
+  "name": "demo-ext",
+  "module": "index.ts",
+  "scripts": {
+    "build": "node esbuild.js && extism-js dist/index.js -i src/index.d.ts -o bundled.wasm",
+    "build-hash": "node esbuild.js && extism-js dist/hash.js -i src/hash.d.ts -o hash.wasm"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "esbuild": "^0.20.2",
+    "typescript": "^5.4.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
