@@ -1895,7 +1895,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-engine"
-version = "0.1.4"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1934,7 +1934,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-graphql"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -1961,7 +1961,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-server"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "actix-cors",
  "actix-web",
