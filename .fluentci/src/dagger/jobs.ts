@@ -351,7 +351,7 @@ export async function e2e(
   await dag
     .pipeline("plugin-e2e")
     .container()
-    .from("rust:1.76-bullseye")
+    .from("rust:1.76-bookworm")
     .withExec(["rustup", "target", "add", "wasm32-unknown-unknown"])
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
