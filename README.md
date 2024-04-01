@@ -108,7 +108,7 @@ fluentci-engine call -m ./target/wasm32-unknown-unknown/release/nix.wasm -- exec
 
 ### 🌈 Builtin functions
 
-FluentCI Engine provides some builtin functions from that you can use in your plugins:
+FluentCI Plugin Development Kit ([fluentci_pdk](https://docs.rs/fluentci-pdk/latest/fluentci_pdk)) provides some builtin functions from that you can use in your plugins:
 
 #### devbox
 
