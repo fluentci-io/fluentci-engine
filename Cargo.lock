@@ -353,7 +353,7 @@ checksum = "7d5a26814d8dcb93b0e5a0ff3c6d80a8843bafb21b39e8e18a6f05471870e110"
 
 [[package]]
 name = "archive"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "extism-pdk",
  "fluentci-pdk",
@@ -1557,7 +1557,7 @@ dependencies = [
 
 [[package]]
 name = "devbox"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "extism-pdk",
  "fluentci-pdk",
@@ -1856,7 +1856,7 @@ dependencies = [
 
 [[package]]
 name = "flox"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "extism-pdk",
  "fluentci-pdk",
@@ -1952,7 +1952,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-pdk"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "extism-pdk",
  "fluentci-types",
@@ -2174,7 +2174,7 @@ dependencies = [
 
 [[package]]
 name = "git"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "extism-pdk",
  "fluentci-pdk",
@@ -2232,7 +2232,7 @@ dependencies = [
 
 [[package]]
 name = "hash"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "extism-pdk",
  "fluentci-pdk",
@@ -2763,7 +2763,7 @@ dependencies = [
 
 [[package]]
 name = "mise"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "extism-pdk",
  "fluentci-pdk",
@@ -2789,7 +2789,7 @@ dependencies = [
 
 [[package]]
 name = "nix"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "extism-pdk",
  "fluentci-pdk",
@@ -3181,7 +3181,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pixi"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "extism-pdk",
  "fluentci-pdk",
@@ -3205,7 +3205,7 @@ checksum = "d231b230927b5e4ad203db57bbcbee2802f6bce620b1e4a9024a07d94e2907ec"
 
 [[package]]
 name = "pkgx"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "extism-pdk",
  "fluentci-pdk",
