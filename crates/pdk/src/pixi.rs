@@ -24,9 +24,15 @@ impl From<types::Pixi> for Pixi {
 }
 
 impl Pixi {
-    pub fn with_exec(&self, args: Vec<String>) -> Result<Pixi, Error> {
+    pub fn with_exec(&self, args: Vec<&str>) -> Result<Pixi, Error> {
         unsafe { set_runner("pixi".into()) }?;
-        unsafe { with_exec(Json::from(args)) }?;
+        unsafe {
+            with_exec(Json::from(
+                args.into_iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>(),
+            ))
+        }?;
         Ok(Pixi {
             id: self.id.clone(),
         })

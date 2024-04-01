@@ -24,9 +24,15 @@ impl From<types::Flox> for Flox {
 }
 
 impl Flox {
-    pub fn with_exec(&self, args: Vec<String>) -> Result<Flox, Error> {
+    pub fn with_exec(&self, args: Vec<&str>) -> Result<Flox, Error> {
         unsafe { set_runner("flox".into()) }?;
-        unsafe { with_exec(Json::from(args)) }?;
+        unsafe {
+            with_exec(Json::from(
+                args.into_iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>(),
+            ))
+        }?;
         Ok(Flox {
             id: self.id.clone(),
         })

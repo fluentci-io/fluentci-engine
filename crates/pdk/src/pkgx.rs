@@ -24,9 +24,15 @@ impl From<types::Pkgx> for Pkgx {
 }
 
 impl Pkgx {
-    pub fn with_exec(&self, args: Vec<String>) -> Result<Pkgx, Error> {
+    pub fn with_exec(&self, args: Vec<&str>) -> Result<Pkgx, Error> {
         unsafe { set_runner("pkgx".into()) }?;
-        unsafe { with_exec(Json::from(args)) }?;
+        unsafe {
+            with_exec(Json::from(
+                args.into_iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>(),
+            ))
+        }?;
         Ok(Pkgx {
             id: self.id.clone(),
         })

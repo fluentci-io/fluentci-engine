@@ -104,8 +104,14 @@ impl Directory {
         Ok(file.into_inner())
     }
 
-    pub fn with_exec(&self, args: Vec<String>) -> Result<Directory, Error> {
-        unsafe { with_exec(Json::from(args)) }?;
+    pub fn with_exec(&self, args: Vec<&str>) -> Result<Directory, Error> {
+        unsafe {
+            with_exec(Json::from(
+                args.into_iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>(),
+            ))
+        }?;
         Ok(Directory {
             id: self.id.clone(),
             path: self.path.clone(),

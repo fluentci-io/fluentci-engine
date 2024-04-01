@@ -24,9 +24,15 @@ impl From<types::Devenv> for Devenv {
 }
 
 impl Devenv {
-    pub fn with_exec(&self, args: Vec<String>) -> Result<Devenv, Error> {
+    pub fn with_exec(&self, args: Vec<&str>) -> Result<Devenv, Error> {
         unsafe { set_runner("devenv".into()) }?;
-        unsafe { with_exec(Json::from(args)) }?;
+        unsafe {
+            with_exec(Json::from(
+                args.into_iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>(),
+            ))
+        }?;
         Ok(Devenv {
             id: self.id.clone(),
         })

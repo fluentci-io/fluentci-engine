@@ -99,8 +99,14 @@ impl Pipeline {
         Ok(envhub.into_inner())
     }
 
-    pub fn with_exec(&self, args: Vec<String>) -> Result<Pipeline, Error> {
-        unsafe { with_exec(Json::from(args)) }?;
+    pub fn with_exec(&self, args: Vec<&str>) -> Result<Pipeline, Error> {
+        unsafe {
+            with_exec(Json::from(
+                args.into_iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>(),
+            ))
+        }?;
         Ok(Pipeline {
             id: self.id.clone(),
         })
@@ -117,7 +123,7 @@ impl Pipeline {
         unsafe {
             with_cache(Json(Cache {
                 id: cache_id,
-                path,   
+                path,
                 ..Default::default()
             }))
         }?;

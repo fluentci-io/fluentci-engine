@@ -6,7 +6,7 @@ pub fn exec(command: String) -> FnResult<String> {
     let stdout = dag()
         .pixi()?
         .with_workdir("./pixi-demo".into())?
-        .with_exec(command.split_whitespace().map(|s| s.to_string()).collect())?
+        .with_exec(command.split_whitespace().collect())?
         .stdout()?;
     Ok(stdout)
 }

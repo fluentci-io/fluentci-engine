@@ -24,9 +24,15 @@ impl From<types::Mise> for Mise {
 }
 
 impl Mise {
-    pub fn with_exec(&self, args: Vec<String>) -> Result<Mise, Error> {
+    pub fn with_exec(&self, args: Vec<&str>) -> Result<Mise, Error> {
         unsafe { set_runner("mise".into()) }?;
-        unsafe { with_exec(Json::from(args)) }?;
+        unsafe {
+            with_exec(Json::from(
+                args.into_iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>(),
+            ))
+        }?;
         Ok(Mise {
             id: self.id.clone(),
         })

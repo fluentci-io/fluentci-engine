@@ -24,9 +24,15 @@ impl From<types::Envhub> for Envhub {
 }
 
 impl Envhub {
-    pub fn with_exec(&self, args: Vec<String>) -> Result<Envhub, Error> {
+    pub fn with_exec(&self, args: Vec<&str>) -> Result<Envhub, Error> {
         unsafe { set_runner("envhub".into()) }?;
-        unsafe { with_exec(Json::from(args)) }?;
+        unsafe {
+            with_exec(Json::from(
+                args.into_iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>(),
+            ))
+        }?;
         Ok(Envhub {
             id: self.id.clone(),
         })

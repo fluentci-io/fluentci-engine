@@ -8,7 +8,7 @@ pub fn exec(command: String) -> FnResult<String> {
         .flox()?
         .with_workdir("./flox-demo".into())?
         .with_cache("./.flox".into(), cache_id)?
-        .with_exec(command.split_whitespace().map(|s| s.to_string()).collect())?
+        .with_exec(command.split_whitespace().collect())?
         .stdout()?;
     Ok(stdout)
 }
