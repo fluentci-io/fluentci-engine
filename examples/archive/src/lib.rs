@@ -15,12 +15,12 @@ pub fn zip(path: String) -> FnResult<Json<File>> {
 
 #[plugin_fn]
 pub fn tar_xzvf(path: String) -> FnResult<Json<Vec<String>>> {
-    let entries = dag().file(path)?.tar_xzvf()?.entries()?;
+    let entries = dag().file(&path)?.tar_xzvf()?.entries()?;
     Ok(Json(entries))
 }
 
 #[plugin_fn]
 pub fn unzip(path: String) -> FnResult<Json<Vec<String>>> {
-    let entries = dag().file(path)?.unzip()?.entries()?;
+    let entries = dag().file(&path)?.unzip()?.entries()?;
     Ok(Json(entries))
 }

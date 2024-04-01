@@ -23,8 +23,8 @@ impl From<types::Git> for Git {
 }
 
 impl Git {
-    pub fn branch(&self, name: String) -> Result<Git, Error> {
-        unsafe { branch(name) }?;
+    pub fn branch(&self, name: &str) -> Result<Git, Error> {
+        unsafe { branch(name.into()) }?;
         Ok(Git {
             id: self.id.clone(),
         })

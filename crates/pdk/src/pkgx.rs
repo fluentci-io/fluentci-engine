@@ -38,18 +38,18 @@ impl Pkgx {
         })
     }
 
-    pub fn with_workdir(&self, path: String) -> Result<Pkgx, Error> {
-        unsafe { with_workdir(path) }?;
+    pub fn with_workdir(&self, path: &str) -> Result<Pkgx, Error> {
+        unsafe { with_workdir(path.into()) }?;
         Ok(Pkgx {
             id: self.id.clone(),
         })
     }
 
-    pub fn with_cache(&self, path: String, cache_id: String) -> Result<Pkgx, Error> {
+    pub fn with_cache(&self, path: &str, cache_id: &str) -> Result<Pkgx, Error> {
         unsafe {
             with_cache(Json(Cache {
-                id: cache_id,
-                path,
+                id: cache_id.into(),
+                path: path.into(),
                 ..Default::default()
             }))
         }?;

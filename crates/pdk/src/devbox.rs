@@ -38,18 +38,18 @@ impl Devbox {
         })
     }
 
-    pub fn with_workdir(&self, path: String) -> Result<Devbox, Error> {
-        unsafe { with_workdir(path) }?;
+    pub fn with_workdir(&self, path: &str) -> Result<Devbox, Error> {
+        unsafe { with_workdir(path.into()) }?;
         Ok(Devbox {
             id: self.id.clone(),
         })
     }
 
-    pub fn with_cache(&self, path: String, cache_id: String) -> Result<Devbox, Error> {
+    pub fn with_cache(&self, path: &str, cache_id: &str) -> Result<Devbox, Error> {
         unsafe {
             with_cache(Json(Cache {
-                id: cache_id,
-                path,
+                id: cache_id.into(),
+                path: path.into(),
                 ..Default::default()
             }))
         }?;

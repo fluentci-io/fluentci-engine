@@ -5,7 +5,7 @@ use fluentci_pdk::dag;
 pub fn exec(command: String) -> FnResult<String> {
     let stdout = dag()
         .nix()?
-        .with_workdir("./nix-demo".into())?
+        .with_workdir("./nix-demo")?
         .with_exec(command.split_whitespace().collect())?
         .stdout()?;
     Ok(stdout)

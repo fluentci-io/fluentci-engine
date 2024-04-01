@@ -38,18 +38,18 @@ impl Envhub {
         })
     }
 
-    pub fn with_workdir(&self, path: String) -> Result<Envhub, Error> {
-        unsafe { with_workdir(path) }?;
+    pub fn with_workdir(&self, path: &str) -> Result<Envhub, Error> {
+        unsafe { with_workdir(path.into()) }?;
         Ok(Envhub {
             id: self.id.clone(),
         })
     }
 
-    pub fn with_cache(&self, path: String, cache_id: String) -> Result<Envhub, Error> {
+    pub fn with_cache(&self, path: &str, cache_id: &str) -> Result<Envhub, Error> {
         unsafe {
             with_cache(Json(Cache {
-                id: cache_id,
-                path,
+                id: cache_id.into(),
+                path: path.into(),
                 ..Default::default()
             }))
         }?;

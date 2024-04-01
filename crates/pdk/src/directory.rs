@@ -44,8 +44,8 @@ impl From<types::Directory> for Directory {
 }
 
 impl Directory {
-    pub fn directory(&self, path: String) -> Result<Directory, Error> {
-        let directory = unsafe { directory(path.clone()) }?;
+    pub fn directory(&self, path: &str) -> Result<Directory, Error> {
+        let directory = unsafe { directory(path.into()) }?;
         Ok(directory.into_inner())
     }
 

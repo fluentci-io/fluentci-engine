@@ -144,7 +144,7 @@ Example:
 
 ```rust
 dag()
-  .directory(".".to_string())?
+  .directory(".")?
   .with_exec(vec!["ls", "-la"])?
   .stdout()?;
 ```
@@ -170,7 +170,7 @@ Example:
 
 ```rust
 dag()
-  .file("Cargo.toml".to_string())?
+  .file("Cargo.toml")?
   .path()?;
 ```
 
@@ -195,8 +195,8 @@ Example:
 
 ```rust
 dag()
-  .git("https://github.com/tsirysndr/me".to_string())?
-  .branch("main".to_string())?
+  .git("https://github.com/tsirysndr/me")?
+  .branch("main")?
   .tree()?
   .entries()?;
 ```
@@ -209,7 +209,7 @@ Example:
 
 ```rust
 dag()
-  .http("https://example.com".to_string())?
+  .http("https://example.com")?
   .path()?;
 ```
 
@@ -247,7 +247,7 @@ Example:
 
 ```rust
 dag()
-  .pipeline("example".to_string())?
+  .pipeline("example")?
   .with_exec(vec!["echo", "Hello, World!"])?
   .stdout()?;
 ```

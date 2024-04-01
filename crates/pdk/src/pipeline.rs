@@ -75,15 +75,15 @@ impl Pipeline {
         Ok(pixi.into_inner())
     }
 
-    pub fn git(&self, url: String) -> Result<Git, Error> {
+    pub fn git(&self, url: &str) -> Result<Git, Error> {
         unsafe { set_runner("git".into()) }?;
-        let git = unsafe { git(url) }?;
+        let git = unsafe { git(url.into()) }?;
         Ok(git.into_inner())
     }
 
-    pub fn http(&self, url: String) -> Result<File, Error> {
+    pub fn http(&self, url: &str) -> Result<File, Error> {
         unsafe { set_runner("http".into()) }?;
-        let file = unsafe { http(url) }?;
+        let file = unsafe { http(url.into()) }?;
         Ok(file.into_inner())
     }
 
@@ -112,18 +112,18 @@ impl Pipeline {
         })
     }
 
-    pub fn with_workdir(&self, path: String) -> Result<Pipeline, Error> {
-        unsafe { with_workdir(path) }?;
+    pub fn with_workdir(&self, path: &str) -> Result<Pipeline, Error> {
+        unsafe { with_workdir(path.into()) }?;
         Ok(Pipeline {
             id: self.id.clone(),
         })
     }
 
-    pub fn with_cache(&self, path: String, cache_id: String) -> Result<Pipeline, Error> {
+    pub fn with_cache(&self, path: &str, cache_id: &str) -> Result<Pipeline, Error> {
         unsafe {
             with_cache(Json(Cache {
-                id: cache_id,
-                path,
+                id: cache_id.into(),
+                path: path.into(),
                 ..Default::default()
             }))
         }?;

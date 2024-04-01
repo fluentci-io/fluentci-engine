@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "hash"
-version = "0.1.2"
+version = "0.1.3"
 
 [lib]
 crate_type = ["cdylib"]
@@ -10,4 +10,4 @@ crate_type = ["cdylib"]
 
 [dependencies]
 extism-pdk = "1.1.0"
-fluentci-pdk = {path = "../../crates/pdk", version = "0.1.2"}
+fluentci-pdk = {path = "../../crates/pdk", version = "0.1.3"}

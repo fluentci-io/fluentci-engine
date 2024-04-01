@@ -43,8 +43,8 @@ pub fn dag() -> Client {
 }
 
 impl Client {
-    pub fn cache(&self, key: String) -> Result<Cache, Error> {
-        unsafe { cache(key) }.map(|cache| cache.into_inner())
+    pub fn cache(&self, key: &str) -> Result<Cache, Error> {
+        unsafe { cache(key.into()) }.map(|cache| cache.into_inner())
     }
 
     pub fn devbox(&self) -> Result<Devbox, Error> {
@@ -59,20 +59,20 @@ impl Client {
         unsafe { envhub() }.map(|envhub| envhub.into_inner())
     }
 
-    pub fn file(&self, path: String) -> Result<File, Error> {
-        unsafe { file(path) }.map(|file| file.into_inner())
+    pub fn file(&self, path: &str) -> Result<File, Error> {
+        unsafe { file(path.into()) }.map(|file| file.into_inner())
     }
 
     pub fn flox(&self) -> Result<Flox, Error> {
         unsafe { flox() }.map(|flox| flox.into_inner())
     }
 
-    pub fn git(&self, url: String) -> Result<Git, Error> {
-        unsafe { git(url) }.map(|git| git.into_inner())
+    pub fn git(&self, url: &str) -> Result<Git, Error> {
+        unsafe { git(url.into()) }.map(|git| git.into_inner())
     }
 
-    pub fn http(&self, url: String) -> Result<File, Error> {
-        unsafe { http(url) }.map(|file| file.into_inner())
+    pub fn http(&self, url: &str) -> Result<File, Error> {
+        unsafe { http(url.into()) }.map(|file| file.into_inner())
     }
 
     pub fn mise(&self) -> Result<Mise, Error> {
@@ -83,8 +83,8 @@ impl Client {
         unsafe { nix() }.map(|nix| nix.into_inner())
     }
 
-    pub fn pipeline(&self, name: String) -> Result<Pipeline, Error> {
-        unsafe { pipeline(name) }.map(|pipeline| pipeline.into_inner())
+    pub fn pipeline(&self, name: &str) -> Result<Pipeline, Error> {
+        unsafe { pipeline(name.into()) }.map(|pipeline| pipeline.into_inner())
     }
 
     pub fn pixi(&self) -> Result<Pixi, Error> {
