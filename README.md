@@ -106,6 +106,178 @@ Run the plugin:
 fluentci-engine call -m ./target/wasm32-unknown-unknown/release/nix.wasm -- exec nix --version
 ```
 
+### 🌈 Builtin functions
+
+FluentCI Engine provides some builtin functions from that you can use in your plugins:
+
+#### devbox
+
+Setup a Devbox Environment.
+
+Example:
+
+```rust
+dag()
+  .devbox()?
+  .with_exec(vec!["devbox", "version"].map(|s| s.to_string()).collect())?
+  .stdout()?;
+```
+
+#### devenv
+
+Setup a Devenv Environment.
+
+Example:
+
+```rust
+dag()
+  .devenv()?
+  .with_exec(vec!["devenv", "version"].map(|s| s.to_string()).collect())?
+  .stdout()?;
+```
+
+#### directory
+
+Load a directory at the given path.
+
+Example:
+
+```rust
+dag()
+  .directory(".".to_string())?
+  .with_exec(vec!["ls", "-la"].map(|s| s.to_string()).collect())?
+  .stdout()?;
+```
+
+#### envhub
+
+Setup an EnvHub Environment.
+
+Example:
+
+```rust
+dag()
+  .envhub()?
+  .with_exec(vec!["envhub", "--version"].map(|s| s.to_string()).collect())?
+  .stdout()?;
+```
+
+#### file
+
+Load a file at the given path.
+
+Example:
+
+```rust
+dag()
+  .file("Cargo.toml".to_string())?
+  .path()?;
+```
+
+#### flox
+
+Setup a Flox Environment.
+
+Example:
+
+```rust
+dag()
+  .flox()?
+  .with_exec(vec!["flox", "--version"].map(|s| s.to_string()).collect())?
+  .stdout()?;
+```
+
+#### git
+
+Load a Git repository at the given URL.
+
+Example:
+
+```rust
+dag()
+  .git("https://github.com/tsirysndr/me".to_string())?
+  .branch("main".to_string())?
+  .tree()?
+  .entries()?;
+```
+
+#### http
+
+Load a HTTP resource at the given URL.
+
+Example:
+
+```rust
+dag()
+  .http("https://example.com".to_string())?
+  .path()?;
+```
+
+#### mise
+
+Setup a Mise Environment.
+
+Example:
+
+```rust
+dag()
+  .mise()?
+  .with_exec(vec!["mise", "--version"].map(|s| s.to_string()).collect())?
+  .stdout()?;
+```
+
+#### nix
+
+Setup a Nix Environment.
+
+Example:
+
+```rust
+dag()
+  .nix()?
+  .with_exec(vec!["nix", "--version"].map(|s| s.to_string()).collect())?
+  .stdout()?;
+```
+
+#### pipeline
+
+Create a new pipeline.
+
+Example:
+
+```rust
+dag()
+  .pipeline("example".to_string())?
+  .with_exec(vec!["echo", "Hello, World!"].map(|s| s.to_string()).collect())?
+  .stdout()?;
+```
+
+#### pixi
+
+Setup a Pixi Environment.
+
+Example:
+
+```rust
+dag()
+  .pixi()?
+  .with_exec(vec!["pixi", "--version"].map(|s| s.to_string()).collect())?
+  .stdout()?;
+```
+
+#### pkgx
+
+Setup a Pkgx Environment.
+
+Example:
+
+```rust
+dag()
+  .pkgx()?
+  .with_exec(vec!["pkgx", "--version"].map(|s| s.to_string()).collect())?
+  .stdout()?;
+```
+
 ## ⚡ Caching
 
 FluentCI Engine supports caching. To enable it, set the following environment variables:
