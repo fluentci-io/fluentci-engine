@@ -81,7 +81,7 @@ use fluentci_pdk::dag;
 pub fn exec(command: String) -> FnResult<String> {
     let stdout = dag()
         .nix()?
-        .with_exec(command.split_whitespace().map(|s| s.to_string()).collect())?
+        .with_exec(command.split_whitespace().collect())?
         .stdout()?;
     Ok(stdout)
 }
@@ -119,7 +119,7 @@ Example:
 ```rust
 dag()
   .devbox()?
-  .with_exec(vec!["devbox", "version"].map(|s| s.to_string()).collect())?
+  .with_exec(vec!["devbox", "version"])?
   .stdout()?;
 ```
 
@@ -132,7 +132,7 @@ Example:
 ```rust
 dag()
   .devenv()?
-  .with_exec(vec!["devenv", "version"].map(|s| s.to_string()).collect())?
+  .with_exec(vec!["devenv", "version"])?
   .stdout()?;
 ```
 
@@ -145,7 +145,7 @@ Example:
 ```rust
 dag()
   .directory(".".to_string())?
-  .with_exec(vec!["ls", "-la"].map(|s| s.to_string()).collect())?
+  .with_exec(vec!["ls", "-la"])?
   .stdout()?;
 ```
 
@@ -158,7 +158,7 @@ Example:
 ```rust
 dag()
   .envhub()?
-  .with_exec(vec!["envhub", "--version"].map(|s| s.to_string()).collect())?
+  .with_exec(vec!["envhub", "--version"])?
   .stdout()?;
 ```
 
@@ -183,7 +183,7 @@ Example:
 ```rust
 dag()
   .flox()?
-  .with_exec(vec!["flox", "--version"].map(|s| s.to_string()).collect())?
+  .with_exec(vec!["flox", "--version"])?
   .stdout()?;
 ```
 
@@ -222,7 +222,7 @@ Example:
 ```rust
 dag()
   .mise()?
-  .with_exec(vec!["mise", "--version"].map(|s| s.to_string()).collect())?
+  .with_exec(vec!["mise", "--version"])?
   .stdout()?;
 ```
 
@@ -235,7 +235,7 @@ Example:
 ```rust
 dag()
   .nix()?
-  .with_exec(vec!["nix", "--version"].map(|s| s.to_string()).collect())?
+  .with_exec(vec!["nix", "--version"])?
   .stdout()?;
 ```
 
@@ -248,7 +248,7 @@ Example:
 ```rust
 dag()
   .pipeline("example".to_string())?
-  .with_exec(vec!["echo", "Hello, World!"].map(|s| s.to_string()).collect())?
+  .with_exec(vec!["echo", "Hello, World!"])?
   .stdout()?;
 ```
 
@@ -261,7 +261,7 @@ Example:
 ```rust
 dag()
   .pixi()?
-  .with_exec(vec!["pixi", "--version"].map(|s| s.to_string()).collect())?
+  .with_exec(vec!["pixi", "--version"])?
   .stdout()?;
 ```
 
@@ -274,7 +274,7 @@ Example:
 ```rust
 dag()
   .pkgx()?
-  .with_exec(vec!["pkgx", "--version"].map(|s| s.to_string()).collect())?
+  .with_exec(vec!["pkgx", "--version"])?
   .stdout()?;
 ```
 
