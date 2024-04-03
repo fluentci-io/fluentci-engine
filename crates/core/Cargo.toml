@@ -7,7 +7,7 @@ keywords = ["nix", "environment", "ci", "cd", "devops"]
 license = "MPL-2.0"
 name = "fluentci-core"
 repository = "https://github.com/fluentci-io/fluentci-engine"
-version = "0.1.4"
+version = "0.1.5"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -16,7 +16,7 @@ anyhow = "1.0.81"
 chrono = "0.4.35"
 dirs = "5.0.1"
 fluentci-ext = {path = "../ext", version = "0.1.4"}
-fluentci-types = {path = "../types", version = "0.1.0"}
+fluentci-types = {path = "../types", version = "0.1.1"}
 opentelemetry = {version = "0.22.0", features = ["trace", "pin-project-lite"]}
 opentelemetry-jaeger = "0.21.0"
 opentelemetry-otlp = {version = "0.15.0", features = ["http-proto", "reqwest-rustls", "reqwest-client"], default-features = false}

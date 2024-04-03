@@ -138,7 +138,11 @@ impl Graph {
             }
 
             let (tx, rx) = mpsc::channel();
-            let mut span = tracer.start_with_context(label.to_string(), &context);
+            let mut span = tracer.start_with_context(
+                format!("{} {}", label.to_string(), self.vertices[i].command.clone()),
+                &context,
+            );
+
             span.set_attribute(KeyValue::new("command", self.vertices[i].command.clone()));
 
             if self.vertices[i].label == "withWorkdir" {
@@ -232,8 +236,9 @@ impl Graph {
             }
             let (tx, rx) = mpsc::channel();
             let label = self.vertices[i].label.clone();
-            let mut span = tracer.start(label);
-            span.set_attribute(KeyValue::new("command", self.vertices[i].command.clone()));
+            let command = self.vertices[i].command.clone();
+            let mut span = tracer.start(format!("{} {}", label, command.clone()));
+            span.set_attribute(KeyValue::new("command", command.clone()));
 
             if self.vertices[i].label == "withWorkdir" {
                 if !Path::new(&self.vertices[i].command).exists() {
@@ -297,7 +302,10 @@ impl Graph {
                 continue;
             }
 
-            let mut span = tracer.start_with_context(label.to_string(), &ctx);
+            let mut span = tracer.start_with_context(
+                format!("{} {}", label.to_string(), self.vertices[i].command.clone()),
+                &ctx,
+            );
             span.set_attribute(KeyValue::new("command", self.vertices[i].command.clone()));
             let (tx, rx) = mpsc::channel();
             match self.vertices[i].runner.post_setup(tx) {
