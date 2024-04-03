@@ -68,7 +68,7 @@ async function main() {
   const sha256 = await dag.file("./flox-demo.tar.gz").sha256();
 
   console.log(sha256);
-
+  /*
   await dag
     .pipeline("clean")
     .withWorkdir("./")
@@ -81,7 +81,7 @@ async function main() {
       "flox-demo.tar.gz",
     ])
     .stdout();
-
+*/
   const mise = await dag
     .pipeline("mise-demo")
     .mise()
