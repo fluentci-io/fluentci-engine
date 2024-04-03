@@ -338,6 +338,7 @@ export async function e2e(
 ): Promise<string> {
   let plugins = [
     "archive",
+    "chmod",
     "devbox",
     "flox",
     "git",
@@ -436,6 +437,13 @@ export async function e2e(
       "-m",
       "../target/wasm32-unknown-unknown/release/pkgx.wasm",
       "exec which deno",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/chmod.wasm",
+      "chmod a+x hello.sh",
     ])
     .stdout();
 

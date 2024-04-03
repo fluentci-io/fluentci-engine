@@ -65,6 +65,12 @@ impl File {
         let hash = file::sha256(graph.clone(), self.path.clone())?;
         Ok(hash)
     }
+
+    async fn chmod(&self, ctx: &Context<'_>, mode: String) -> Result<File, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let file = file::chmod(graph.clone(), self.path.clone(), mode)?;
+        Ok(File::from(file))
+    }
 }
 
 impl From<types::File> for File {

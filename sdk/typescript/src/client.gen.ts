@@ -861,6 +861,19 @@ export class File extends BaseClient {
     );
     return response;
   };
+
+  chmod = (mode: string): File => {
+    return new File({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "chmod",
+          args: { mode },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
 }
 
 /**

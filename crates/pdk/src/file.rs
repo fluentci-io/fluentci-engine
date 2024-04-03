@@ -1,5 +1,5 @@
 use extism_pdk::*;
-use fluentci_types::file as types;
+use fluentci_types::file::{self as types, Chmod};
 use serde::{Deserialize, Serialize};
 
 use super::directory::Directory;
@@ -12,6 +12,7 @@ extern "ExtismHost" {
     fn tar_xzvf(path: String) -> Json<Directory>;
     fn md5(path: String) -> String;
     fn sha256(path: String) -> String;
+    fn chmod(opt: Json<Chmod>) -> Json<File>;
 }
 
 #[derive(Serialize, Deserialize)]
@@ -56,5 +57,14 @@ impl File {
 
     pub fn sha256(&self) -> Result<String, Error> {
         unsafe { sha256(self.path.clone()) }
+    }
+
+    pub fn chmod(&self, mode: &str) -> Result<File, Error> {
+        let options = Chmod {
+            path: self.path.clone(),
+            mode: mode.to_string(),
+        };
+        let file = unsafe { chmod(Json::from(options)) }?;
+        Ok(file.into_inner())
     }
 }

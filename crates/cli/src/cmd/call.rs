@@ -57,6 +57,7 @@ pub fn call(module: &str, command: &str) {
         .with_function("tar_xzvf", [PTR], [PTR], user_data.clone(), tar_xzvf)
         .with_function("md5", [PTR], [PTR], user_data.clone(), md5)
         .with_function("sha256", [PTR], [PTR], user_data.clone(), sha256)
+        .with_function("chmod", [PTR], [PTR], user_data.clone(), chmod)
         .build()
         .unwrap();
 
