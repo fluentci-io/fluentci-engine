@@ -343,6 +343,7 @@ export async function e2e(
     "flox",
     "git",
     "hash",
+    "http",
     "mise",
     "nix",
     "pixi",
@@ -444,6 +445,13 @@ export async function e2e(
       "-m",
       "../target/wasm32-unknown-unknown/release/chmod.wasm",
       "chmod a+x hello.sh",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/http.wasm",
+      "get https://fluentci.io",
     ])
     .stdout();
 
