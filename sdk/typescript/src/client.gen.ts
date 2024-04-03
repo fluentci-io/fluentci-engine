@@ -321,6 +321,19 @@ export class Devbox extends BaseClient {
     });
   };
 
+  withFile = (path: string, fileId: string): Devbox => {
+    return new Devbox({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withFile",
+          args: { path, fileId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
@@ -429,6 +442,19 @@ export class Devenv extends BaseClient {
         {
           operation: "withCache",
           args: { path, cacheId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withFile = (path: string, fileId: string): Devenv => {
+    return new Devenv({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withFile",
+          args: { path, fileId },
         },
       ],
       ctx: this._ctx,
@@ -665,6 +691,19 @@ export class Directory extends BaseClient {
         {
           operation: "withCache",
           args: { path, cacheId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withFile = (path: string, fileId: string): Pipeline => {
+    return new Pipeline({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withFile",
+          args: { path, fileId },
         },
       ],
       ctx: this._ctx,
@@ -951,6 +990,19 @@ export class Flox extends BaseClient {
     });
   };
 
+  withFile = (path: string, fileId: string): Flox => {
+    return new Flox({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withFile",
+          args: { path, fileId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
@@ -1121,6 +1173,19 @@ export class Nix extends BaseClient {
         {
           operation: "withCache",
           args: { path, cacheId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withFile = (path: string, fileId: string): Nix => {
+    return new Nix({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withFile",
+          args: { path, fileId },
         },
       ],
       ctx: this._ctx,
@@ -1363,6 +1428,19 @@ export class Pipeline extends BaseClient {
     });
   };
 
+  withFile = (path: string, fileId: string): Pipeline => {
+    return new Pipeline({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withFile",
+          args: { path, fileId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
@@ -1471,6 +1549,19 @@ export class Pkgx extends BaseClient {
         {
           operation: "withCache",
           args: { path, cacheId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withFile = (path: string, fileId: string): Pkgx => {
+    return new Pkgx({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withFile",
+          args: { path, fileId },
         },
       ],
       ctx: this._ctx,
@@ -1591,6 +1682,19 @@ export class Pixi extends BaseClient {
     });
   };
 
+  withFile = (path: string, fileId: string): Pixi => {
+    return new Pixi({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withFile",
+          args: { path, fileId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
@@ -1699,6 +1803,19 @@ export class Mise extends BaseClient {
         {
           operation: "withCache",
           args: { path, cacheId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withFile = (path: string, fileId: string): Mise => {
+    return new Mise({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withFile",
+          args: { path, fileId },
         },
       ],
       ctx: this._ctx,
@@ -1826,6 +1943,19 @@ export class Envhub extends BaseClient {
         {
           operation: "withCache",
           args: { path, cacheId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withFile = (path: string, fileId: string): Envhub => {
+    return new Envhub({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withFile",
+          args: { path, fileId },
         },
       ],
       ctx: this._ctx,

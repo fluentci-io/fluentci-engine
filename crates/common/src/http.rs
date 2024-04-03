@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Error;
 use fluentci_core::deps::{Graph, GraphCommand};
-use fluentci_ext::http::Http as HttpExt;
+use fluentci_ext::{http::Http as HttpExt, runner::Runner};
 use fluentci_types::file::File;
 use uuid::Uuid;
 
@@ -34,12 +34,22 @@ pub fn http(graph: Arc<Mutex<Graph>>, url: String, reset: bool) -> Result<File, 
     ));
     graph.execute_vertex(&id)?;
 
+    let id = Uuid::new_v4().to_string();
     let filename = sha256::digest(url).to_string();
     let work_dir = graph.work_dir.clone();
 
     let file = File {
-        id,
+        id: id.clone(),
         path: format!("{}/{}", work_dir, filename),
     };
+
+    graph.execute(GraphCommand::AddVertex(
+        id,
+        "file".into(),
+        file.path.clone(),
+        vec![],
+        Arc::new(Box::new(Runner::default())),
+    ));
+
     Ok(file)
 }

@@ -39,7 +39,7 @@ pub fn file(graph: Arc<Mutex<Graph>>, path: String, reset: bool) -> Result<File,
     graph.execute(GraphCommand::AddVertex(
         id.clone(),
         "file".into(),
-        "".into(),
+        path.clone(),
         vec![],
         Arc::new(Box::new(Runner::default())),
     ));

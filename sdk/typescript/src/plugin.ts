@@ -22,7 +22,8 @@ declare const Host: {
     zip: (ptr: I64) => I64;
     with_exec: (ptr: I64) => void;
     with_workdir: (ptr: I64) => void;
-    withCache: (ptr: I64) => I64;
+    with_cache: (ptr: I64) => I64;
+    with_file: (ptr: I64) => I64;
     stdout: () => I64;
     stderr: () => I64;
     set_runner: (ptr: I64) => void;
@@ -59,7 +60,8 @@ export const tar_czvf: (ptr: I64) => I64 = fn.tar_czvf;
 export const zip: (ptr: I64) => I64 = fn.zip;
 export const with_exec: (ptr: I64) => void = fn.with_exec;
 export const with_workdir: (ptr: I64) => void = fn.with_workdir;
-export const with_cache: (ptr: I64) => I64 = fn.withCache;
+export const with_cache: (ptr: I64) => I64 = fn.with_cache;
+export const with_file: (ptr: I64) => I64 = fn.with_file;
 export const stdout: () => I64 = fn.stdout;
 export const stderr: () => I64 = fn.stderr;
 export const set_runner: (ptr: I64) => void = fn.set_runner;
@@ -1042,6 +1044,24 @@ export class Flox extends BaseClient {
   };
 
   /**
+   * Create file at the given path
+   * ```ts
+   * dag.flox().withFile("/path/to/file", "file-id");
+   * ```
+   * @param {string} path Path to the file
+   * @param {String} fileId Unique file identifier
+   * @returns {Flox}
+   */
+  withFile = (path: string, fileId: String): Flox => {
+    let mem = Memory.fromJsonObject({
+      path,
+      id: fileId,
+    });
+    with_cache(mem.offset);
+    return this;
+  };
+
+  /**
    * Returns the stdout of the last executed command
    * ```ts
    * dag.flox().withExec(["echo", "hello world"]).stdout();
@@ -1199,6 +1219,24 @@ export class Nix extends BaseClient {
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
+    });
+    with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Create file at the given path
+   * ```ts
+   * dag.nix().withFile("/path/to/file", "file-id");
+   * ```
+   * @param {string} path Path to the file
+   * @param {String} fileId Unique file identifier
+   * @returns {Nix}
+   */
+  withFile = (path: string, fileId: String): Nix => {
+    let mem = Memory.fromJsonObject({
+      path,
+      id: fileId,
     });
     with_cache(mem.offset);
     return this;
@@ -1421,6 +1459,24 @@ export class Pipeline extends BaseClient {
   };
 
   /**
+   * Create file at the given path
+   * ```ts
+   * dag.pipeline("my-pipeline").withFile("/path/to/file", "file-id");
+   * ```
+   * @param {string} path Path to the file
+   * @param {String} fileId Unique file identifier
+   * @returns {Pipeline}
+   */
+  withFile = (path: string, fileId: String): Pipeline => {
+    let mem = Memory.fromJsonObject({
+      path,
+      id: fileId,
+    });
+    with_cache(mem.offset);
+    return this;
+  };
+
+  /**
    * Returns the stdout of the last executed command
    * ```ts
    * dag.pipeline("my-pipeline").withExec(["echo", "hello world"]).stdout();
@@ -1510,6 +1566,15 @@ export class Pkgx extends BaseClient {
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
+    });
+    with_cache(mem.offset);
+    return this;
+  };
+
+  withFile = (path: string, fileId: String): Pkgx => {
+    let mem = Memory.fromJsonObject({
+      path,
+      id: fileId,
     });
     with_cache(mem.offset);
     return this;
@@ -1611,6 +1676,24 @@ export class Pixi extends BaseClient {
   };
 
   /**
+   * Create file at the given path
+   * ```ts
+   * dag.pixi().withFile("/path/to/file", "file-id");
+   * ```
+   * @param {string} path Path to the file
+   * @param {String} fileId Unique file identifier
+   * @returns {Pixi}
+   */
+  withFile = (path: string, fileId: String): Pixi => {
+    let mem = Memory.fromJsonObject({
+      path,
+      id: fileId,
+    });
+    with_cache(mem.offset);
+    return this;
+  };
+
+  /**
    * Returns the stdout of the last executed command
    * ```ts
    * dag.pixi().withExec(["echo", "hello world"]).stdout();
@@ -1706,6 +1789,24 @@ export class Mise extends BaseClient {
   };
 
   /**
+   * Create file at the given path
+   * ```ts
+   * dag.mise().withFile("/path/to/file", "file-id");
+   * ```
+   * @param {string} path Path to the file
+   * @param {String} fileId Unique file identifier
+   * @returns {Mise}
+   */
+  withFile = (path: string, fileId: String): Mise => {
+    let mem = Memory.fromJsonObject({
+      path,
+      id: fileId,
+    });
+    with_cache(mem.offset);
+    return this;
+  };
+
+  /**
    * Returns the stdout of the last executed command
    * ```ts
    * dag.mise().withExec(["echo", "hello world"]).stdout();
@@ -1795,6 +1896,24 @@ export class Envhub extends BaseClient {
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
+    });
+    with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Create file at the given path
+   * ```ts
+   * dag.envhub().withFile("/path/to/file", "file-id");
+   * ```
+   * @param {string} path Path to the file
+   * @param {String} fileId Unique file identifier
+   * @returns {Envhub}
+   */
+  withFile = (path: string, fileId: String): Envhub => {
+    let mem = Memory.fromJsonObject({
+      path,
+      id: fileId,
     });
     with_cache(mem.offset);
     return this;

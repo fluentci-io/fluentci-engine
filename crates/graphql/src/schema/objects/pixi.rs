@@ -44,6 +44,17 @@ impl Pixi {
         Ok(self)
     }
 
+    async fn with_file(
+        &self,
+        ctx: &Context<'_>,
+        path: String,
+        file_id: ID,
+    ) -> Result<&Pixi, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_file(graph.clone(), file_id.into(), path)?;
+        Ok(self)
+    }
+
     async fn stdout(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();

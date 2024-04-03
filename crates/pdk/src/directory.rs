@@ -22,6 +22,7 @@ extern "ExtismHost" {
     fn tar_czvf(path: String) -> Json<File>;
     fn zip(path: String) -> Json<File>;
     fn with_exec(args: Json<Vec<String>>);
+    fn with_file(file: Json<File>);
     fn with_workdir(path: String);
     fn with_cache(cache: Json<Cache>);
     fn stdout() -> String;
@@ -132,6 +133,19 @@ impl Directory {
                 id: cache_id,
                 path: path.clone(),
                 ..Default::default()
+            }))
+        }?;
+        Ok(Directory {
+            id: self.id.clone(),
+            path: self.path.clone(),
+        })
+    }
+
+    pub fn with_file(&self, path: &str, file_id: &str) -> Result<Directory, Error> {
+        unsafe {
+            with_file(Json(File {
+                id: file_id.into(),
+                path: path.into(),
             }))
         }?;
         Ok(Directory {

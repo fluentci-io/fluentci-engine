@@ -23,6 +23,7 @@ extern "ExtismHost" {
     fn with_exec(args: Json<Vec<String>>);
     fn with_workdir(path: String);
     fn with_cache(cache: Json<Cache>);
+    fn with_file(file: Json<File>);
     fn stdout() -> String;
     fn stderr() -> String;
 }
@@ -125,6 +126,18 @@ impl Pipeline {
                 id: cache_id.into(),
                 path: path.into(),
                 ..Default::default()
+            }))
+        }?;
+        Ok(Pipeline {
+            id: self.id.clone(),
+        })
+    }
+
+    pub fn with_file(&self, path: &str, file_id: &str) -> Result<Pipeline, Error> {
+        unsafe {
+            with_file(Json(File {
+                id: file_id.into(),
+                path: path.into(),
             }))
         }?;
         Ok(Pipeline {

@@ -1,5 +1,5 @@
 use extism_pdk::*;
-use fluentci_types::{cache::Cache, envhub as types};
+use fluentci_types::{cache::Cache, envhub as types, file::File};
 use serde::{Deserialize, Serialize};
 
 #[host_fn]
@@ -8,6 +8,7 @@ extern "ExtismHost" {
     fn with_exec(args: Json<Vec<String>>);
     fn with_workdir(path: String);
     fn with_cache(cache: Json<Cache>);
+    fn with_file(file: Json<File>);
     fn stdout() -> String;
     fn stderr() -> String;
 }
@@ -32,6 +33,18 @@ impl Envhub {
                     .map(|x| x.to_string())
                     .collect::<Vec<String>>(),
             ))
+        }?;
+        Ok(Envhub {
+            id: self.id.clone(),
+        })
+    }
+
+    pub fn with_file(&self, path: &str, file_id: &str) -> Result<Envhub, Error> {
+        unsafe {
+            with_file(Json(File {
+                id: file_id.into(),
+                path: path.into(),
+            }))
         }?;
         Ok(Envhub {
             id: self.id.clone(),

@@ -60,6 +60,14 @@ impl Graph {
                 {
                     return;
                 }
+                if label == "file"
+                    && self
+                        .vertices
+                        .iter()
+                        .any(|v| v.command == command && v.label == "file")
+                {
+                    return;
+                }
                 if let Some(vertex) = self.vertices.iter_mut().find(|v| v.id == id) {
                     vertex.needs.extend(needs);
                 } else {
@@ -103,6 +111,7 @@ impl Graph {
             "directory",
             "cache",
             "chmod",
+            "withFile",
         ];
         let mut visited = vec![false; self.vertices.len()];
         let mut stack = Vec::new();
@@ -310,7 +319,8 @@ impl Graph {
     }
 
     pub fn reset(&mut self) {
-        self.vertices.retain(|v| v.label == "cache");
+        let keep = vec!["cache", "file", "directory"];
+        self.vertices.retain(|v| keep.contains(&v.label.as_str()));
         self.edges.clear();
         self.work_dir = current_dir().unwrap().to_str().unwrap().to_string();
     }

@@ -6,10 +6,10 @@ use std::{
 
 use anyhow::Error;
 use fluentci_core::deps::{Graph, GraphCommand};
-use fluentci_ext::archive::tar::czvf::TarCzvf as TarCzvfExt;
 use fluentci_ext::archive::zip::Zip as ZipExt;
 use fluentci_ext::cache::Cache as CacheExt;
 use fluentci_ext::Extension;
+use fluentci_ext::{archive::tar::czvf::TarCzvf as TarCzvfExt, runner::Runner};
 use fluentci_types::{file::File, Output};
 use uuid::Uuid;
 
@@ -118,6 +118,41 @@ pub fn with_cache(graph: Arc<Mutex<Graph>>, cache_id: String, path: String) -> R
     return Err(Error::msg("Cache not found"));
 }
 
+pub fn with_file(graph: Arc<Mutex<Graph>>, file_id: String, path: String) -> Result<(), Error> {
+    let mut graph = graph.lock().unwrap();
+    let runner = graph.runner.clone();
+    graph.runner = Arc::new(Box::new(CacheExt::default()));
+    graph.runner.setup()?;
+
+    if let Some(file) = graph.vertices.iter().find(|v| v.id.clone() == file_id) {
+        let id = Uuid::new_v4().to_string();
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
+        let copy_file = format!("cp {} {}", file.command, path);
+        graph.execute(GraphCommand::AddVertex(
+            id.clone(),
+            "withFile".into(),
+            copy_file,
+            deps,
+            Arc::new(Box::new(Runner::default())),
+        ));
+
+        let x = graph.size() - 2;
+        let y = graph.size() - 1;
+        graph.execute(GraphCommand::AddEdge(x, y));
+
+        graph.execute_vertex(&id)?;
+
+        graph.runner = runner;
+        return Ok(());
+    }
+
+    return Err(Error::msg("File not found"));
+}
+
 pub fn stdout(
     graph: Arc<Mutex<Graph>>,
     rx: Arc<Mutex<Receiver<(String, usize)>>>,
@@ -185,10 +220,19 @@ pub fn zip(graph: Arc<Mutex<Graph>>, path: String) -> Result<File, Error> {
     let parent_dir = path.split('/').collect::<Vec<&str>>();
     let parent_dir = parent_dir[..parent_dir.len() - 1].join("/");
 
+    let id = Uuid::new_v4().to_string();
     let file = File {
-        id,
+        id: id.clone(),
         path: format!("{}/{}", parent_dir, output_file),
     };
+
+    graph.execute(GraphCommand::AddVertex(
+        id,
+        "file".into(),
+        file.path.clone(),
+        vec![],
+        Arc::new(Box::new(Runner::default())),
+    ));
 
     Ok(file)
 }
@@ -223,9 +267,19 @@ pub fn tar_czvf(graph: Arc<Mutex<Graph>>, path: String) -> Result<File, Error> {
     let parent_dir = path.split('/').collect::<Vec<&str>>();
     let parent_dir = parent_dir[..parent_dir.len() - 1].join("/");
 
+    let id = Uuid::new_v4().to_string();
     let file = File {
-        id,
+        id: id.clone(),
         path: format!("{}/{}", parent_dir, output_file),
     };
+
+    graph.execute(GraphCommand::AddVertex(
+        id,
+        "file".into(),
+        file.path.clone(),
+        vec![],
+        Arc::new(Box::new(Runner::default())),
+    ));
+
     Ok(file)
 }

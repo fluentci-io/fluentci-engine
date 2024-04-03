@@ -81,6 +81,15 @@ host_fn!(pub with_cache(user_data: State;  cache: Json<Cache>) {
   Ok(())
 });
 
+host_fn!(pub with_file(user_data: State;  file: Json<File>) {
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  let graph = state.graph.clone();
+  let file = file.into_inner();
+  common::with_file(graph, file.id, file.path)?;
+  Ok(())
+});
+
 host_fn!(pub stdout(user_data: State;) -> String {
   let state = user_data.get()?;
   let state = state.lock().unwrap();
