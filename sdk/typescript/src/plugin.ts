@@ -1,4 +1,6 @@
-// @ts-nocheck
+declare type I64 = {
+  offset: I64;
+};
 
 declare const Host: {
   getFunctions: () => {
@@ -35,47 +37,38 @@ declare const Host: {
   };
 };
 
-declare const Memory: {
-  fromString: (str: string) => I64;
-  fromJsonObject: (obj: any) => I64;
-  find: (offset: I64) => {
-    readString: () => string;
-    readJsonObject: () => Record<string, any>;
-  };
-};
+const fn = Host.getFunctions();
 
-export const {
-  cache,
-  http,
-  file,
-  directory,
-  entries,
-  devbox,
-  devenv,
-  flox,
-  nix,
-  pkgx,
-  pipeline,
-  pixi,
-  mise,
-  envhub,
-  tar_czvf,
-  zip,
-  with_exec,
-  with_workdir,
-  with_cache,
-  stdout,
-  stderr,
-  set_runner,
-  git,
-  branch,
-  commit,
-  tree,
-  md5,
-  sha256,
-  unzip,
-  tar_xzvf,
-} = Host.getFunctions();
+export const cache: (ptr: I64) => I64 = fn.cache;
+export const http: (ptr: I64) => I64 = fn.http;
+export const file: (ptr: I64) => I64 = fn.file;
+export const directory: (ptr: I64) => I64 = fn.directory;
+export const entries: (ptr: I64) => I64 = fn.entries;
+export const devbox: () => I64 = fn.devbox;
+export const devenv: () => I64 = fn.devenv;
+export const flox: () => I64 = fn.flox;
+export const nix: () => I64 = fn.nix;
+export const pkgx: () => I64 = fn.pkgx;
+export const pipeline: (ptr: I64) => I64 = fn.pipeline;
+export const pixi: () => I64 = fn.pixi;
+export const mise: () => I64 = fn.mise;
+export const envhub: () => I64 = fn.envhub;
+export const tar_czvf: (ptr: I64) => I64 = fn.tar_czvf;
+export const zip: (ptr: I64) => I64 = fn.zip;
+export const with_exec: (ptr: I64) => void = fn.with_exec;
+export const with_workdir: (ptr: I64) => void = fn.with_workdir;
+export const with_cache: (ptr: I64) => I64 = fn.withCache;
+export const stdout: () => I64 = fn.stdout;
+export const stderr: () => I64 = fn.stderr;
+export const set_runner: (ptr: I64) => void = fn.set_runner;
+export const git: (ptr: I64) => I64 = fn.git;
+export const branch: (ptr: I64) => void = fn.branch;
+export const commit: () => I64 = fn.commit;
+export const tree: () => I64 = fn.tree;
+export const md5: (ptr: I64) => I64 = fn.md5;
+export const sha256: (ptr: I64) => I64 = fn.sha256;
+export const unzip: (ptr: I64) => I64 = fn.unzip;
+export const tar_xzvf: (ptr: I64) => I64 = fn.tar_xzvf;
 
 class BaseClient {
   constructor() {}
@@ -95,8 +88,10 @@ export class Client extends BaseClient {
    * @returns {Pipeline}
    */
   pipeline = (name: string): Pipeline => {
+    // @ts-ignore
     let mem = Memory.fromString(name);
-    let offset = pipeline(mem.offset);
+    let offset = pipeline(mem!.offset);
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
 
     return new Pipeline({
@@ -115,8 +110,10 @@ export class Client extends BaseClient {
    * @returns {Cache}
    */
   cache = (key: string): Cache => {
+    // @ts-ignore
     let mem = Memory.fromString(key);
-    let offset = cache(mem.offset);
+    let offset = cache(mem!.offset);
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Cache({
       id: response.id,
@@ -135,6 +132,7 @@ export class Client extends BaseClient {
    */
   devbox = (): Devbox => {
     let offset = devbox();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Devbox({
       id: response.id,
@@ -152,8 +150,10 @@ export class Client extends BaseClient {
    * @returns
    */
   directory = (path: string): Directory => {
+    // @ts-ignore
     let mem = Memory.fromString(path);
     let offset = directory(mem.offset);
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Directory({
       id: response.id,
@@ -171,6 +171,7 @@ export class Client extends BaseClient {
    */
   envhub = (): Envhub => {
     let offset = envhub();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Envhub({
       id: response.id,
@@ -188,6 +189,7 @@ export class Client extends BaseClient {
    */
   flox = (): Flox => {
     let offset = flox();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Flox({
       id: response.id,
@@ -203,8 +205,10 @@ export class Client extends BaseClient {
    * @returns
    */
   git = (url: string): Git => {
+    // @ts-ignore
     let mem = Memory.fromString(url);
-    let offset = git(mem.offset);
+    let offset = git(mem!.offset);
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Git({
       id: response.id,
@@ -220,8 +224,10 @@ export class Client extends BaseClient {
    * @returns
    */
   file = (path: string): File => {
+    // @ts-ignore
     let mem = Memory.fromString(path);
     let offset = file(mem.offset);
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new File({
       id: response.id,
@@ -238,6 +244,7 @@ export class Client extends BaseClient {
    */
   nix = (): Nix => {
     let offset = nix();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Nix({
       id: response.id,
@@ -253,8 +260,10 @@ export class Client extends BaseClient {
    * @returns
    */
   http = (url: string): File => {
+    // @ts-ignore
     let mem = Memory.fromString(url);
-    let offset = http(mem.offset);
+    let offset = http(mem!.offset);
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new File({
       id: response.id,
@@ -271,6 +280,7 @@ export class Client extends BaseClient {
    */
   mise = (): Mise => {
     let offset = mise();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Mise({
       id: response.id,
@@ -286,6 +296,7 @@ export class Client extends BaseClient {
    */
   pixi = (): Pixi => {
     let offset = pixi();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Pixi({
       id: response.id,
@@ -301,6 +312,7 @@ export class Client extends BaseClient {
    */
   pkgx = (): Pkgx => {
     let offset = pkgx();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Pkgx({
       id: response.id,
@@ -329,7 +341,7 @@ export class Cache extends BaseClient {
    * @returns {string}
    */
   id = (): string => {
-    return this._id;
+    return this._id!;
   };
 
   /**
@@ -340,7 +352,7 @@ export class Cache extends BaseClient {
    * @returns {string}
    */
   key = (): string => {
-    return this._key;
+    return this._key!;
   };
 }
 
@@ -363,7 +375,7 @@ export class Devbox extends BaseClient {
    * @returns {string}
    */
   id = (): string => {
-    return this._id;
+    return this._id!;
   };
 
   /**
@@ -375,10 +387,12 @@ export class Devbox extends BaseClient {
    * @returns {Devbox}
    */
   withExec = (args: string[]): Devbox => {
+    // @ts-ignore
     let mem = Memory.fromString("devbox");
-    set_runner(mem.offset);
+    set_runner(mem!.offset);
+    // @ts-ignore
     mem = Memory.fromJsonObject(args);
-    with_exec(mem.offset);
+    with_exec(mem!.offset);
     return this;
   };
 
@@ -391,8 +405,9 @@ export class Devbox extends BaseClient {
    * @returns {Devbox}
    */
   withWorkdir = (path: string): Devbox => {
+    // @ts-ignore
     let mem = Memory.fromString(path);
-    with_workdir(mem.offset);
+    with_workdir(mem!.offset);
     return this;
   };
 
@@ -406,11 +421,12 @@ export class Devbox extends BaseClient {
    * @returns {Devbox} Devbox
    */
   withCache = (path: string, cacheId: String): Devbox => {
+    // @ts-ignore
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
-    with_cache(mem.offset);
+    with_cache(mem!.offset);
     return this;
   };
 
@@ -423,6 +439,7 @@ export class Devbox extends BaseClient {
    */
   stdout = (): string => {
     let offset = stdout();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 
@@ -435,6 +452,7 @@ export class Devbox extends BaseClient {
    */
   stderr = (): string => {
     let offset = stderr();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 }
@@ -458,7 +476,7 @@ export class Devenv extends BaseClient {
    * @returns {string}
    */
   id = (): string => {
-    return this._id;
+    return this._id!;
   };
 
   /**
@@ -470,10 +488,12 @@ export class Devenv extends BaseClient {
    * @returns {Devenv}
    */
   withExec = (args: string[]): Devenv => {
+    // @ts-ignore
     let mem = Memory.fromString("devenv");
-    set_runner(mem.offset);
+    set_runner(mem!.offset);
+    // @ts-ignore
     mem = Memory.fromJsonObject(args);
-    with_exec(mem.offset);
+    with_exec(mem!.offset);
     return this;
   };
 
@@ -486,8 +506,9 @@ export class Devenv extends BaseClient {
    * @returns {Devenv}
    */
   withWorkdir = (path: string): Devenv => {
+    // @ts-ignore
     let mem = Memory.fromString(path);
-    with_workdir(mem.offset);
+    with_workdir(mem!.offset);
     return this;
   };
 
@@ -501,11 +522,12 @@ export class Devenv extends BaseClient {
    * @returns {Devenv} Devenv
    */
   withCache = (path: string, cacheId: String): Devenv => {
+    // @ts-ignore
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
-    with_cache(mem.offset);
+    with_cache(mem!.offset);
     return this;
   };
 
@@ -520,6 +542,7 @@ export class Devenv extends BaseClient {
    */
   stdout = (): string => {
     let offset = stdout();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 
@@ -532,6 +555,7 @@ export class Devenv extends BaseClient {
    */
   stderr = (): string => {
     let offset = stderr();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 }
@@ -557,7 +581,7 @@ export class Directory extends BaseClient {
    * @returns {string}
    */
   id = (): string => {
-    return this._id;
+    return this._id!;
   };
 
   /**
@@ -568,7 +592,7 @@ export class Directory extends BaseClient {
    * @returns {string}
    */
   path = (): string => {
-    return this._path;
+    return this._path!;
   };
 
   /**
@@ -580,8 +604,10 @@ export class Directory extends BaseClient {
    * @returns {Directory}
    */
   directory = (path: string): Directory => {
+    // @ts-ignore
     let mem = Memory.fromString(path);
-    let offset = directory(mem.offset);
+    let offset = directory(mem!.offset);
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Directory({
       id: response.id,
@@ -597,10 +623,12 @@ export class Directory extends BaseClient {
    * @returns {string[]}
    */
   entries = (): string[] => {
-    const mem = Memory.fromString(this._path);
-    const offset = entries(mem.offset);
+    // @ts-ignore
+    const mem = Memory.fromString(this._path!);
+    const offset = entries(mem!.offset);
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
-    return response;
+    return response as string[];
   };
 
   /**
@@ -612,6 +640,7 @@ export class Directory extends BaseClient {
    */
   devbox = (): Devbox => {
     const offset = devbox();
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
     return new Devbox({
       id: response.id,
@@ -627,6 +656,7 @@ export class Directory extends BaseClient {
    */
   devenv = (): Devenv => {
     const offset = devenv();
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
     return new Devenv({
       id: response.id,
@@ -642,6 +672,7 @@ export class Directory extends BaseClient {
    */
   flox = (): Flox => {
     const offset = flox();
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
     return new Flox({
       id: response.id,
@@ -657,6 +688,7 @@ export class Directory extends BaseClient {
    */
   nix = (): Nix => {
     const offset = nix();
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
     return new Nix({
       id: response.id,
@@ -672,6 +704,7 @@ export class Directory extends BaseClient {
    */
   pkgx = (): Pkgx => {
     const offset = pkgx();
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
     return new Pkgx({
       id: response.id,
@@ -687,6 +720,7 @@ export class Directory extends BaseClient {
    */
   pixi = (): Pixi => {
     const offset = pixi();
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
     return new Pixi({
       id: response.id,
@@ -703,6 +737,7 @@ export class Directory extends BaseClient {
    */
   mise = (): Mise => {
     const offset = mise();
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
     return new Mise({
       id: response.id,
@@ -718,6 +753,7 @@ export class Directory extends BaseClient {
    */
   envhub = (): Envhub => {
     const offset = envhub();
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
     return new Envhub({
       id: response.id,
@@ -732,8 +768,10 @@ export class Directory extends BaseClient {
    * @returns {File}
    */
   tarCzvf = (): File => {
-    const mem = Memory.fromString(this._path);
+    // @ts-ignore
+    const mem = Memory.fromString(this._path!);
     const offset = tar_czvf(mem.offset);
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
     return new File({
       id: response.id,
@@ -749,8 +787,10 @@ export class Directory extends BaseClient {
    * @returns {File}
    */
   zip = (): File => {
-    const mem = Memory.fromString(this._path);
-    const offset = zip(mem.offset);
+    // @ts-ignore
+    const mem = Memory.fromString(this._path!);
+    const offset = zip(mem!.offset);
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
     return new File({
       id: response.id,
@@ -767,8 +807,9 @@ export class Directory extends BaseClient {
    * @returns {Directory}
    */
   withExec = (args: string[]): Directory => {
+    // @ts-ignore
     const mem = Memory.fromJsonObject(args);
-    with_exec(mem.offset);
+    with_exec(mem!.offset);
     return this;
   };
 
@@ -780,8 +821,9 @@ export class Directory extends BaseClient {
    * @param {string} path Path to the new working directory
    */
   withWorkdir = (path: string): Directory => {
+    // @ts-ignore
     const mem = Memory.fromString(path);
-    with_workdir(mem.offset);
+    with_workdir(mem!.offset);
     return this;
   };
 
@@ -795,11 +837,12 @@ export class Directory extends BaseClient {
    * @returns {Directory}
    */
   withCache = (path: string, cacheId: String): Directory => {
+    // @ts-ignore
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
-    with_cache(mem.offset);
+    with_cache(mem!.offset);
     return this;
   };
 
@@ -812,6 +855,7 @@ export class Directory extends BaseClient {
    */
   stdout = (): string => {
     const offset = stdout();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 
@@ -824,6 +868,7 @@ export class Directory extends BaseClient {
    */
   stderr = (): string => {
     const offset = stderr();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 }
@@ -834,8 +879,8 @@ export class Directory extends BaseClient {
 export class Service extends BaseClient {
   private _id?: string;
 
-  id = () => {
-    return this._id;
+  id = (): string => {
+    return this._id!;
   };
 }
 
@@ -860,7 +905,7 @@ export class File extends BaseClient {
    * @returns {string}
    */
   id = (): string => {
-    return this._id;
+    return this._id!;
   };
 
   /**
@@ -871,7 +916,7 @@ export class File extends BaseClient {
    * @returns {string}
    */
   path = (): string => {
-    return this._path;
+    return this._path!;
   };
 
   /**
@@ -882,8 +927,10 @@ export class File extends BaseClient {
    * @returns {File}
    */
   zip = (): File => {
-    const mem = Memory.fromString(this._path);
-    const offset = zip(mem.offset);
+    // @ts-ignore
+    const mem = Memory.fromString(this._path!);
+    const offset = zip(mem!.offset);
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
     return new File({
       id: response.id,
@@ -899,8 +946,10 @@ export class File extends BaseClient {
    * @returns {Directory}
    */
   unzip = (): Directory => {
-    const mem = Memory.fromString(this._path);
-    const offset = unzip(mem.offset);
+    // @ts-ignore
+    const mem = Memory.fromString(this._path!);
+    const offset = unzip(mem!.offset);
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
     return new Directory({
       id: response.id,
@@ -916,8 +965,10 @@ export class File extends BaseClient {
    * @returns {Directory}
    */
   tarXzvf = (): Directory => {
-    const mem = Memory.fromString(this._path);
-    const offset = tar_xzvf(mem.offset);
+    // @ts-ignore
+    const mem = Memory.fromString(this._path!);
+    const offset = tar_xzvf(mem!.offset);
+    // @ts-ignore
     const response = Memory.find(offset).readJsonObject();
     return new Directory({
       id: response.id,
@@ -933,8 +984,10 @@ export class File extends BaseClient {
    * @returns {string}
    */
   md5 = (): string => {
-    const mem = Memory.fromString(this._path);
-    const offset = md5(mem.offset);
+    // @ts-ignore
+    const mem = Memory.fromString(this._path!);
+    const offset = md5(mem!.offset);
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 
@@ -946,8 +999,10 @@ export class File extends BaseClient {
    * @returns {string}
    */
   sha256 = (): string => {
-    const mem = Memory.fromString(this._path);
-    const offset = sha256(mem.offset);
+    // @ts-ignore
+    const mem = Memory.fromString(this._path!);
+    const offset = sha256(mem!.offset);
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 }
@@ -971,7 +1026,7 @@ export class Flox extends BaseClient {
    * @returns {string}
    */
   id = (): string => {
-    return this._id;
+    return this._id!;
   };
 
   /**
@@ -983,10 +1038,12 @@ export class Flox extends BaseClient {
    * @returns {Flox}
    */
   withExec = (args: string[]): Flox => {
+    // @ts-ignore
     let mem = Memory.fromString("flox");
-    set_runner(mem.offset);
+    set_runner(mem!.offset);
+    // @ts-ignore
     mem = Memory.fromJsonObject(args);
-    with_exec(mem.offset);
+    with_exec(mem!.offset);
     return this;
   };
 
@@ -999,8 +1056,9 @@ export class Flox extends BaseClient {
    * @returns {Flox}
    */
   withWorkdir = (path: string): Flox => {
+    // @ts-ignore
     let mem = Memory.fromString(path);
-    with_workdir(mem.offset);
+    with_workdir(mem!.offset);
     return this;
   };
 
@@ -1014,12 +1072,13 @@ export class Flox extends BaseClient {
    * @returns {Flox}
    */
   withCache = (path: string, cacheId: String): Flox => {
+    // @ts-ignore
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
       key: "",
     });
-    with_cache(mem.offset);
+    with_cache(mem!.offset);
     return this;
   };
 
@@ -1032,6 +1091,7 @@ export class Flox extends BaseClient {
    */
   stdout = (): string => {
     let offset = stdout();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 
@@ -1044,6 +1104,7 @@ export class Flox extends BaseClient {
    */
   stderr = (): string => {
     let offset = stderr();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 }
@@ -1067,7 +1128,7 @@ export class Git extends BaseClient {
    * @returns {string}
    */
   id = (): string => {
-    return this._id;
+    return this._id!;
   };
 
   /**
@@ -1079,8 +1140,9 @@ export class Git extends BaseClient {
    * @returns {Git}
    */
   branch = (name: string): Git => {
+    // @ts-ignore
     let mem = Memory.fromString(name);
-    branch(mem.offset);
+    branch(mem!.offset);
     return this;
   };
 
@@ -1093,6 +1155,7 @@ export class Git extends BaseClient {
    */
   commit = (): string => {
     let offset = commit();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 
@@ -1105,6 +1168,7 @@ export class Git extends BaseClient {
    */
   tree = (): Directory => {
     let offset = tree();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Directory({
       id: response.id,
@@ -1132,7 +1196,7 @@ export class Nix extends BaseClient {
    * @returns {string}
    */
   id = (): string => {
-    return this._id;
+    return this._id!;
   };
 
   /**
@@ -1144,10 +1208,12 @@ export class Nix extends BaseClient {
    * @returns {Nix}
    */
   withExec = (args: string[]): Nix => {
+    // @ts-ignore
     let mem = Memory.fromString("nix");
-    set_runner(mem.offset);
+    set_runner(mem!.offset);
+    // @ts-ignore
     mem = Memory.fromJsonObject(args);
-    with_exec(mem.offset);
+    with_exec(mem!.offset);
     return this;
   };
 
@@ -1160,8 +1226,9 @@ export class Nix extends BaseClient {
    * @returns {Nix}
    */
   withWorkdir = (path: string): Nix => {
+    // @ts-ignore
     let mem = Memory.fromString(path);
-    with_workdir(mem.offset);
+    with_workdir(mem!.offset);
     return this;
   };
 
@@ -1175,11 +1242,12 @@ export class Nix extends BaseClient {
    * @returns {Nix}
    */
   withCache = (path: string, cacheId: String): Nix => {
+    // @ts-ignore
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
-    with_cache(mem.offset);
+    with_cache(mem!.offset);
     return this;
   };
 
@@ -1192,6 +1260,7 @@ export class Nix extends BaseClient {
    */
   stdout = (): string => {
     let offset = stdout();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 
@@ -1204,6 +1273,7 @@ export class Nix extends BaseClient {
    */
   stderr = (): string => {
     let offset = stderr();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 }
@@ -1227,7 +1297,7 @@ export class Pipeline extends BaseClient {
    * @returns {string}
    */
   id = (): string => {
-    return this._id;
+    return this._id!;
   };
 
   /**
@@ -1239,6 +1309,7 @@ export class Pipeline extends BaseClient {
    */
   devbox = (): Devbox => {
     let offset = devbox();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Devbox({
       id: response.id,
@@ -1254,6 +1325,7 @@ export class Pipeline extends BaseClient {
    */
   devenv = (): Devenv => {
     let offset = devenv();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Devenv({
       id: response.id,
@@ -1269,6 +1341,7 @@ export class Pipeline extends BaseClient {
    */
   flox = (): Flox => {
     let offset = flox();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Flox({
       id: response.id,
@@ -1284,6 +1357,7 @@ export class Pipeline extends BaseClient {
    */
   nix = (): Nix => {
     let offset = nix();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Nix({
       id: response.id,
@@ -1299,6 +1373,7 @@ export class Pipeline extends BaseClient {
    */
   pkgx = (): Pkgx => {
     let offset = pkgx();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Pkgx({
       id: response.id,
@@ -1314,6 +1389,7 @@ export class Pipeline extends BaseClient {
    */
   pixi = (): Pixi => {
     let offset = pixi();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Pixi({
       id: response.id,
@@ -1329,6 +1405,7 @@ export class Pipeline extends BaseClient {
    */
   mise = (): Mise => {
     let offset = mise();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Mise({
       id: response.id,
@@ -1344,6 +1421,7 @@ export class Pipeline extends BaseClient {
    */
   envhub = (): Envhub => {
     let offset = envhub();
+    // @ts-ignore
     let response = Memory.find(offset).readJsonObject();
     return new Envhub({
       id: response.id,
@@ -1359,10 +1437,12 @@ export class Pipeline extends BaseClient {
    * @returns {Pipeline}
    */
   withExec = (args: string[]): Pipeline => {
+    // @ts-ignore
     let mem = Memory.fromString("default");
-    set_runner(mem.offset);
+    set_runner(mem!.offset);
+    // @ts-ignore
     mem = Memory.fromString(args.join(" "));
-    with_exec(mem.offset);
+    with_exec(mem!.offset);
     return this;
   };
 
@@ -1375,8 +1455,9 @@ export class Pipeline extends BaseClient {
    * @returns {Pipeline}
    */
   withWorkdir = (path: string): Pipeline => {
+    // @ts-ignore
     let mem = Memory.fromString(path);
-    with_workdir(mem.offset);
+    with_workdir(mem!.offset);
     return this;
   };
 
@@ -1390,11 +1471,12 @@ export class Pipeline extends BaseClient {
    * @returns {Pipeline}
    */
   withCache = (path: string, cacheId: String): Pipeline => {
+    // @ts-ignore
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
-    with_cache(mem.offset);
+    with_cache(mem!.offset);
     return this;
   };
 
@@ -1407,6 +1489,7 @@ export class Pipeline extends BaseClient {
    */
   stdout = (): string => {
     let offset = stdout();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 
@@ -1419,6 +1502,7 @@ export class Pipeline extends BaseClient {
    */
   stderr = (): string => {
     let offset = stderr();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 }
@@ -1442,7 +1526,7 @@ export class Pkgx extends BaseClient {
    * @returns {string}
    */
   id = (): string => {
-    return this._id;
+    return this._id!;
   };
 
   /**
@@ -1454,10 +1538,12 @@ export class Pkgx extends BaseClient {
    * @returns {Pkgx}
    */
   withExec = (args: string[]): Pkgx => {
+    // @ts-ignore
     let mem = Memory.fromString("pkgx");
-    set_runner(mem.offset);
+    set_runner(mem!.offset);
+    // @ts-ignore
     mem = Memory.fromJsonObject(args);
-    with_exec(mem.offset);
+    with_exec(mem!.offset);
     return this;
   };
 
@@ -1470,8 +1556,9 @@ export class Pkgx extends BaseClient {
    * @returns {Pkgx}
    */
   withWorkdir = (path: string): Pkgx => {
+    // @ts-ignore
     let mem = Memory.fromString(path);
-    with_workdir(mem.offset);
+    with_workdir(mem!.offset);
     return this;
   };
 
@@ -1485,11 +1572,12 @@ export class Pkgx extends BaseClient {
    * @returns {Pkgx}
    */
   withCache = (path: string, cacheId: String): Pkgx => {
+    // @ts-ignore
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
-    with_cache(mem.offset);
+    with_cache(mem!.offset);
     return this;
   };
 
@@ -1502,6 +1590,7 @@ export class Pkgx extends BaseClient {
    */
   stdout = (): string => {
     let offset = stdout();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 
@@ -1514,6 +1603,7 @@ export class Pkgx extends BaseClient {
    */
   stderr = (): string => {
     let offset = stderr();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 }
@@ -1537,7 +1627,7 @@ export class Pixi extends BaseClient {
    * @returns {string}
    */
   id = (): string => {
-    return this._id;
+    return this._id!;
   };
 
   /**
@@ -1549,10 +1639,12 @@ export class Pixi extends BaseClient {
    * @returns {Pixi}
    */
   withExec = (args: string[]): Pixi => {
+    // @ts-ignore
     let mem = Memory.fromString("pixi");
-    set_runner(mem.offset);
+    set_runner(mem!.offset);
+    // @ts-ignore
     mem = Memory.fromJsonObject(args);
-    with_exec(mem.offset);
+    with_exec(mem!.offset);
     return this;
   };
 
@@ -1565,8 +1657,9 @@ export class Pixi extends BaseClient {
    * @returns {Pixi}
    */
   withWorkdir = (path: string): Pixi => {
+    // @ts-ignore
     let mem = Memory.fromString(path);
-    with_workdir(mem.offset);
+    with_workdir(mem!.offset);
     return this;
   };
 
@@ -1580,11 +1673,12 @@ export class Pixi extends BaseClient {
    * @returns {Pixi}
    */
   withCache = (path: string, cacheId: String): Pixi => {
+    // @ts-ignore
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
-    with_cache(mem.offset);
+    with_cache(mem!.offset);
     return this;
   };
 
@@ -1597,6 +1691,7 @@ export class Pixi extends BaseClient {
    */
   stdout = (): string => {
     let offset = stdout();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 
@@ -1609,6 +1704,7 @@ export class Pixi extends BaseClient {
    */
   stderr = (): string => {
     let offset = stderr();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 }
@@ -1632,7 +1728,7 @@ export class Mise extends BaseClient {
    * @returns {string}
    */
   id = (): string => {
-    return this._id;
+    return this._id!;
   };
 
   /**
@@ -1644,10 +1740,12 @@ export class Mise extends BaseClient {
    * @returns {Mise}
    */
   withExec = (args: string[]): Mise => {
+    // @ts-ignore
     let mem = Memory.fromString("mise");
-    set_runner(mem.offset);
+    set_runner(mem!.offset);
+    // @ts-ignore
     mem = Memory.fromJsonObject(args);
-    with_exec(mem.offset);
+    with_exec(mem!.offset);
     return this;
   };
 
@@ -1660,8 +1758,9 @@ export class Mise extends BaseClient {
    * @returns {Mise}
    */
   withWorkdir = (path: string): Mise => {
+    // @ts-ignore
     let mem = Memory.fromString(path);
-    with_workdir(mem.offset);
+    with_workdir(mem!.offset);
     return this;
   };
 
@@ -1675,11 +1774,12 @@ export class Mise extends BaseClient {
    * @returns {Mise}
    */
   withCache = (path: string, cacheId: String): Mise => {
+    // @ts-ignore
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
-    with_cache(mem.offset);
+    with_cache(mem!.offset);
     return this;
   };
 
@@ -1692,6 +1792,7 @@ export class Mise extends BaseClient {
    */
   stdout = (): string => {
     let offset = stdout();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 
@@ -1704,6 +1805,7 @@ export class Mise extends BaseClient {
    */
   stderr = (): string => {
     let offset = stderr();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 }
@@ -1727,7 +1829,7 @@ export class Envhub extends BaseClient {
    * @returns {string}
    */
   id = (): string => {
-    return this._id;
+    return this._id!;
   };
 
   /**
@@ -1739,10 +1841,12 @@ export class Envhub extends BaseClient {
    * @returns {Envhub}
    */
   withExec = (args: string[]): Envhub => {
+    // @ts-ignore
     let mem = Memory.fromString("envhub");
-    set_runner(mem.offset);
+    set_runner(mem!.offset);
+    // @ts-ignore
     mem = Memory.fromJsonObject(args);
-    with_exec(mem.offset);
+    with_exec(mem!.offset);
     return this;
   };
 
@@ -1755,8 +1859,9 @@ export class Envhub extends BaseClient {
    * @returns {Envhub}
    */
   withWorkdir = (path: string): Envhub => {
+    // @ts-ignore
     let mem = Memory.fromString(path);
-    with_workdir(mem.offset);
+    with_workdir(mem!.offset);
     return this;
   };
 
@@ -1770,11 +1875,12 @@ export class Envhub extends BaseClient {
    * @returns {Envhub}
    */
   withCache = (path: string, cacheId: String): Envhub => {
+    // @ts-ignore
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
-    with_cache(mem.offset);
+    with_cache(mem!.offset);
     return this;
   };
 
@@ -1787,6 +1893,7 @@ export class Envhub extends BaseClient {
    */
   stdout = (): string => {
     let offset = stdout();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 
@@ -1799,8 +1906,9 @@ export class Envhub extends BaseClient {
    */
   stderr = (): string => {
     let offset = stderr();
+    // @ts-ignore
     return Memory.find(offset).readString();
   };
 }
 
-export const dag = new Client();
+export const dag: Client = new Client();

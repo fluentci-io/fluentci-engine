@@ -1,4 +1,4 @@
-import { dag } from "./plugin";
+import { dag } from "@fluentci/sdk/plugin";
 
 declare const Host: {
   inputString: () => string;

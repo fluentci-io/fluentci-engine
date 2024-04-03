@@ -50,4 +50,4 @@ export class Context {
 /**
  * Expose a default context for the global client
  */
-export const defaultContext = new Context();
+export const defaultContext: Context = new Context();

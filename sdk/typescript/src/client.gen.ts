@@ -38,7 +38,7 @@ class BaseClient {
   /**
    * @hidden
    */
-  get queryTree() {
+  get queryTree(): QueryTree[] {
     return this._queryTree;
   }
 }
@@ -1858,4 +1858,4 @@ export class Envhub extends BaseClient {
   };
 }
 
-export const dag = new Client({ ctx: defaultContext });
+export const dag: Client = new Client({ ctx: defaultContext });

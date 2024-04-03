@@ -1,8 +1,8 @@
 {
   "name": "@fluentci/sdk",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "exports": {
-    ".": "./mod.ts",
+    ".": "./src/client.gen.ts",
     "./plugin": "./src/plugin.ts"
   },
   "tasks": {
@@ -10,7 +10,8 @@
   },
   "publish": {
     "exclude": [
-      "demo-ext/*"
+      "demo-ext/*",
+      "demo/*"
     ]
   }
 }
