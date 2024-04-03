@@ -91,7 +91,7 @@ export class Client extends BaseClient {
    */
   pipeline = (name: string): Pipeline => {
     let mem = Memory.fromString(name);
-    let offset = pipeline(mem!.offset);
+    let offset = pipeline(mem.offset);
 
     let response = Memory.find(offset).readJsonObject();
 
@@ -112,7 +112,7 @@ export class Client extends BaseClient {
    */
   cache = (key: string): Cache => {
     let mem = Memory.fromString(key);
-    let offset = cache(mem!.offset);
+    let offset = cache(mem.offset);
 
     let response = Memory.find(offset).readJsonObject();
     return new Cache({
@@ -201,7 +201,7 @@ export class Client extends BaseClient {
    */
   git = (url: string): Git => {
     let mem = Memory.fromString(url);
-    let offset = git(mem!.offset);
+    let offset = git(mem.offset);
     let response = Memory.find(offset).readJsonObject();
     return new Git({
       id: response.id,
@@ -251,7 +251,7 @@ export class Client extends BaseClient {
    */
   http = (url: string): File => {
     let mem = Memory.fromString(url);
-    let offset = http(mem!.offset);
+    let offset = http(mem.offset);
     let response = Memory.find(offset).readJsonObject();
     return new File({
       id: response.id,
@@ -374,9 +374,9 @@ export class Devbox extends BaseClient {
    */
   withExec = (args: string[]): Devbox => {
     let mem = Memory.fromString("devbox");
-    set_runner(mem!.offset);
+    set_runner(mem.offset);
     mem = Memory.fromJsonObject(args);
-    with_exec(mem!.offset);
+    with_exec(mem.offset);
     return this;
   };
 
@@ -390,7 +390,7 @@ export class Devbox extends BaseClient {
    */
   withWorkdir = (path: string): Devbox => {
     let mem = Memory.fromString(path);
-    with_workdir(mem!.offset);
+    with_workdir(mem.offset);
     return this;
   };
 
@@ -408,7 +408,7 @@ export class Devbox extends BaseClient {
       path,
       id: cacheId,
     });
-    with_cache(mem!.offset);
+    with_cache(mem.offset);
     return this;
   };
 
@@ -471,10 +471,10 @@ export class Devenv extends BaseClient {
    */
   withExec = (args: string[]): Devenv => {
     let mem = Memory.fromString("devenv");
-    set_runner(mem!.offset);
+    set_runner(mem.offset);
 
     mem = Memory.fromJsonObject(args);
-    with_exec(mem!.offset);
+    with_exec(mem.offset);
     return this;
   };
 
@@ -488,7 +488,7 @@ export class Devenv extends BaseClient {
    */
   withWorkdir = (path: string): Devenv => {
     let mem = Memory.fromString(path);
-    with_workdir(mem!.offset);
+    with_workdir(mem.offset);
     return this;
   };
 
@@ -506,7 +506,7 @@ export class Devenv extends BaseClient {
       path,
       id: cacheId,
     });
-    with_cache(mem!.offset);
+    with_cache(mem.offset);
     return this;
   };
 
@@ -584,7 +584,7 @@ export class Directory extends BaseClient {
    */
   directory = (path: string): Directory => {
     let mem = Memory.fromString(path);
-    let offset = directory(mem!.offset);
+    let offset = directory(mem.offset);
 
     let response = Memory.find(offset).readJsonObject();
     return new Directory({
@@ -602,7 +602,7 @@ export class Directory extends BaseClient {
    */
   entries = (): string[] => {
     const mem = Memory.fromString(this._path!);
-    const offset = entries(mem!.offset);
+    const offset = entries(mem.offset);
     const response = Memory.find(offset).readJsonObject();
     return response as string[];
   };
@@ -754,7 +754,7 @@ export class Directory extends BaseClient {
    */
   zip = (): File => {
     const mem = Memory.fromString(this._path!);
-    const offset = zip(mem!.offset);
+    const offset = zip(mem.offset);
     const response = Memory.find(offset).readJsonObject();
     return new File({
       id: response.id,
@@ -772,7 +772,7 @@ export class Directory extends BaseClient {
    */
   withExec = (args: string[]): Directory => {
     const mem = Memory.fromJsonObject(args);
-    with_exec(mem!.offset);
+    with_exec(mem.offset);
     return this;
   };
 
@@ -785,7 +785,7 @@ export class Directory extends BaseClient {
    */
   withWorkdir = (path: string): Directory => {
     const mem = Memory.fromString(path);
-    with_workdir(mem!.offset);
+    with_workdir(mem.offset);
     return this;
   };
 
@@ -803,7 +803,7 @@ export class Directory extends BaseClient {
       path,
       id: cacheId,
     });
-    with_cache(mem!.offset);
+    with_cache(mem.offset);
     return this;
   };
 
@@ -887,7 +887,7 @@ export class File extends BaseClient {
    */
   zip = (): File => {
     const mem = Memory.fromString(this._path!);
-    const offset = zip(mem!.offset);
+    const offset = zip(mem.offset);
     const response = Memory.find(offset).readJsonObject();
     return new File({
       id: response.id,
@@ -904,7 +904,7 @@ export class File extends BaseClient {
    */
   unzip = (): Directory => {
     const mem = Memory.fromString(this._path!);
-    const offset = unzip(mem!.offset);
+    const offset = unzip(mem.offset);
     const response = Memory.find(offset).readJsonObject();
     return new Directory({
       id: response.id,
@@ -921,7 +921,7 @@ export class File extends BaseClient {
    */
   tarXzvf = (): Directory => {
     const mem = Memory.fromString(this._path!);
-    const offset = tar_xzvf(mem!.offset);
+    const offset = tar_xzvf(mem.offset);
     const response = Memory.find(offset).readJsonObject();
     return new Directory({
       id: response.id,
@@ -938,7 +938,7 @@ export class File extends BaseClient {
    */
   md5 = (): string => {
     const mem = Memory.fromString(this._path!);
-    const offset = md5(mem!.offset);
+    const offset = md5(mem.offset);
     return Memory.find(offset).readString();
   };
 
@@ -951,8 +951,22 @@ export class File extends BaseClient {
    */
   sha256 = (): string => {
     const mem = Memory.fromString(this._path!);
-    const offset = sha256(mem!.offset);
+    const offset = sha256(mem.offset);
     return Memory.find(offset).readString();
+  };
+
+  /**
+   * Change the file mode
+   * ```ts
+   * dag.file("/path/to/file").chmod("a+x");
+   * ```
+   * @param {string} mode
+   * @returns {File}
+   */
+  chmod = (mode: string): File => {
+    const mem = Memory.fromString(mode);
+    chmod(mem.offset);
+    return this;
   };
 }
 
@@ -988,9 +1002,9 @@ export class Flox extends BaseClient {
    */
   withExec = (args: string[]): Flox => {
     let mem = Memory.fromString("flox");
-    set_runner(mem!.offset);
+    set_runner(mem.offset);
     mem = Memory.fromJsonObject(args);
-    with_exec(mem!.offset);
+    with_exec(mem.offset);
     return this;
   };
 
@@ -1004,7 +1018,7 @@ export class Flox extends BaseClient {
    */
   withWorkdir = (path: string): Flox => {
     let mem = Memory.fromString(path);
-    with_workdir(mem!.offset);
+    with_workdir(mem.offset);
     return this;
   };
 
@@ -1023,7 +1037,7 @@ export class Flox extends BaseClient {
       id: cacheId,
       key: "",
     });
-    with_cache(mem!.offset);
+    with_cache(mem.offset);
     return this;
   };
 
@@ -1084,7 +1098,7 @@ export class Git extends BaseClient {
    */
   branch = (name: string): Git => {
     let mem = Memory.fromString(name);
-    branch(mem!.offset);
+    branch(mem.offset);
     return this;
   };
 
@@ -1151,10 +1165,10 @@ export class Nix extends BaseClient {
    */
   withExec = (args: string[]): Nix => {
     let mem = Memory.fromString("nix");
-    set_runner(mem!.offset);
+    set_runner(mem.offset);
 
     mem = Memory.fromJsonObject(args);
-    with_exec(mem!.offset);
+    with_exec(mem.offset);
     return this;
   };
 
@@ -1168,7 +1182,7 @@ export class Nix extends BaseClient {
    */
   withWorkdir = (path: string): Nix => {
     let mem = Memory.fromString(path);
-    with_workdir(mem!.offset);
+    with_workdir(mem.offset);
     return this;
   };
 
@@ -1186,7 +1200,7 @@ export class Nix extends BaseClient {
       path,
       id: cacheId,
     });
-    with_cache(mem!.offset);
+    with_cache(mem.offset);
     return this;
   };
 
@@ -1368,9 +1382,9 @@ export class Pipeline extends BaseClient {
    */
   withExec = (args: string[]): Pipeline => {
     let mem = Memory.fromString("default");
-    set_runner(mem!.offset);
+    set_runner(mem.offset);
     mem = Memory.fromString(args.join(" "));
-    with_exec(mem!.offset);
+    with_exec(mem.offset);
     return this;
   };
 
@@ -1384,7 +1398,7 @@ export class Pipeline extends BaseClient {
    */
   withWorkdir = (path: string): Pipeline => {
     let mem = Memory.fromString(path);
-    with_workdir(mem!.offset);
+    with_workdir(mem.offset);
     return this;
   };
 
@@ -1402,7 +1416,7 @@ export class Pipeline extends BaseClient {
       path,
       id: cacheId,
     });
-    with_cache(mem!.offset);
+    with_cache(mem.offset);
     return this;
   };
 
@@ -1463,9 +1477,9 @@ export class Pkgx extends BaseClient {
    */
   withExec = (args: string[]): Pkgx => {
     let mem = Memory.fromString("pkgx");
-    set_runner(mem!.offset);
+    set_runner(mem.offset);
     mem = Memory.fromJsonObject(args);
-    with_exec(mem!.offset);
+    with_exec(mem.offset);
     return this;
   };
 
@@ -1479,7 +1493,7 @@ export class Pkgx extends BaseClient {
    */
   withWorkdir = (path: string): Pkgx => {
     let mem = Memory.fromString(path);
-    with_workdir(mem!.offset);
+    with_workdir(mem.offset);
     return this;
   };
 
@@ -1497,7 +1511,7 @@ export class Pkgx extends BaseClient {
       path,
       id: cacheId,
     });
-    with_cache(mem!.offset);
+    with_cache(mem.offset);
     return this;
   };
 
@@ -1558,9 +1572,9 @@ export class Pixi extends BaseClient {
    */
   withExec = (args: string[]): Pixi => {
     let mem = Memory.fromString("pixi");
-    set_runner(mem!.offset);
+    set_runner(mem.offset);
     mem = Memory.fromJsonObject(args);
-    with_exec(mem!.offset);
+    with_exec(mem.offset);
     return this;
   };
 
@@ -1574,7 +1588,7 @@ export class Pixi extends BaseClient {
    */
   withWorkdir = (path: string): Pixi => {
     let mem = Memory.fromString(path);
-    with_workdir(mem!.offset);
+    with_workdir(mem.offset);
     return this;
   };
 
@@ -1592,7 +1606,7 @@ export class Pixi extends BaseClient {
       path,
       id: cacheId,
     });
-    with_cache(mem!.offset);
+    with_cache(mem.offset);
     return this;
   };
 
@@ -1653,9 +1667,9 @@ export class Mise extends BaseClient {
    */
   withExec = (args: string[]): Mise => {
     let mem = Memory.fromString("mise");
-    set_runner(mem!.offset);
+    set_runner(mem.offset);
     mem = Memory.fromJsonObject(args);
-    with_exec(mem!.offset);
+    with_exec(mem.offset);
     return this;
   };
 
@@ -1669,7 +1683,7 @@ export class Mise extends BaseClient {
    */
   withWorkdir = (path: string): Mise => {
     let mem = Memory.fromString(path);
-    with_workdir(mem!.offset);
+    with_workdir(mem.offset);
     return this;
   };
 
@@ -1687,7 +1701,7 @@ export class Mise extends BaseClient {
       path,
       id: cacheId,
     });
-    with_cache(mem!.offset);
+    with_cache(mem.offset);
     return this;
   };
 
@@ -1748,9 +1762,9 @@ export class Envhub extends BaseClient {
    */
   withExec = (args: string[]): Envhub => {
     let mem = Memory.fromString("envhub");
-    set_runner(mem!.offset);
+    set_runner(mem.offset);
     mem = Memory.fromJsonObject(args);
-    with_exec(mem!.offset);
+    with_exec(mem.offset);
     return this;
   };
 
@@ -1764,7 +1778,7 @@ export class Envhub extends BaseClient {
    */
   withWorkdir = (path: string): Envhub => {
     let mem = Memory.fromString(path);
-    with_workdir(mem!.offset);
+    with_workdir(mem.offset);
     return this;
   };
 
@@ -1782,7 +1796,7 @@ export class Envhub extends BaseClient {
       path,
       id: cacheId,
     });
-    with_cache(mem!.offset);
+    with_cache(mem.offset);
     return this;
   };
 

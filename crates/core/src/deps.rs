@@ -102,6 +102,7 @@ impl Graph {
             "file",
             "directory",
             "cache",
+            "chmod",
         ];
         let mut visited = vec![false; self.vertices.len()];
         let mut stack = Vec::new();

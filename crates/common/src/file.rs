@@ -182,3 +182,29 @@ pub fn unzip(
 
     Ok(dir)
 }
+
+pub fn chmod(graph: Arc<Mutex<Graph>>, path: String, mode: String) -> Result<File, Error> {
+    let mut graph = graph.lock().unwrap();
+    graph.runner = Arc::new(Box::new(Runner::default()));
+    graph.runner.setup()?;
+
+    let id = Uuid::new_v4().to_string();
+    let dep_id = graph.vertices[graph.size() - 1].id.clone();
+
+    graph.execute(GraphCommand::AddVertex(
+        id.clone(),
+        "chmod".into(),
+        format!("chmod {} {}", mode, path),
+        vec![dep_id],
+        Arc::new(Box::new(Runner::default())),
+    ));
+
+    let x = graph.size() - 2;
+    let y = graph.size() - 1;
+    graph.execute(GraphCommand::AddEdge(x, y));
+
+    graph.execute_vertex(&id)?;
+
+    let file = File { id, path };
+    Ok(file)
+}
