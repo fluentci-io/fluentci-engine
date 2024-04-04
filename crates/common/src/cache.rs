@@ -11,14 +11,14 @@ pub fn cache(graph: Arc<Mutex<Graph>>, key: &str) -> Result<Cache, Error> {
     graph.reset();
 
     let cache = graph
-        .vertices
+        .volumes
         .iter()
-        .find(|v| v.label == "cache" && v.command == key);
+        .find(|v| v.label == "cache" && v.key == key);
 
     if let Some(cache) = cache {
         return Ok(Cache {
             id: cache.id.clone(),
-            key: cache.command.clone(),
+            key: cache.key.clone(),
             path: "".into(),
         });
     }
@@ -30,6 +30,12 @@ pub fn cache(graph: Arc<Mutex<Graph>>, key: &str) -> Result<Cache, Error> {
         key.into(),
         vec![],
         Arc::new(Box::new(CacheExt::default())),
+    ));
+
+    graph.execute(GraphCommand::AddVolume(
+        id.clone(),
+        "cache".into(),
+        key.into(),
     ));
 
     let cache = Cache {

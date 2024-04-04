@@ -44,6 +44,12 @@ pub fn file(graph: Arc<Mutex<Graph>>, path: String, reset: bool) -> Result<File,
         Arc::new(Box::new(Runner::default())),
     ));
 
+    graph.execute(GraphCommand::AddVolume(
+        id.clone(),
+        "file".into(),
+        path.clone(),
+    ));
+
     let file = File { id, path };
     Ok(file)
 }
@@ -133,9 +139,16 @@ pub fn tar_xzvf(
     let parent_dir = parent_dir[..parent_dir.len() - 1].join("/");
 
     let dir = Directory {
-        id,
+        id: id.clone(),
         path: format!("{}/{}", parent_dir, output_dir),
     };
+
+    graph.execute(GraphCommand::AddVolume(
+        id,
+        "directory".into(),
+        dir.path.clone(),
+    ));
+
     Ok(dir)
 }
 
@@ -176,9 +189,15 @@ pub fn unzip(
     let parent_dir = parent_dir[..parent_dir.len() - 1].join("/");
 
     let dir = Directory {
-        id,
+        id: id.clone(),
         path: format!("{}/{}", parent_dir, output_dir),
     };
+
+    graph.execute(GraphCommand::AddVolume(
+        id,
+        "directory".into(),
+        dir.path.clone(),
+    ));
 
     Ok(dir)
 }

@@ -90,14 +90,14 @@ pub fn with_cache(graph: Arc<Mutex<Graph>>, cache_id: String, path: String) -> R
     graph.runner = Arc::new(Box::new(CacheExt::default()));
     graph.runner.setup()?;
 
-    if let Some(cache) = graph.vertices.iter().find(|v| v.id.clone() == cache_id) {
+    if let Some(cache) = graph.volumes.iter().find(|v| v.id.clone() == cache_id) {
         let id = Uuid::new_v4().to_string();
         let dep_id = graph.vertices[graph.size() - 1].id.clone();
         let deps = match graph.size() {
             1 => vec![],
             _ => vec![dep_id],
         };
-        let cache_key_path = format!("{}:{}", cache.command, path);
+        let cache_key_path = format!("{}:{}", cache.path, path);
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
             "withCache".into(),
@@ -121,17 +121,17 @@ pub fn with_cache(graph: Arc<Mutex<Graph>>, cache_id: String, path: String) -> R
 pub fn with_file(graph: Arc<Mutex<Graph>>, file_id: String, path: String) -> Result<(), Error> {
     let mut graph = graph.lock().unwrap();
     let runner = graph.runner.clone();
-    graph.runner = Arc::new(Box::new(CacheExt::default()));
+    graph.runner = Arc::new(Box::new(Runner::default()));
     graph.runner.setup()?;
 
-    if let Some(file) = graph.vertices.iter().find(|v| v.id.clone() == file_id) {
+    if let Some(file) = graph.volumes.iter().find(|v| v.id.clone() == file_id) {
         let id = Uuid::new_v4().to_string();
         let dep_id = graph.vertices[graph.size() - 1].id.clone();
         let deps = match graph.size() {
             1 => vec![],
             _ => vec![dep_id],
         };
-        let copy_file = format!("cp {} {}", file.command, path);
+        let copy_file = format!("cp {} {}", file.path, path);
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
             "withFile".into(),
@@ -226,12 +226,10 @@ pub fn zip(graph: Arc<Mutex<Graph>>, path: String) -> Result<File, Error> {
         path: format!("{}/{}", parent_dir, output_file),
     };
 
-    graph.execute(GraphCommand::AddVertex(
+    graph.execute(GraphCommand::AddVolume(
         id,
         "file".into(),
         file.path.clone(),
-        vec![],
-        Arc::new(Box::new(Runner::default())),
     ));
 
     Ok(file)
@@ -273,12 +271,10 @@ pub fn tar_czvf(graph: Arc<Mutex<Graph>>, path: String) -> Result<File, Error> {
         path: format!("{}/{}", parent_dir, output_file),
     };
 
-    graph.execute(GraphCommand::AddVertex(
+    graph.execute(GraphCommand::AddVolume(
         id,
         "file".into(),
         file.path.clone(),
-        vec![],
-        Arc::new(Box::new(Runner::default())),
     ));
 
     Ok(file)

@@ -43,6 +43,12 @@ pub fn directory(graph: Arc<Mutex<Graph>>, path: String, reset: bool) -> Result<
         Arc::new(Box::new(Runner::default())),
     ));
 
+    graph.execute(GraphCommand::AddVolume(
+        id.clone(),
+        "directory".into(),
+        path.clone(),
+    ));
+
     let path = canonicalize(path).unwrap().to_str().unwrap().to_string();
     let directory = Directory { id, path };
     Ok(directory)

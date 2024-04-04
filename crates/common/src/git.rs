@@ -131,9 +131,15 @@ pub fn tree(graph: Arc<Mutex<Graph>>) -> Result<Directory, Error> {
     graph.execute(GraphCommand::AddEdge(x, y));
     graph.runner = Arc::new(Box::new(RunnerExt::default()));
 
-    let directory = Directory {
-        id,
-        path: graph.work_dir.clone(),
-    };
+    let path = graph.work_dir.clone();
+
+    graph.execute(GraphCommand::AddVolume(
+        id.clone(),
+        "directory".into(),
+        path.clone(),
+    ));
+
+    let directory = Directory { id, path };
+
     Ok(directory)
 }
