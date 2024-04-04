@@ -16,7 +16,16 @@ use fluentci_types::Output;
 use super::edge::Edge;
 use super::vertex::{Runnable, Vertex};
 
+#[derive(Default, Debug, Clone)]
+pub struct Volume {
+    pub id: String,
+    pub label: String,
+    pub path: String,
+    pub key: String,
+}
+
 pub enum GraphCommand {
+    AddVolume(String, String, String),
     AddVertex(
         String,
         String,
@@ -32,6 +41,7 @@ pub enum GraphCommand {
 pub struct Graph {
     pub vertices: Vec<Vertex>,
     pub edges: Vec<Edge>,
+    pub volumes: Vec<Volume>,
     tx: Sender<(String, usize)>,
     pub runner: Arc<Box<dyn Extension + Send + Sync>>,
     pub work_dir: String,
@@ -42,6 +52,7 @@ impl Graph {
         let work_dir = current_dir().unwrap().to_str().unwrap().to_string();
         Graph {
             vertices: Vec::new(),
+            volumes: Vec::new(),
             edges: Vec::new(),
             tx,
             runner,
@@ -51,23 +62,15 @@ impl Graph {
 
     pub fn execute(&mut self, command: GraphCommand) {
         match command {
+            GraphCommand::AddVolume(id, label, path) => {
+                self.volumes.push(Volume {
+                    id,
+                    label,
+                    key: path.clone(),
+                    path,
+                });
+            }
             GraphCommand::AddVertex(id, label, command, needs, runner) => {
-                if label == "cache"
-                    && self
-                        .vertices
-                        .iter()
-                        .any(|v| v.command == command && v.label == "cache")
-                {
-                    return;
-                }
-                if label == "file"
-                    && self
-                        .vertices
-                        .iter()
-                        .any(|v| v.command == command && v.label == "file")
-                {
-                    return;
-                }
                 if let Some(vertex) = self.vertices.iter_mut().find(|v| v.id == id) {
                     vertex.needs.extend(needs);
                 } else {
@@ -107,9 +110,9 @@ impl Graph {
             "git-last-commit",
             "tree",
             "http",
+            "cache",
             "file",
             "directory",
-            "cache",
             "chmod",
             "withFile",
         ];
@@ -327,8 +330,7 @@ impl Graph {
     }
 
     pub fn reset(&mut self) {
-        let keep = vec!["cache", "file", "directory"];
-        self.vertices.retain(|v| keep.contains(&v.label.as_str()));
+        self.vertices.clear();
         self.edges.clear();
         self.work_dir = current_dir().unwrap().to_str().unwrap().to_string();
     }

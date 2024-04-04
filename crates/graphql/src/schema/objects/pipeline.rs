@@ -58,10 +58,11 @@ impl Pipeline {
             1 => vec![],
             _ => vec![dep_id],
         };
+
         graph.execute(GraphCommand::AddVertex(
             id.clone(),
             "http".into(),
-            url,
+            url.clone(),
             deps,
             Arc::new(Box::new(HttpExt::default())),
         ));
@@ -72,11 +73,20 @@ impl Pipeline {
             let y = graph.size() - 1;
             graph.execute(GraphCommand::AddEdge(x, y));
         }
+        let filename = sha256::digest(url).to_string();
+        let work_dir = graph.work_dir.clone();
 
         let file = File {
-            id: ID(id),
-            path: "/file".into(),
+            id: ID(id.clone()),
+            path: format!("{}/{}", work_dir, filename),
         };
+
+        graph.execute(GraphCommand::AddVolume(
+            id,
+            "file".into(),
+            file.path.clone(),
+        ));
+
         Ok(file)
     }
 
