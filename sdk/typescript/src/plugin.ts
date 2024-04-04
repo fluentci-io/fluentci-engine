@@ -37,6 +37,12 @@ declare const Host: {
     http: (ptr: I64) => I64;
     md5: (ptr: I64) => I64;
     sha256: (ptr: I64) => I64;
+    get_env: (ptr: I64) => I64;
+    set_envs: (ptr: I64) => void;
+    has_env: (ptr: I64) => I64;
+    remove_env: (ptr: I64) => void;
+    get_os: () => I64;
+    get_arch: () => I64;
   };
 };
 
@@ -73,6 +79,12 @@ export const md5: (ptr: I64) => I64 = fn.md5;
 export const sha256: (ptr: I64) => I64 = fn.sha256;
 export const unzip: (ptr: I64) => I64 = fn.unzip;
 export const tar_xzvf: (ptr: I64) => I64 = fn.tar_xzvf;
+export const get_env: (ptr: I64) => I64 = fn.get_env;
+export const set_envs: (ptr: I64) => void = fn.set_envs;
+export const has_env: (ptr: I64) => I64 = fn.has_env;
+export const remove_env: (ptr: I64) => void = fn.remove_env;
+export const get_os: () => I64 = fn.get_os;
+export const get_arch: () => I64 = fn.get_arch;
 
 class BaseClient {
   constructor() {}
@@ -305,6 +317,85 @@ export class Client extends BaseClient {
     return new Pkgx({
       id: response.id,
     });
+  };
+
+  /**
+   * Get environment variable
+   * ```ts
+   * dag.getEnv("ENV_NAME");
+   * ```
+   * @param name
+   * @returns {string}
+   */
+  getEnv = (name: string): string => {
+    const mem = Memory.fromString(name);
+    const offset = get_env(mem.offset);
+    return Memory.find(offset).readString();
+  };
+
+  /**
+   * Set environment variables
+   * ```ts
+   * dag.setEnvs({ ENV_NAME: "value" });
+   * ```
+   * @param envs
+   * @returns {void}
+   */
+  setEnvs = (envs: Record<string, string>): void => {
+    const mem = Memory.fromJsonObject(envs);
+    set_envs(mem.offset);
+  };
+
+  /**
+   * Check if an environment variable exists
+   * ```ts
+   * dag.hasEnv("ENV_NAME");
+   * ```
+   * @param name
+   * @returns {boolean}
+   */
+  hasEnv = (name: string): boolean => {
+    const mem = Memory.fromString(name);
+    const offset = has_env(mem.offset);
+    const value = Memory.find(offset).readJsonObject();
+    return value;
+  };
+
+  /**
+   * Remove an environment variable
+   * ```ts
+   * dag.removeEnv("ENV_NAME");
+   * ```
+   * @param name
+   * @returns {void}
+   */
+  removeEnv = (name: string): void => {
+    const mem = Memory.fromString(name);
+    remove_env(mem.offset);
+  };
+
+  /**
+   * Get the operating system
+   * ```ts
+   * dag.getOS();
+   * ```
+   * @returns {string}
+   */
+  getOS = (): string => {
+    const offset = get_os();
+    return Memory.find(offset).readString();
+  };
+
+  /**
+   * Get the current cpu architecture
+   * ```ts
+   * dag.getArch();
+   * ```
+   * @returns {string}
+   */
+  getArch = (): string => {
+    const offset = get_arch();
+    return Memory.find(offset).readString();
   };
 }
 
