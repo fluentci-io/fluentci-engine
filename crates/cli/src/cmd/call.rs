@@ -59,6 +59,12 @@ pub fn call(module: &str, command: &str) {
         .with_function("sha256", [PTR], [PTR], user_data.clone(), sha256)
         .with_function("chmod", [PTR], [PTR], user_data.clone(), chmod)
         .with_function("with_file", [PTR], [], user_data.clone(), with_file)
+        .with_function("get_env", [PTR], [PTR], user_data.clone(), get_env)
+        .with_function("set_envs", [PTR], [], user_data.clone(), set_envs)
+        .with_function("remove_env", [PTR], [], user_data.clone(), remove_env)
+        .with_function("has_env", [PTR], [PTR], user_data.clone(), has_env)
+        .with_function("get_os", [], [PTR], user_data.clone(), get_os)
+        .with_function("get_arch", [], [PTR], user_data.clone(), get_arch)
         .build()
         .unwrap();
 

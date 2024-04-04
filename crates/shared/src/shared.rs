@@ -125,3 +125,31 @@ host_fn!(pub tar_czvf(user_data: State; path: String) -> Json<File> {
     Err(e) => Err(e),
   }
 });
+
+host_fn!(pub get_env(user_data: State; key: String) -> String {
+  Ok(std::env::var(key).unwrap_or_default())
+});
+
+host_fn!(pub set_envs(user_data: State; env: Json<Vec<(String, String)>>) {
+  for (key, value) in env.into_inner() {
+    std::env::set_var(key, value);
+  }
+  Ok(())
+});
+
+host_fn!(pub remove_env(user_data: State; key: String) {
+  std::env::remove_var(key);
+  Ok(())
+});
+
+host_fn!(pub has_env(user_data: State; key: String) -> Json<bool> {
+  Ok(Json(std::env::var(key).is_ok()))
+});
+
+host_fn!(pub get_os(user_data: State;) -> String {
+  Ok(std::env::consts::OS.to_string())
+});
+
+host_fn!(pub get_arch(user_data: State;) -> String {
+  Ok(std::env::consts::ARCH.to_string())
+});

@@ -34,6 +34,12 @@ extern "ExtismHost" {
     fn pipeline(name: String) -> Json<Pipeline>;
     fn pixi() -> Json<Pixi>;
     fn pkgx() -> Json<Pkgx>;
+    fn get_env(key: String) -> String;
+    fn has_env(key: String) -> Json<bool>;
+    fn set_envs(envs: Json<Vec<(String, String)>>);
+    fn remove_env(key: String);
+    fn get_os() -> String;
+    fn get_arch() -> String;
 }
 
 pub struct Client {}
@@ -93,5 +99,29 @@ impl Client {
 
     pub fn pkgx(&self) -> Result<Pkgx, Error> {
         unsafe { pkgx() }.map(|pkgx| pkgx.into_inner())
+    }
+
+    pub fn get_env(&self, key: &str) -> Result<String, Error> {
+        unsafe { get_env(key.into()) }
+    }
+
+    pub fn has_env(&self, key: &str) -> Result<bool, Error> {
+        unsafe { has_env(key.into()) }.map(|has_env| has_env.into_inner())
+    }
+
+    pub fn set_envs(&self, envs: Vec<(String, String)>) -> Result<(), Error> {
+        unsafe { set_envs(envs.into()) }
+    }
+
+    pub fn remove_env(&self, key: &str) -> Result<(), Error> {
+        unsafe { remove_env(key.into()) }
+    }
+
+    pub fn get_os(&self) -> Result<String, Error> {
+        unsafe { get_os() }
+    }
+
+    pub fn get_arch(&self) -> Result<String, Error> {
+        unsafe { get_arch() }
     }
 }

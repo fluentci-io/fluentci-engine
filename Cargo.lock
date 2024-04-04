@@ -1698,6 +1698,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "env"
+version = "0.1.0"
+dependencies = [
+ "extism-pdk",
+ "fluentci-pdk",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1960,7 +1968,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-pdk"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "extism-pdk",
  "fluentci-types",
@@ -1986,7 +1994,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-shared"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "extism",
  "extism-pdk",
