@@ -1,7 +1,7 @@
 const esbuild = require("esbuild");
 
 esbuild.build({
-  entryPoints: ["src/index.ts", "src/hash.ts"],
+  entryPoints: ["src/index.ts", "src/hash.ts", "src/module.ts", "src/sys.ts"],
   outdir: "dist",
   bundle: true,
   sourcemap: true,

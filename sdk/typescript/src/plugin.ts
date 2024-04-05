@@ -413,8 +413,8 @@ export class Client extends BaseClient {
   call = (url: string, func: string, args: string[]): string => {
     const mem = Memory.fromJsonObject({
       url,
-      func,
-      args,
+      function: func,
+      args: args.join(" "),
     });
     const offset = call(mem.offset);
     return Memory.find(offset).readString();
