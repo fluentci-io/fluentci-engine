@@ -43,6 +43,7 @@ declare const Host: {
     remove_env: (ptr: I64) => void;
     get_os: () => I64;
     get_arch: () => I64;
+    call: (ptr: I64) => I64;
   };
 };
 
@@ -85,6 +86,7 @@ export const has_env: (ptr: I64) => I64 = fn.has_env;
 export const remove_env: (ptr: I64) => void = fn.remove_env;
 export const get_os: () => I64 = fn.get_os;
 export const get_arch: () => I64 = fn.get_arch;
+export const call: (ptr: I64) => I64 = fn.call;
 
 class BaseClient {
   constructor() {}
@@ -395,6 +397,26 @@ export class Client extends BaseClient {
    */
   getArch = (): string => {
     const offset = get_arch();
+    return Memory.find(offset).readString();
+  };
+
+  /**
+   * Call a function
+   * ```ts
+   * dag.call("/path/to/wasm/file", "function_name", "args");
+   * ```
+   * @param {string} url
+   * @param {string} func
+   * @param {string} args
+   * @returns {string}
+   */
+  call = (url: string, func: string, args: string[]): string => {
+    const mem = Memory.fromJsonObject({
+      url,
+      func,
+      args,
+    });
+    const offset = call(mem.offset);
     return Memory.find(offset).readString();
   };
 }

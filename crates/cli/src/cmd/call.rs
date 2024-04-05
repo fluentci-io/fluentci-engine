@@ -4,8 +4,22 @@ use extism::{Manifest, PluginBuilder, UserData, Wasm, PTR};
 use fluentci_core::deps::Graph;
 use fluentci_ext::runner::Runner;
 use fluentci_shared::{
-    cache::*, devbox::*, devenv::*, directory::*, envhub::*, file::*, flox::*, git::*, http::*,
-    mise::*, nix::*, pipeline::*, pixi::*, pkgx::*, shared::*, state::State,
+    cache::*,
+    devbox::*,
+    devenv::*,
+    directory::*,
+    envhub::*,
+    file::*,
+    flox::*,
+    git::*,
+    http::*,
+    mise::*,
+    nix::*,
+    pipeline::*,
+    pixi::*,
+    pkgx::*,
+    shared::{self, *},
+    state::State,
 };
 
 pub fn call(module: &str, command: &str) {
@@ -65,6 +79,7 @@ pub fn call(module: &str, command: &str) {
         .with_function("has_env", [PTR], [PTR], user_data.clone(), has_env)
         .with_function("get_os", [], [PTR], user_data.clone(), get_os)
         .with_function("get_arch", [], [PTR], user_data.clone(), get_arch)
+        .with_function("call", [PTR], [PTR], user_data.clone(), shared::call)
         .build()
         .unwrap();
 

@@ -1,4 +1,5 @@
 use extism_pdk::*;
+use fluentci_types::Module;
 
 use self::{
     cache::Cache, devbox::Devbox, directory::Directory, envhub::Envhub, file::File, flox::Flox,
@@ -40,6 +41,7 @@ extern "ExtismHost" {
     fn remove_env(key: String);
     fn get_os() -> String;
     fn get_arch() -> String;
+    fn call(opts: Json<Module>) -> String;
 }
 
 pub struct Client {}
@@ -123,5 +125,15 @@ impl Client {
 
     pub fn get_arch(&self) -> Result<String, Error> {
         unsafe { get_arch() }
+    }
+
+    pub fn call(&self, url: &str, func: &str, args: Vec<&str>) -> Result<String, Error> {
+        unsafe {
+            call(Json(Module {
+                url: url.into(),
+                function: func.into(),
+                args: args.join(" "),
+            }))
+        }
     }
 }
