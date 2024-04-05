@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 pub mod cache;
 pub mod devbox;
 pub mod devenv;
@@ -17,4 +19,11 @@ pub mod service;
 pub enum Output {
     Stdout,
     Stderr,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Module {
+    pub url: String,
+    pub function: String,
+    pub args: String,
 }
