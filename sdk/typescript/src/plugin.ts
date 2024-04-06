@@ -1684,12 +1684,35 @@ export class Pkgx extends BaseClient {
     return this;
   };
 
+  /**
+   * Create file at the given path
+   * ```ts
+   * dag.pkgx().withFile("/path/to/file", "file-id");
+   * ```
+   * @param {string} path Path to the file
+   * @param {String} fileId Unique file identifier
+   * @returns {Pkgx}
+   */
   withFile = (path: string, fileId: String): Pkgx => {
     let mem = Memory.fromJsonObject({
       path,
       id: fileId,
     });
     with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Install packages
+   * ```ts
+   * dag.pkgx().withPackages(["jq", "gh"]);
+   * ```
+   * @param {string[]} packages List of packages to install
+   * @returns {Pkgx}
+   */
+  withPackages = (packages: string[]): Pkgx => {
+    let mem = Memory.fromJsonObject(packages);
+    with_packages(mem.offset);
     return this;
   };
 

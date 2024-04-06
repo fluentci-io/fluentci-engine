@@ -71,6 +71,20 @@ impl Pkgx {
         })
     }
 
+    pub fn with_packages(&self, packages: Vec<&str>) -> Result<Pkgx, Error> {
+        unsafe {
+            with_exec(Json::from(
+                packages
+                    .into_iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>(),
+            ))
+        }?;
+        Ok(Pkgx {
+            id: self.id.clone(),
+        })
+    }
+
     pub fn stdout(&self) -> Result<String, Error> {
         unsafe { stdout() }
     }

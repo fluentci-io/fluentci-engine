@@ -1,7 +1,7 @@
 use std::sync::{mpsc::Receiver, Arc, Mutex};
 
 use async_graphql::{Context, Error, Object, ID};
-use fluentci_common::common;
+use fluentci_common::{common, pkgx as common_pkgx};
 use fluentci_core::deps::Graph;
 use fluentci_ext::pkgx::Pkgx as PkgxExt;
 use fluentci_types::pkgx as types;
@@ -52,6 +52,16 @@ impl Pkgx {
     ) -> Result<&Pkgx, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         common::with_file(graph.clone(), file_id.into(), path)?;
+        Ok(self)
+    }
+
+    async fn with_packages(
+        &self,
+        ctx: &Context<'_>,
+        packages: Vec<String>,
+    ) -> Result<&Pkgx, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common_pkgx::with_packages(graph.clone(), packages)?;
         Ok(self)
     }
 

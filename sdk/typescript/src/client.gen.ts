@@ -1568,6 +1568,19 @@ export class Pkgx extends BaseClient {
     });
   };
 
+  withPackages = (packages: string[]): Pkgx => {
+    return new Pkgx({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withPackages",
+          args: { packages },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
