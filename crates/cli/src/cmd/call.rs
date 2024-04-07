@@ -80,6 +80,7 @@ pub fn call(module: &str, command: &str) {
         .with_function("get_os", [], [PTR], user_data.clone(), get_os)
         .with_function("get_arch", [], [PTR], user_data.clone(), get_arch)
         .with_function("call", [PTR], [PTR], user_data.clone(), shared::call)
+        .with_function("with_packages", [PTR], [], user_data.clone(), with_packages)
         .build()
         .unwrap();
 

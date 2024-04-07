@@ -9,6 +9,7 @@ extern "ExtismHost" {
     fn with_workdir(path: String);
     fn with_cache(cache: Json<Cache>);
     fn with_file(file: Json<File>);
+    fn with_packages(packages: Json<Vec<String>>);
     fn stdout() -> String;
     fn stderr() -> String;
 }
@@ -73,7 +74,7 @@ impl Pkgx {
 
     pub fn with_packages(&self, packages: Vec<&str>) -> Result<Pkgx, Error> {
         unsafe {
-            with_exec(Json::from(
+            with_packages(Json::from(
                 packages
                     .into_iter()
                     .map(|x| x.to_string())
