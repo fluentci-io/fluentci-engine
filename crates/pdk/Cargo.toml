@@ -7,7 +7,7 @@ keywords = ["nix", "environment", "ci", "cd", "devops"]
 license = "MPL-2.0"
 name = "fluentci-pdk"
 repository = "https://github.com/fluentci-io/fluentci-engine"
-version = "0.1.7"
+version = "0.1.8"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
