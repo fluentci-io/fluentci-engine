@@ -24,10 +24,13 @@ jobs:
           docker-images: true
           swap-storage: true
       - name: Setup Fluent CI
-        uses: fluentci-io/setup-fluentci@v4
+        uses: fluentci-io/setup-fluentci@v5
+        with:
+          wasm: true
+          pipeline: rust
+          args: build --release
       - name: Run Build and e2e tests
         run: |
-          fluentci run rust_pipeline build
           ls -ltr target
           rm -rf target/release/build target/release/deps target/release/examples target/release/incremental
           fluentci run . e2e
