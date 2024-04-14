@@ -279,6 +279,35 @@ dag()
   .stdout()?;
 ```
 
+## 🌱 Github Actions
+
+FluentCI Engine is designed to be used with Github Actions. You can use the `fluentci-io/setup-fluentci@v5` action to run your pipelines. See [fluentci-io/setup-fluentci](https://github.com/marketplace/actions/setup-fluentci) for more information.
+
+```yaml
+name: Hello
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  setup-fluentci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup FluentCI
+        uses: fluentci-io/setup-fluentci@v5
+        with:
+          wasm: true # set to true so WebAssembly plugins can be used
+          plugin: base # Name of the Wasm Plugin to use without the .wasm extension, 
+          # will be downloaded from the registry https://pkg.fluentci.io
+
+          # Arguments to pass to the plugin: function_name args
+          args: |
+            hello Hello, World!
+```
+
 ## ⚡ Caching
 
 FluentCI Engine supports caching. To enable it, set the following environment variables:
