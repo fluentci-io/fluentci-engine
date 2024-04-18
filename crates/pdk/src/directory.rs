@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     devbox::Devbox, devenv::Devenv, envhub::Envhub, file::File, flox::Flox, mise::Mise, nix::Nix,
-    pixi::Pixi, pkgx::Pkgx,
+    pixi::Pixi, pkgx::Pkgx, proto::Proto,
 };
 
 #[host_fn]
@@ -17,6 +17,7 @@ extern "ExtismHost" {
     fn nix() -> Json<Nix>;
     fn pkgx() -> Json<Pkgx>;
     fn pixi() -> Json<Pixi>;
+    fn proto() -> Json<Proto>;
     fn mise() -> Json<Mise>;
     fn envhub() -> Json<Envhub>;
     fn tar_czvf(path: String) -> Json<File>;
@@ -88,6 +89,11 @@ impl Directory {
     pub fn mise(&self) -> Result<Mise, Error> {
         let mise = unsafe { mise() }?;
         Ok(mise.into_inner())
+    }
+
+    pub fn proto(&self) -> Result<Proto, Error> {
+        let proto = unsafe { proto() }?;
+        Ok(proto.into_inner())
     }
 
     pub fn envhub(&self) -> Result<Envhub, Error> {
