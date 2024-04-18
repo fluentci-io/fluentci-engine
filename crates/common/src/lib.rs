@@ -13,4 +13,5 @@ pub mod nix;
 pub mod pipeline;
 pub mod pixi;
 pub mod pkgx;
+pub mod proto;
 pub mod util;

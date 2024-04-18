@@ -1,0 +1,16 @@
+query Proto {
+  pipeline(name: "Demo") {
+    proto {
+      withExec(args: ["proto", "--version"]) {
+        withExec(args: ["proto", "install", "deno"]) {
+          withExec(args: ["deno", "--version"]) {
+            withExec(args: ["which", "deno"]) {
+              id
+              stdout
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -18,6 +18,7 @@ use fluentci_shared::{
     pipeline::*,
     pixi::*,
     pkgx::*,
+    proto::*,
     shared::{self, *},
     state::State,
 };
@@ -60,6 +61,7 @@ pub fn call(module: &str, command: &str) {
         .with_function("pipeline", [PTR], [PTR], user_data.clone(), pipeline)
         .with_function("pixi", [], [PTR], user_data.clone(), pixi)
         .with_function("pkgx", [], [PTR], user_data.clone(), pkgx)
+        .with_function("proto", [], [PTR], user_data.clone(), proto)
         .with_function("mise", [], [PTR], user_data.clone(), mise)
         .with_function("with_exec", [PTR], [], user_data.clone(), with_exec)
         .with_function("with_workdir", [PTR], [], user_data.clone(), with_workdir)

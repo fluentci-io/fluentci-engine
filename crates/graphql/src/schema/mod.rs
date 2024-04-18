@@ -3,7 +3,7 @@ use async_graphql::MergedObject;
 use self::{
     cache::CacheQuery, devbox::DevboxQuery, devenv::DevenvQuery, directory::DirectoryQuery,
     file::FileQuery, flox::FloxQuery, git::GitQuery, http::HttpQuery, mise::MiseQuery,
-    nix::NixQuery, pipeline::PipelineQuery, pixi::PixiQuery, pkgx::PkgxQuery,
+    nix::NixQuery, pipeline::PipelineQuery, pixi::PixiQuery, pkgx::PkgxQuery, proto::ProtoQuery,
 };
 
 pub mod cache;
@@ -21,6 +21,7 @@ pub mod objects;
 pub mod pipeline;
 pub mod pixi;
 pub mod pkgx;
+pub mod proto;
 
 #[derive(Default, MergedObject)]
 pub struct Query(
@@ -37,4 +38,5 @@ pub struct Query(
     PkgxQuery,
     MiseQuery,
     PixiQuery,
+    ProtoQuery,
 );
