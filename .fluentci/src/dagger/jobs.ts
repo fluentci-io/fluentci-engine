@@ -348,6 +348,7 @@ export async function e2e(
     "nix",
     "pixi",
     "pkgx",
+    "proto",
   ];
   let context = await getDirectory(".");
   await dag
@@ -452,6 +453,20 @@ export async function e2e(
       "-m",
       "../target/wasm32-unknown-unknown/release/http.wasm",
       "get https://fluentci.io",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/proto.wasm",
+      "proto install bun",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
+      "../target/wasm32-unknown-unknown/release/proto.wasm",
+      "which bun",
     ])
     .stdout();
 
