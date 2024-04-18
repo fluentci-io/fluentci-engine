@@ -13,13 +13,16 @@ use fluentci_common::mise::mise as common_mise;
 use fluentci_common::nix::nix as common_nix;
 use fluentci_common::pixi::pixi as common_pixi;
 use fluentci_common::pkgx::pkgx as common_pkgx;
+use fluentci_common::proto::proto as common_proto;
 use fluentci_ext::runner::Runner;
 use fluentci_types::directory as types;
 use uuid::Uuid;
 
 use crate::schema::objects::{envhub::Envhub, file::File, mise::Mise};
 
-use super::{devbox::Devbox, devenv::Devenv, flox::Flox, nix::Nix, pixi::Pixi, pkgx::Pkgx};
+use super::{
+    devbox::Devbox, devenv::Devenv, flox::Flox, nix::Nix, pixi::Pixi, pkgx::Pkgx, proto::Proto,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct Directory {
@@ -82,6 +85,12 @@ impl Directory {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let pixi = common_pixi(graph.clone(), false)?;
         Ok(Pixi::from(pixi))
+    }
+
+    async fn proto(&self, ctx: &Context<'_>) -> Result<Proto, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let proto = common_proto(graph.clone(), false)?;
+        Ok(Proto::from(proto))
     }
 
     async fn mise(&self, ctx: &Context<'_>) -> Result<Mise, Error> {

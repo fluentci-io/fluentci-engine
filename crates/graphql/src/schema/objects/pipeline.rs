@@ -16,6 +16,7 @@ use fluentci_ext::mise::Mise as MiseExt;
 use fluentci_ext::nix::Nix as NixExt;
 use fluentci_ext::pixi::Pixi as PixiExt;
 use fluentci_ext::pkgx::Pkgx as PkgxExt;
+use fluentci_ext::proto::Proto as ProtoExt;
 use fluentci_ext::runner::Runner;
 use fluentci_types::pipeline as types;
 use uuid::Uuid;
@@ -27,6 +28,7 @@ use crate::{
 
 use super::{
     devbox::Devbox, devenv::Devenv, envhub::Envhub, flox::Flox, nix::Nix, pixi::Pixi, pkgx::Pkgx,
+    proto::Proto,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -325,6 +327,37 @@ impl Pipeline {
 
         let pixi = Pixi { id: ID(id) };
         Ok(pixi)
+    }
+
+    async fn proto(&self, ctx: &Context<'_>) -> Result<Proto, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(ProtoExt::default()));
+        graph.runner.setup()?;
+
+        let id = Uuid::new_v4().to_string();
+
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
+        graph.execute(GraphCommand::AddVertex(
+            id.clone(),
+            "proto".into(),
+            "".into(),
+            deps,
+            Arc::new(Box::new(ProtoExt::default())),
+        ));
+
+        if graph.size() > 2 {
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+        }
+
+        let proto = Proto { id: ID(id) };
+        Ok(proto)
     }
 
     async fn mise(&self, ctx: &Context<'_>) -> Result<Mise, Error> {
