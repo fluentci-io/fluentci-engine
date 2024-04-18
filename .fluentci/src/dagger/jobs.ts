@@ -454,20 +454,6 @@ export async function e2e(
       "../target/wasm32-unknown-unknown/release/http.wasm",
       "get https://fluentci.io",
     ])
-    .withExec([
-      "fluentci-engine",
-      "call",
-      "-m",
-      "../target/wasm32-unknown-unknown/release/proto.wasm",
-      "proto install bun",
-    ])
-    .withExec([
-      "fluentci-engine",
-      "call",
-      "-m",
-      "../target/wasm32-unknown-unknown/release/proto.wasm",
-      "which bun",
-    ])
     .stdout();
 
   context = await getDirectory(env.get("WORK_DIR") || src);

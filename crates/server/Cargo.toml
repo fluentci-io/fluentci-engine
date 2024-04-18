@@ -7,7 +7,7 @@ keywords = ["nix", "environment", "ci", "cd", "devops"]
 license = "MPL-2.0"
 name = "fluentci-server"
 repository = "https://github.com/fluentci-io/fluentci-engine"
-version = "0.1.8"
+version = "0.1.9"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -18,8 +18,8 @@ anyhow = "1.0.81"
 async-graphql = "7.0.2"
 async-graphql-actix-web = "7.0.2"
 fluentci-core = {path = "../core", version = "0.1.6"}
-fluentci-ext = {path = "../ext", version = "0.1.4"}
-fluentci-graphql = {path = "../graphql", version = "0.1.8"}
+fluentci-ext = {path = "../ext", version = "0.1.5"}
+fluentci-graphql = {path = "../graphql", version = "0.1.9"}
 mime_guess = "2.0.4"
 owo-colors = "4.0.0"
 tokio = "1.36.0"
