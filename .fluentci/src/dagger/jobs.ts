@@ -531,6 +531,7 @@ export async function e2e(
     "flox",
     "devenv",
     "devbox",
+    "proto",
   ];
 
   for (const item of queries) {

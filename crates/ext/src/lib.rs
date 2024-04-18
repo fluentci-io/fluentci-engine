@@ -23,6 +23,7 @@ pub mod mise;
 pub mod nix;
 pub mod pixi;
 pub mod pkgx;
+pub mod proto;
 pub mod runner;
 
 pub trait Extension {

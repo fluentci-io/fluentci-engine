@@ -1,5 +1,6 @@
 use extism_pdk::*;
 use fluentci_types::Module;
+use proto::Proto;
 
 use self::{
     cache::Cache, devbox::Devbox, directory::Directory, envhub::Envhub, file::File, flox::Flox,
@@ -19,6 +20,7 @@ pub mod nix;
 pub mod pipeline;
 pub mod pixi;
 pub mod pkgx;
+pub mod proto;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -34,6 +36,7 @@ extern "ExtismHost" {
     fn nix() -> Json<Nix>;
     fn pipeline(name: String) -> Json<Pipeline>;
     fn pixi() -> Json<Pixi>;
+    fn proto() -> Json<Proto>;
     fn pkgx() -> Json<Pkgx>;
     fn get_env(key: String) -> String;
     fn has_env(key: String) -> Json<bool>;
@@ -101,6 +104,10 @@ impl Client {
 
     pub fn pkgx(&self) -> Result<Pkgx, Error> {
         unsafe { pkgx() }.map(|pkgx| pkgx.into_inner())
+    }
+
+    pub fn proto(&self) -> Result<Proto, Error> {
+        unsafe { proto() }.map(|proto| proto.into_inner())
     }
 
     pub fn get_env(&self, key: &str) -> Result<String, Error> {

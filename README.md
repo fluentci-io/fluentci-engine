@@ -109,31 +109,31 @@ fluentci-engine call -m ./target/wasm32-unknown-unknown/release/nix.wasm -- exec
 
 ### 📑 Available Plugins
 
-- [android](https://github.com/fluent-ci-templates/android-pipeline/tree/main/plugin) -  Android Plugin
-- [ansible-lint](https://github.com/tsirysndr/daggerverse/tree/main/ansible-lint/plugin) - Ansible Lint Plugin
-- [ansible](https://github.com/tsirysndr/daggerverse/tree/main/ansible/plugin) - Ansible Plugin
-- [base](https://github.com/fluent-ci-templates/base-pipeline/tree/main/plugin) - Base Plugin
-- [black](https://github.com/tsirysndr/daggerverse/tree/main/black/plugin) - Black Formatter Plugin
-- [buildx](https://github.com/tsirysndr/daggerverse/tree/main/buildx/plugin) - Buildx Plugin
-- [bun](https://github.com/fluent-ci-templates/bun-pipeline/tree/main/plugin) - Bun Plugin
-- [chromatic](https://github.com/fluent-ci-templates/chromatic-pipeline/tree/main/plugin) - Chromatic Plugin
-- [cloudflare](https://github.com/fluent-ci-templates/cloudflare-pipeline/tree/main/plugin) - Cloudflare Plugin
-- [codecov](https://github.com/fluent-ci-templates/codecov-pipeline/tree/main/plugin) - Codecov Plugin
-- [deno](https://github.com/fluent-ci-templates/deno-pipeline/tree/main/plugin) - Deno Plugin
-- [fastlane](https://github.com/fluent-ci-templates/fastlane-pipeline/tree/main/plugin) - Fastlane Plugin
-- [flakestry](https://github.com/tsirysndr/daggerverse/tree/main/flakestry/plugin) - Flakestry Plugin
-- [flutter](https://github.com/fluent-ci-templates/flutter-pipeline/tree/main/plugin) - Flutter Plugin
-- [github](https://github.com/fluent-ci-templates/github-pipeline/tree/main/plugin) - Github Plugin
-- [gleam](https://github.com/fluent-ci-templates/gleam-pipeline/tree/main/plugin) - Gleam Plugin
-- [go](https://github.com/fluent-ci-templates/go-pipeline/tree/main/plugin) - Go Plugin
-- [gradle](https://github.com/fluent-ci-templates/gradle-pipeline/tree/main/plugin) - Gradle Plugin
-- [microcks](https://github.com/fluent-ci-templates/microcks-pipeline/tree/main/plugin) - Microcks Plugin
-- [nixpacks](https://github.com/tsirysndr/daggerverse/tree/main/nixpacks/plugin) - Nixpacks Plugin
-- [ruby](https://github.com/fluent-ci-templates/ruby-pipeline/tree/main/plugin) - Ruby Plugin
-- [rust](https://github.com/fluent-ci-templates/rust-pipeline/tree/main/plugin) - Rust Plugin
-- [shuttle](https://github.com/fluent-ci-templates/shuttle-pipeline/tree/main/plugin) - Shuttle Plugin
-- [syft](https://github.com/fluent-ci-templates/syft-pipeline/tree/main/plugin) - Syft Plugin
-- [symfony](https://github.com/fluent-ci-templates/symfony-pipeline/tree/main/plugin) - Symfony Plugin
+- [android](https://github.com/fluent-ci-templates/android-pipeline/tree/main/plugin)
+- [ansible-lint](https://github.com/tsirysndr/daggerverse/tree/main/ansible-lint/plugin)
+- [ansible](https://github.com/tsirysndr/daggerverse/tree/main/ansible/plugin)
+- [base](https://github.com/fluent-ci-templates/base-pipeline/tree/main/plugin)
+- [black](https://github.com/tsirysndr/daggerverse/tree/main/black/plugin)
+- [buildx](https://github.com/tsirysndr/daggerverse/tree/main/buildx/plugin)
+- [bun](https://github.com/fluent-ci-templates/bun-pipeline/tree/main/plugin)
+- [chromatic](https://github.com/fluent-ci-templates/chromatic-pipeline/tree/main/plugin)
+- [cloudflare](https://github.com/fluent-ci-templates/cloudflare-pipeline/tree/main/plugin)
+- [codecov](https://github.com/fluent-ci-templates/codecov-pipeline/tree/main/plugin)
+- [deno](https://github.com/fluent-ci-templates/deno-pipeline/tree/main/plugin)
+- [fastlane](https://github.com/fluent-ci-templates/fastlane-pipeline/tree/main/plugin)
+- [flakestry](https://github.com/tsirysndr/daggerverse/tree/main/flakestry/plugin)
+- [flutter](https://github.com/fluent-ci-templates/flutter-pipeline/tree/main/plugin)
+- [github](https://github.com/fluent-ci-templates/github-pipeline/tree/main/plugin)
+- [gleam](https://github.com/fluent-ci-templates/gleam-pipeline/tree/main/plugin)
+- [go](https://github.com/fluent-ci-templates/go-pipeline/tree/main/plugin)
+- [gradle](https://github.com/fluent-ci-templates/gradle-pipeline/tree/main/plugin)
+- [microcks](https://github.com/fluent-ci-templates/microcks-pipeline/tree/main/plugin)
+- [nixpacks](https://github.com/tsirysndr/daggerverse/tree/main/nixpacks/plugin)
+- [ruby](https://github.com/fluent-ci-templates/ruby-pipeline/tree/main/plugin)
+- [rust](https://github.com/fluent-ci-templates/rust-pipeline/tree/main/plugin)
+- [shuttle](https://github.com/fluent-ci-templates/shuttle-pipeline/tree/main/plugin)
+- [syft](https://github.com/fluent-ci-templates/syft-pipeline/tree/main/plugin)
+- [symfony](https://github.com/fluent-ci-templates/symfony-pipeline/tree/main/plugin)
 
 ### 🌈 Builtin functions
 
