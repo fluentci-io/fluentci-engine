@@ -146,11 +146,13 @@ fluentci-engine call -m ./target/wasm32-unknown-unknown/release/nix.wasm -- exec
 - [ruby](https://github.com/fluent-ci-templates/ruby-pipeline/tree/main/plugin)
 - [rust](https://github.com/fluent-ci-templates/rust-pipeline/tree/main/plugin)
 - [shuttle](https://github.com/fluent-ci-templates/shuttle-pipeline/tree/main/plugin)
+- [spin](https://github.com/fluent-ci-templates/spin-pipeline/tree/main/plugin)
 - [syft](https://github.com/fluent-ci-templates/syft-pipeline/tree/main/plugin)
 - [symfony](https://github.com/fluent-ci-templates/symfony-pipeline/tree/main/plugin)
 - [terraform](https://github.com/fluent-ci-templates/terraform-pipeline/tree/main/plugin)
 - [zig](https://github.com/fluent-ci-templates/zig-pipeline/tree/main/plugin)
-
+- [wasmer](https://github.com/fluent-ci-templates/wasmer-pipeline/tree/main/plugin)
+  
 ### 🌈 Builtin functions
 
 FluentCI Plugin Development Kit ([fluentci_pdk](https://docs.rs/fluentci-pdk/latest/fluentci_pdk)) provides some builtin functions from that you can use in your plugins:
