@@ -106,3 +106,11 @@ if (import.meta.main) {
   await main();
 }
 ```
+
+Alternatively, you can run the code above with the following command:
+
+```bash
+fluentci-engine run -- deno run -A main.ts
+```
+
+So you don't need to run the engine server separately.
