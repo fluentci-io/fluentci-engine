@@ -1,6 +1,6 @@
 query Nix {
   pipeline(name: "Demo") {
-    nix {
+    nix(args: { impure: true }) {
       withWorkdir(path: "./nix-demo") {
         withExec(args: ["nix", "--version"]) {
           withExec(args: ["which", "deno"]) {

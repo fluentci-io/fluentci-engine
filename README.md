@@ -66,10 +66,10 @@ Create a new Rust project:
 cargo new nix --lib
 ```
 
-Install the `extism_pdk` and `fluentci_pdk` crates:
+Install the `extism_pdk`, `fluentci_types` and `fluentci_pdk` crates:
 
 ```bash
-cargo add extism_pdk fluentci_pdk
+cargo add extism_pdk fluentci_types fluentci_pdk
 ```
 
 Save the following code to `src/lib.rs`:
@@ -77,11 +77,14 @@ Save the following code to `src/lib.rs`:
 ```rust
 use extism_pdk::*;
 use fluentci_pdk::dag;
+use fluentci_types::nix::NixArgs;
 
 #[plugin_fn]
 pub fn exec(command: String) -> FnResult<String> {
     let stdout = dag()
-        .nix()?
+        .nix(NixArgs {
+            impure: true
+        })?
         .with_exec(command.split_whitespace().collect())?
         .stdout()?;
     Ok(stdout)
@@ -284,7 +287,9 @@ Example:
 
 ```rust
 dag()
-  .nix()?
+  .nix(NixArgs {
+    impure: true
+  })?
   .with_exec(vec!["nix", "--version"])?
   .stdout()?;
 ```

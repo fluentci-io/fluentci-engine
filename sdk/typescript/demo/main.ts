@@ -124,7 +124,9 @@ async function main() {
 
   const nix = await dag
     .pipeline("nix-demo")
-    .nix()
+    .nix({
+      impure: true,
+    })
     .withWorkdir("./nix-demo")
     .withExec(["nix", "--version"])
     .withExec(["which", "deno"])

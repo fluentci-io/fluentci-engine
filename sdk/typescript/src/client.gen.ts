@@ -24,7 +24,7 @@ interface ClientConfig {
 }
 
 export interface NixArgs {
-  impoure?: boolean;
+  impure?: boolean;
 }
 
 class BaseClient {
