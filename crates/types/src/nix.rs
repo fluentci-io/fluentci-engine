@@ -4,3 +4,8 @@ use serde::{Deserialize, Serialize};
 pub struct Nix {
     pub id: String,
 }
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+pub struct NixArgs {
+    pub impure: bool,
+}

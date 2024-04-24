@@ -57,7 +57,7 @@ pub fn call(module: &str, command: &str) {
         .with_function("commit", [], [PTR], user_data.clone(), commit)
         .with_function("tree", [], [PTR], user_data.clone(), tree)
         .with_function("http", [PTR], [PTR], user_data.clone(), http)
-        .with_function("nix", [], [PTR], user_data.clone(), nix)
+        .with_function("nix", [PTR], [PTR], user_data.clone(), nix)
         .with_function("pipeline", [PTR], [PTR], user_data.clone(), pipeline)
         .with_function("pixi", [], [PTR], user_data.clone(), pixi)
         .with_function("pkgx", [], [PTR], user_data.clone(), pkgx)

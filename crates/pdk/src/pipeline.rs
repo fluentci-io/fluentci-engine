@@ -1,5 +1,5 @@
 use extism_pdk::*;
-use fluentci_types::{cache::Cache, pipeline as types};
+use fluentci_types::{cache::Cache, nix::NixArgs, pipeline as types};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -13,7 +13,7 @@ extern "ExtismHost" {
     fn devbox() -> Json<Devbox>;
     fn devenv() -> Json<Devenv>;
     fn flox() -> Json<Flox>;
-    fn nix() -> Json<Nix>;
+    fn nix(args: Json<NixArgs>) -> Json<Nix>;
     fn pkgx() -> Json<Pkgx>;
     fn pixi() -> Json<Pixi>;
     fn git(url: String) -> Json<Git>;
@@ -58,9 +58,9 @@ impl Pipeline {
         Ok(flox.into_inner())
     }
 
-    pub fn nix(&self) -> Result<Nix, Error> {
+    pub fn nix(&self, args: NixArgs) -> Result<Nix, Error> {
         unsafe { set_runner("nix".into()) }?;
-        let nix = unsafe { nix() }?;
+        let nix = unsafe { nix(Json(args)) }?;
         Ok(nix.into_inner())
     }
 

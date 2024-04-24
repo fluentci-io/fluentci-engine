@@ -18,11 +18,11 @@ use fluentci_ext::pixi::Pixi as PixiExt;
 use fluentci_ext::pkgx::Pkgx as PkgxExt;
 use fluentci_ext::proto::Proto as ProtoExt;
 use fluentci_ext::runner::Runner;
-use fluentci_types::pipeline as types;
+use fluentci_types::{nix, pipeline as types};
 use uuid::Uuid;
 
 use crate::{
-    schema::objects::{file::File, git::Git, mise::Mise},
+    schema::objects::{file::File, git::Git, mise::Mise, nix::NixArgs},
     util::{extract_git_repo, validate_git_url},
 };
 
@@ -235,11 +235,13 @@ impl Pipeline {
         Ok(flox)
     }
 
-    async fn nix(&self, ctx: &Context<'_>) -> Result<Nix, Error> {
+    async fn nix(&self, ctx: &Context<'_>, args: Option<NixArgs>) -> Result<Nix, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
-        graph.runner = Arc::new(Box::new(NixExt::default()));
+        let args: nix::NixArgs = args.unwrap_or_default().into();
+        graph.runner = Arc::new(Box::new(NixExt::new(args.clone())));
         graph.runner.setup()?;
+        graph.nix_args = args.clone();
 
         let id = Uuid::new_v4().to_string();
 
@@ -254,7 +256,7 @@ impl Pipeline {
             "nix".into(),
             "".into(),
             deps,
-            Arc::new(Box::new(NixExt::default())),
+            Arc::new(Box::new(NixExt::new(args))),
         ));
 
         if graph.size() > 2 {
