@@ -1,5 +1,5 @@
 use extism_pdk::*;
-use fluentci_types::Module;
+use fluentci_types::{nix::NixArgs, Module};
 use proto::Proto;
 
 use self::{
@@ -33,7 +33,7 @@ extern "ExtismHost" {
     fn git(url: String) -> Json<Git>;
     fn http(url: String) -> Json<File>;
     fn mise() -> Json<Mise>;
-    fn nix() -> Json<Nix>;
+    fn nix(args: Json<NixArgs>) -> Json<Nix>;
     fn pipeline(name: String) -> Json<Pipeline>;
     fn pixi() -> Json<Pixi>;
     fn proto() -> Json<Proto>;
@@ -90,8 +90,8 @@ impl Client {
         unsafe { mise() }.map(|mise| mise.into_inner())
     }
 
-    pub fn nix(&self) -> Result<Nix, Error> {
-        unsafe { nix() }.map(|nix| nix.into_inner())
+    pub fn nix(&self, args: NixArgs) -> Result<Nix, Error> {
+        unsafe { nix(Json(args)) }.map(|nix| nix.into_inner())
     }
 
     pub fn pipeline(&self, name: &str) -> Result<Pipeline, Error> {

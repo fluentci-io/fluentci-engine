@@ -23,6 +23,10 @@ interface ClientConfig {
   ctx?: Context;
 }
 
+export interface NixArgs {
+  impure?: boolean;
+}
+
 class BaseClient {
   protected _queryTree: QueryTree[];
   protected _ctx: Context;
@@ -184,12 +188,13 @@ export class Client extends BaseClient {
     });
   };
 
-  nix = (): Nix => {
+  nix = (args?: NixArgs): Nix => {
     return new Nix({
       queryTree: [
         ...this.queryTree,
         {
           operation: "nix",
+          args: { args },
         },
       ],
       ctx: this._ctx,
@@ -585,12 +590,13 @@ export class Directory extends BaseClient {
     });
   };
 
-  nix = (): Nix => {
+  nix = (args?: NixArgs): Nix => {
     return new Nix({
       queryTree: [
         ...this.queryTree,
         {
           operation: "nix",
+          args: { args },
         },
       ],
       ctx: this._ctx,
@@ -1316,12 +1322,13 @@ export class Pipeline extends BaseClient {
     });
   };
 
-  nix = (): Nix => {
+  nix = (args?: NixArgs): Nix => {
     return new Nix({
       queryTree: [
         ...this.queryTree,
         {
           operation: "nix",
+          args: { args },
         },
       ],
       ctx: this._ctx,

@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use fluentci_ext::envhub::Envhub;
 use fluentci_ext::Extension;
-use fluentci_types::Output;
+use fluentci_types::{nix::NixArgs, Output};
 
 use super::edge::Edge;
 use super::vertex::{Runnable, Vertex};
@@ -45,6 +45,7 @@ pub struct Graph {
     tx: Sender<(String, usize)>,
     pub runner: Arc<Box<dyn Extension + Send + Sync>>,
     pub work_dir: String,
+    pub nix_args: NixArgs,
 }
 
 impl Graph {
@@ -57,6 +58,7 @@ impl Graph {
             tx,
             runner,
             work_dir,
+            nix_args: NixArgs::default(),
         }
     }
 

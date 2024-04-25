@@ -15,13 +15,19 @@ use fluentci_common::pixi::pixi as common_pixi;
 use fluentci_common::pkgx::pkgx as common_pkgx;
 use fluentci_common::proto::proto as common_proto;
 use fluentci_ext::runner::Runner;
-use fluentci_types::directory as types;
+use fluentci_types::{directory as types, nix};
 use uuid::Uuid;
 
 use crate::schema::objects::{envhub::Envhub, file::File, mise::Mise};
 
 use super::{
-    devbox::Devbox, devenv::Devenv, flox::Flox, nix::Nix, pixi::Pixi, pkgx::Pkgx, proto::Proto,
+    devbox::Devbox,
+    devenv::Devenv,
+    flox::Flox,
+    nix::{Nix, NixArgs},
+    pixi::Pixi,
+    pkgx::Pkgx,
+    proto::Proto,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -69,9 +75,14 @@ impl Directory {
         Ok(Flox::from(flox))
     }
 
-    async fn nix(&self, ctx: &Context<'_>) -> Result<Nix, Error> {
+    async fn nix(&self, ctx: &Context<'_>, args: Option<NixArgs>) -> Result<Nix, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        let nix = common_nix(graph.clone(), false)?;
+        let args: nix::NixArgs = args.unwrap_or_default().into();
+        let mut g = graph.lock().unwrap();
+        g.nix_args = args.clone();
+        drop(g);
+
+        let nix = common_nix(graph.clone(), false, args)?;
         Ok(Nix::from(nix))
     }
 

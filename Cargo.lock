@@ -356,7 +356,7 @@ name = "archive"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.10",
+ "fluentci-pdk 0.1.11",
 ]
 
 [[package]]
@@ -1162,7 +1162,7 @@ name = "chmod"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.10",
+ "fluentci-pdk 0.1.11",
 ]
 
 [[package]]
@@ -1568,7 +1568,7 @@ name = "devbox"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.10",
+ "fluentci-pdk 0.1.11",
 ]
 
 [[package]]
@@ -1702,7 +1702,7 @@ name = "env"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.10",
+ "fluentci-pdk 0.1.11",
 ]
 
 [[package]]
@@ -1875,18 +1875,18 @@ name = "flox"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.10",
+ "fluentci-pdk 0.1.11",
 ]
 
 [[package]]
 name = "fluentci-common"
-version = "0.1.4"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "dirs 5.0.1",
  "fluentci-core",
  "fluentci-ext",
- "fluentci-types 0.1.4",
+ "fluentci-types 0.1.5",
  "regex",
  "sha256",
  "uuid",
@@ -1894,13 +1894,13 @@ dependencies = [
 
 [[package]]
 name = "fluentci-core"
-version = "0.1.6"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "chrono",
  "dirs 5.0.1",
  "fluentci-ext",
- "fluentci-types 0.1.4",
+ "fluentci-types 0.1.5",
  "opentelemetry",
  "opentelemetry-jaeger",
  "opentelemetry-otlp",
@@ -1928,7 +1928,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-ext"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1936,7 +1936,7 @@ dependencies = [
  "aws-sdk-s3",
  "cloud-storage",
  "dirs 5.0.1",
- "fluentci-types 0.1.4",
+ "fluentci-types 0.1.5",
  "futures",
  "md5",
  "mime_guess",
@@ -1950,7 +1950,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-graphql"
-version = "0.1.9"
+version = "0.1.11"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -1959,7 +1959,7 @@ dependencies = [
  "fluentci-common",
  "fluentci-core",
  "fluentci-ext",
- "fluentci-types 0.1.4",
+ "fluentci-types 0.1.5",
  "regex",
  "sha256",
  "tokio",
@@ -1979,16 +1979,16 @@ dependencies = [
 
 [[package]]
 name = "fluentci-pdk"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "extism-pdk",
- "fluentci-types 0.1.4",
+ "fluentci-types 0.1.5",
  "serde",
 ]
 
 [[package]]
 name = "fluentci-server"
-version = "0.1.9"
+version = "0.1.11"
 dependencies = [
  "actix-cors",
  "actix-web",
@@ -2005,14 +2005,14 @@ dependencies = [
 
 [[package]]
 name = "fluentci-shared"
-version = "0.1.5"
+version = "0.1.7"
 dependencies = [
  "extism",
  "extism-pdk",
  "fluentci-common",
  "fluentci-core",
  "fluentci-ext",
- "fluentci-types 0.1.4",
+ "fluentci-types 0.1.5",
  "serde",
  "uuid",
 ]
@@ -2028,7 +2028,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-types"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "serde",
 ]
@@ -2213,7 +2213,7 @@ name = "git"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.10",
+ "fluentci-pdk 0.1.11",
 ]
 
 [[package]]
@@ -2271,7 +2271,7 @@ name = "hash"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.10",
+ "fluentci-pdk 0.1.11",
 ]
 
 [[package]]
@@ -2340,7 +2340,7 @@ name = "http"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.10",
+ "fluentci-pdk 0.1.11",
 ]
 
 [[package]]
@@ -2810,7 +2810,7 @@ name = "mise"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.10",
+ "fluentci-pdk 0.1.11",
 ]
 
 [[package]]
@@ -2846,7 +2846,8 @@ name = "nix"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.10",
+ "fluentci-pdk 0.1.11",
+ "fluentci-types 0.1.5",
 ]
 
 [[package]]
@@ -3238,7 +3239,7 @@ name = "pixi"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.10",
+ "fluentci-pdk 0.1.11",
 ]
 
 [[package]]
@@ -3262,7 +3263,7 @@ name = "pkgx"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.10",
+ "fluentci-pdk 0.1.11",
 ]
 
 [[package]]
@@ -3344,7 +3345,7 @@ name = "proto"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.10",
+ "fluentci-pdk 0.1.11",
 ]
 
 [[package]]

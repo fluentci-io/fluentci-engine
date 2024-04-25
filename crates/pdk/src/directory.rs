@@ -1,5 +1,5 @@
 use extism_pdk::*;
-use fluentci_types::{cache::Cache, directory as types};
+use fluentci_types::{cache::Cache, directory as types, nix::NixArgs};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -14,7 +14,7 @@ extern "ExtismHost" {
     fn devbox() -> Json<Devbox>;
     fn devenv() -> Json<Devenv>;
     fn flox() -> Json<Flox>;
-    fn nix() -> Json<Nix>;
+    fn nix(args: Json<NixArgs>) -> Json<Nix>;
     fn pkgx() -> Json<Pkgx>;
     fn pixi() -> Json<Pixi>;
     fn proto() -> Json<Proto>;
@@ -71,8 +71,8 @@ impl Directory {
         Ok(flox.into_inner())
     }
 
-    pub fn nix(&self) -> Result<Nix, Error> {
-        let nix = unsafe { nix() }?;
+    pub fn nix(&self, args: NixArgs) -> Result<Nix, Error> {
+        let nix = unsafe { nix(Json(args)) }?;
         Ok(nix.into_inner())
     }
 

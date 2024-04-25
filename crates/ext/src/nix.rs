@@ -7,10 +7,31 @@ use users::get_current_username;
 
 use crate::{exec, Extension};
 use anyhow::Error;
-use fluentci_types::Output;
+use fluentci_types::{Output, nix::NixArgs};
 
-#[derive(Default)]
-pub struct Nix {}
+#[derive(Default, Clone)]
+pub struct Nix {
+    pub args: NixArgs
+}
+
+impl Nix {
+    pub fn new(args: NixArgs) -> Self {
+        Self { args }
+    }
+
+    pub fn impure(&mut self) -> &mut Self {
+        self.args.impure = true;
+        self
+    }
+
+    pub fn build_args(&self) -> String {
+        let mut args = vec![];
+        if self.args.impure {
+            args.push("--impure".to_string());
+        }
+        args.join(" ")
+    }
+}
 
 impl Extension for Nix {
     fn exec(
@@ -27,16 +48,18 @@ impl Extension for Nix {
             return Ok(ExitStatus::default());
         }
 
+        let args = self.build_args();
+
         Command::new("bash")
             .arg("-c")
-            .arg("nix flake init")
+            .arg(&format!("nix flake init {}", args))
             .current_dir(work_dir)
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .spawn()?
             .wait()?;
 
-        let cmd = format!("nix develop -c {}", cmd);
+        let cmd = format!("nix develop {} -c {}", args, cmd);
         exec(&cmd, tx, out, last_cmd, work_dir)
     }
 

@@ -57,7 +57,7 @@ export const entries: (ptr: I64) => I64 = fn.entries;
 export const devbox: () => I64 = fn.devbox;
 export const devenv: () => I64 = fn.devenv;
 export const flox: () => I64 = fn.flox;
-export const nix: () => I64 = fn.nix;
+export const nix: (ptr: I64) => I64 = fn.nix;
 export const pkgx: () => I64 = fn.pkgx;
 export const pipeline: (ptr: I64) => I64 = fn.pipeline;
 export const pixi: () => I64 = fn.pixi;
@@ -87,6 +87,10 @@ export const remove_env: (ptr: I64) => void = fn.remove_env;
 export const get_os: () => I64 = fn.get_os;
 export const get_arch: () => I64 = fn.get_arch;
 export const call: (ptr: I64) => I64 = fn.call;
+
+export interface NixArgs {
+  impure?: boolean;
+}
 
 class BaseClient {
   constructor() {}
@@ -249,9 +253,10 @@ export class Client extends BaseClient {
    * ```
    * @returns
    */
-  nix = (): Nix => {
-    let offset = nix();
-    let response = Memory.find(offset).readJsonObject();
+  nix = (args?: NixArgs): Nix => {
+    const mem = Memory.fromJsonObject(args || { impure: false });
+    const offset = nix(mem);
+    const response = Memory.find(offset).readJsonObject();
     return new Nix({
       id: response.id,
     });
@@ -774,8 +779,9 @@ export class Directory extends BaseClient {
    * ```
    * @returns {Nix}
    */
-  nix = (): Nix => {
-    const offset = nix();
+  nix = (args?: NixArgs): Nix => {
+    const mem = Memory.fromJsonObject(args || { impure: false });
+    const offset = nix(mem);
     const response = Memory.find(offset).readJsonObject();
     return new Nix({
       id: response.id,
@@ -1454,9 +1460,10 @@ export class Pipeline extends BaseClient {
    * ```
    * @returns {Nix}
    */
-  nix = (): Nix => {
-    let offset = nix();
-    let response = Memory.find(offset).readJsonObject();
+  nix = (args?: NixArgs): Nix => {
+    const mem = Memory.fromJsonObject(args || { impure: false });
+    const offset = nix(mem);
+    const response = Memory.find(offset).readJsonObject();
     return new Nix({
       id: response.id,
     });
