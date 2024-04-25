@@ -4,6 +4,7 @@
 # FluentCI Engine
 
 [![FlakeHub](https://img.shields.io/endpoint?url=https://flakehub.com/f/fluentci-io/fluentci-engine/badge)](https://flakehub.com/flake/fluentci-io/fluentci-engine)
+[![built with nix](https://img.shields.io/badge/Built_With-Nix-5277C3.svg?logo=nixos&labelColor=73C3D5)](https://builtwithnix.org)
 [![flakestry.dev](https://flakestry.dev/api/badge/flake/github/fluentci-io/fluentci-engine)](https://flakestry.dev/flake/github/fluentci-io/fluentci-engine)
 [![downloads](https://img.shields.io/crates/dr/fluentci-engine)](https://crates.io/crates/fluentci-engine)
 [![crates](https://img.shields.io/crates/v/fluentci-engine.svg)](https://crates.io/crates/fluentci-engine)
