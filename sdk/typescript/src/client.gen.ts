@@ -365,12 +365,13 @@ export class Devbox extends BaseClient {
     return response;
   };
 
-  asService = (): Service => {
+  asService = (name: string): Service => {
     return new Service({
       queryTree: [
         ...this.queryTree,
         {
           operation: "asService",
+          args: { name },
         },
       ],
       ctx: this._ctx,
@@ -492,12 +493,15 @@ export class Devenv extends BaseClient {
     return response;
   };
 
-  asService = (): Service => {
+  asService = (name: string): Service => {
     return new Service({
       queryTree: [
         ...this.queryTree,
         {
           operation: "asService",
+          args: {
+            name,
+          },
         },
       ],
       ctx: this._ctx,
@@ -1035,12 +1039,13 @@ export class Flox extends BaseClient {
     return response;
   };
 
-  asService = (): Service => {
+  asService = (name: string): Service => {
     return new Service({
       queryTree: [
         ...this.queryTree,
         {
           operation: "asService",
+          args: { name },
         },
       ],
       ctx: this._ctx,
@@ -1224,12 +1229,13 @@ export class Nix extends BaseClient {
     return response;
   };
 
-  asService = (): Service => {
+  asService = (name: string): Service => {
     return new Service({
       queryTree: [
         ...this.queryTree,
         {
           operation: "asService",
+          args: { name },
         },
       ],
       ctx: this._ctx,
@@ -1415,7 +1421,7 @@ export class Pipeline extends BaseClient {
         ...this.queryTree,
         {
           operation: "withService",
-          args: { service: serviceId },
+          args: { serviceId },
         },
       ],
       ctx: this._ctx,
@@ -1474,12 +1480,13 @@ export class Pipeline extends BaseClient {
     return response;
   };
 
-  asService = (): Service => {
+  asService = (name: string): Service => {
     return new Service({
       queryTree: [
         ...this.queryTree,
         {
           operation: "asService",
+          args: { name },
         },
       ],
       ctx: this._ctx,
@@ -1614,12 +1621,13 @@ export class Pkgx extends BaseClient {
     return response;
   };
 
-  asService = (): Service => {
+  asService = (name: string): Service => {
     return new Service({
       queryTree: [
         ...this.queryTree,
         {
           operation: "asService",
+          args: { name },
         },
       ],
       ctx: this._ctx,
@@ -1741,12 +1749,13 @@ export class Pixi extends BaseClient {
     return response;
   };
 
-  asService = (): Service => {
+  asService = (name: string): Service => {
     return new Service({
       queryTree: [
         ...this.queryTree,
         {
           operation: "asService",
+          args: { name },
         },
       ],
       ctx: this._ctx,
@@ -1868,12 +1877,13 @@ export class Mise extends BaseClient {
     return response;
   };
 
-  asService = (): Service => {
+  asService = (name: string): Service => {
     return new Service({
       queryTree: [
         ...this.queryTree,
         {
           operation: "asService",
+          args: { name },
         },
       ],
       ctx: this._ctx,
@@ -2008,12 +2018,13 @@ export class Envhub extends BaseClient {
     return response;
   };
 
-  asService = (): Service => {
+  asService = (name: string): Service => {
     return new Service({
       queryTree: [
         ...this.queryTree,
         {
           operation: "asService",
+          args: { name },
         },
       ],
       ctx: this._ctx,

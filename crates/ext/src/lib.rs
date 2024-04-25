@@ -25,6 +25,7 @@ pub mod pixi;
 pub mod pkgx;
 pub mod proto;
 pub mod runner;
+pub mod service;
 
 pub trait Extension {
     fn exec(
