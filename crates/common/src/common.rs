@@ -10,7 +10,7 @@ use fluentci_ext::archive::zip::Zip as ZipExt;
 use fluentci_ext::cache::Cache as CacheExt;
 use fluentci_ext::Extension;
 use fluentci_ext::{archive::tar::czvf::TarCzvf as TarCzvfExt, runner::Runner};
-use fluentci_types::{file::File, Output};
+use fluentci_types::{file::File, service::Service, Output};
 use uuid::Uuid;
 
 pub fn with_exec(
@@ -278,4 +278,72 @@ pub fn tar_czvf(graph: Arc<Mutex<Graph>>, path: String) -> Result<File, Error> {
     ));
 
     Ok(file)
+}
+
+pub fn as_service(graph: Arc<Mutex<Graph>>, name: String) -> Result<Service, Error> {
+    let mut graph = graph.lock().unwrap();
+    let runner = graph.runner.clone();
+    graph.runner = Arc::new(Box::new(Runner::default()));
+    graph.runner.setup()?;
+
+    let id = Uuid::new_v4().to_string();
+    let dep_id = graph.vertices[graph.size() - 1].id.clone();
+    let deps = match graph.size() {
+        1 => vec![],
+        _ => vec![dep_id],
+    };
+    graph.execute(GraphCommand::AddVertex(
+        id.clone(),
+        "asService".into(),
+        name,
+        deps,
+        Arc::new(Box::new(Runner::default())),
+    ));
+
+    if graph.size() > 2 {
+        let x = graph.size() - 2;
+        let y = graph.size() - 1;
+        graph.execute(GraphCommand::AddEdge(x, y));
+
+        graph.register_service(&id);
+    }
+
+    let service = Service { id: id.clone() };
+
+    graph.runner = runner;
+    Ok(service)
+}
+
+pub fn with_service(graph: Arc<Mutex<Graph>>, service_id: String) -> Result<(), Error> {
+    // let mut graph = graph.lock().unwrap();
+    // let runner = graph.runner.clone();
+    // graph.runner = Arc::new(Box::new(CacheExt::default()));
+    // graph.runner.setup()?;
+
+    /*if let Some(cache) = graph.iter().find(|v| v.id.clone() == cache_id) {
+            let id = Uuid::new_v4().to_string();
+            let dep_id = graph.vertices[graph.size() - 1].id.clone();
+            let deps = match graph.size() {
+                1 => vec![],
+                _ => vec![dep_id],
+            };
+            let cache_key_path = format!("{}:{}", cache.path, path);
+            graph.execute(GraphCommand::AddVertex(
+                id.clone(),
+                "withCache".into(),
+                cache_key_path,
+                deps,
+                Arc::new(Box::new(CacheExt::default())),
+            ));
+
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y));
+
+            graph.execute_vertex(&id)?;
+            graph.runner = runner;
+            return Ok(());
+        }
+    */
+    return Err(Error::msg("Service not found"));
 }

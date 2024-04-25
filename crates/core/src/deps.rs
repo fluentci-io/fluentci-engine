@@ -11,7 +11,11 @@ use std::sync::Arc;
 
 use fluentci_ext::envhub::Envhub;
 use fluentci_ext::Extension;
-use fluentci_types::{nix::NixArgs, Output};
+use fluentci_types::{
+    nix::NixArgs,
+    process_compose::{self, Process},
+    Output,
+};
 
 use super::edge::Edge;
 use super::vertex::{Runnable, Vertex};
@@ -22,6 +26,27 @@ pub struct Volume {
     pub label: String,
     pub path: String,
     pub key: String,
+}
+
+#[derive(Default, Clone)]
+pub struct Service {
+    pub id: String,
+    pub name: String,
+    pub vertices: Vec<Vertex>,
+}
+
+impl Into<Process> for Service {
+    fn into(self) -> Process {
+        Process {
+            command: self
+                .vertices
+                .iter()
+                .map(|v| v.command.clone())
+                .collect::<Vec<String>>()
+                .join(" ; "),
+            depends_on: None,
+        }
+    }
 }
 
 pub enum GraphCommand {
@@ -42,6 +67,8 @@ pub struct Graph {
     pub vertices: Vec<Vertex>,
     pub edges: Vec<Edge>,
     pub volumes: Vec<Volume>,
+    pub services: Vec<Service>,
+
     tx: Sender<(String, usize)>,
     pub runner: Arc<Box<dyn Extension + Send + Sync>>,
     pub work_dir: String,
@@ -54,12 +81,83 @@ impl Graph {
         Graph {
             vertices: Vec::new(),
             volumes: Vec::new(),
+            services: Vec::new(),
             edges: Vec::new(),
             tx,
             runner,
             work_dir,
             nix_args: NixArgs::default(),
         }
+    }
+
+    pub fn register_service(&mut self, id: &str) {
+        // return if vertex at id is not found or is not a service
+        if self
+            .vertices
+            .iter()
+            .find(|v| v.id == id && v.label == "asService")
+            .is_none()
+        {
+            return;
+        }
+
+        let vertex = self
+            .vertices
+            .iter()
+            .find(|v| v.id == id && v.label == "asService")
+            .unwrap();
+
+        // browse the graph dependencies of the service
+        let mut visited = vec![false; self.vertices.len()];
+        let mut stack = Vec::new();
+        let mut service = Service {
+            id: id.to_string(),
+            name: vertex.command.clone(),
+            vertices: Vec::new(),
+        };
+
+        let skip = vec![
+            "git",
+            "git-checkout",
+            "git-last-commit",
+            "tree",
+            "http",
+            "cache",
+            "file",
+            "directory",
+            "chmod",
+            "withFile",
+        ];
+
+        for (i, vertex) in self.vertices.iter().enumerate() {
+            if vertex.id == id {
+                stack.push(i);
+                break;
+            }
+        }
+
+        while let Some(i) = stack.pop() {
+            println!("{} {:?}", i, self.edges);
+            if visited[i] {
+                continue;
+            }
+            visited[i] = true;
+
+            if skip.contains(&self.vertices[i].label.as_str()) {
+                continue;
+            }
+
+            for edge in self.edges.iter().filter(|e| e.to == i) {
+                stack.push(edge.from);
+            }
+
+            let vertex = self.vertices[i].clone();
+            println!("Vertex: {} {} {}", vertex.command, vertex.id, vertex.label);
+            service.vertices.push(vertex);
+        }
+
+        service.vertices.reverse();
+        self.services.push(service);
     }
 
     pub fn execute(&mut self, command: GraphCommand) {
@@ -97,6 +195,29 @@ impl Graph {
         }
     }
 
+    pub fn execute_services(&mut self, ctx: &Context) -> Result<(), Error> {
+        let tracer_provider = global::tracer_provider();
+        let tracer = tracer_provider.versioned_tracer(
+            "fluentci-core",
+            Some(env!("CARGO_PKG_VERSION")),
+            Some("https://opentelemetry.io/schemas/1.17.0"),
+            None,
+        );
+
+        let process_compose_config = process_compose::ConfigFile {
+            version: "0.5".to_string(),
+            processes: self
+                .services
+                .iter()
+                .map(|s| (s.name.clone(), s.clone().into()))
+                .collect(),
+            ..Default::default()
+        };
+        let yaml = serde_yaml::to_string(&process_compose_config)?;
+        println!("{}", yaml);
+        Ok(())
+    }
+
     pub fn execute_graph(&mut self, output: Output) {
         let tracer_provider = global::tracer_provider();
         let tracer = tracer_provider.versioned_tracer(
@@ -117,6 +238,7 @@ impl Graph {
             "directory",
             "chmod",
             "withFile",
+            "asService",
         ];
         let mut visited = vec![false; self.vertices.len()];
         let mut stack = Vec::new();
@@ -127,6 +249,15 @@ impl Graph {
         }
         let root_span = tracer.start("root");
         let context = Context::current_with_span(root_span);
+
+        match self.execute_services(&context) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("Error: {}", e);
+                self.tx.send(("Error".to_string(), 1)).unwrap();
+                return;
+            }
+        }
 
         while let Some(i) = stack.pop() {
             let label = &self.vertices[i].label.as_str();
@@ -283,7 +414,7 @@ impl Graph {
             None,
         );
 
-        let only = vec!["withCache"];
+        let only = vec!["withCache", "withService"];
 
         let mut visited = vec![false; self.vertices.len()];
         let mut stack = Vec::new();
