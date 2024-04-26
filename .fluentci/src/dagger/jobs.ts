@@ -596,6 +596,11 @@ export async function typescriptE2e(
     )
     .withEnvVariable("AWS_ACCESS_KEY_ID", env.get("AWS_ACCESS_KEY_ID")!)
     .withEnvVariable("AWS_SECRET_ACCESS_KEY", env.get("AWS_SECRET_ACCESS_KEY")!)
+    .withEnvVariable(
+      "OTEL_EXPORTER_OTLP_ENDPOINT",
+      env.get("OTEL_EXPORTER_OTLP_ENDPOINT")!
+    )
+    .withEnvVariable("OTLP_API_KEY", env.get("OTLP_API_KEY")!)
     .withExec(["/fluentci-engine", "serve"])
     .withExposedPort(6880)
     .asService();
