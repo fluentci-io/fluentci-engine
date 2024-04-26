@@ -17,7 +17,6 @@ use fluentci_ext::runner::Runner as RunnerExt;
 use fluentci_ext::Extension;
 use fluentci_types::cache::Cache;
 use fluentci_types::file::File;
-use fluentci_types::service::Service;
 use fluentci_types::Module;
 
 use crate::{
@@ -93,6 +92,14 @@ host_fn!(pub with_file(user_data: State;  file: Json<File>) {
   let graph = state.graph.clone();
   let file = file.into_inner();
   common::with_file(graph, file.id, file.path)?;
+  Ok(())
+});
+
+host_fn!(pub with_service(user_data: State; service_id: String) {
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  let graph = state.graph.clone();
+  common::with_service(graph, service_id)?;
   Ok(())
 });
 
@@ -220,6 +227,7 @@ host_fn!(pub call(user_data: State; opts: Json<Module>) -> String {
         .with_function("call", [PTR], [PTR], user_data.clone(), call)
         .with_function("with_packages", [PTR], [], user_data.clone(), with_packages)
         .with_function("as_service", [PTR], [PTR], user_data.clone(), as_service)
+        .with_function("with_service", [PTR], [], user_data.clone(), with_service)
         .build()
         .unwrap();
 

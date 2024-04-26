@@ -31,7 +31,9 @@ impl Proto {
         Ok(self)
     }
 
-    async fn with_service(&self, _service: ID) -> Result<&Proto, Error> {
+    async fn with_service(&self, ctx: &Context<'_>, service_id: ID) -> Result<&Proto, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_service(graph.clone(), service_id.into())?;
         Ok(self)
     }
 

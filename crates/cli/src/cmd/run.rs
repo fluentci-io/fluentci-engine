@@ -42,6 +42,7 @@ pub async fn run(command: &str) -> Result<(), Error> {
         .arg(command)
         .env("FLUENTCI_SESSION_PORT", port.to_string())
         .env("FLUENTCI_SESSION_HOST", host.to_string())
+        .env("FLUENTCI_SESSION_TOKEN", "token".to_string())
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
