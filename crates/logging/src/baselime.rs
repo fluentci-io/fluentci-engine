@@ -36,26 +36,26 @@ impl Baselime {
     pub fn send(&self, data: &str, level: Level, namespace: String) -> Result<(), Error> {
         match env::var("BASELIME_API_KEY") {
             Ok(api_key) => {
-                let body = match level {
-                    Level::Info => serde_json::to_string(&Payload {
+                let json = match level {
+                    Level::Info => serde_json::to_string(&vec![Payload {
                         message: Some(data.to_string()),
                         request_id: Uuid::new_v4().to_string(),
                         namespace,
                         ..Default::default()
-                    })?,
-                    Level::Error => serde_json::to_string(&Payload {
+                    }])?,
+                    Level::Error => serde_json::to_string(&vec![Payload {
                         error: Some(data.to_string()),
                         request_id: Uuid::new_v4().to_string(),
                         namespace,
                         ..Default::default()
-                    })?,
+                    }])?,
                 };
                 self.client
                     .post(URL)
                     .header("x-api-key", api_key)
                     .header("x-service", "fluentci-core")
                     .header("Content-Type", "application/json")
-                    .body(serde_json::to_string(&body)?)
+                    .body(json)
                     .send()?;
                 Ok(())
             }

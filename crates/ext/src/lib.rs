@@ -75,6 +75,12 @@ pub fn exec(
         let mut stdout = String::new();
         while let Ok(line) = stdout_rx.recv() {
             println!("{}", line);
+            match fluentci_logging::info(&line, "fluentci-core") {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Error: {}", e);
+                }
+            }
             stdout.push_str(&line);
             stdout.push_str("\n");
         }
@@ -90,6 +96,10 @@ pub fn exec(
         let mut stderr = String::new();
         while let Ok(line) = stderr_rx.recv() {
             println!("{}", line);
+            match fluentci_logging::error(&line, "fluentci-core") {
+                Ok(_) => {}
+                Err(_) => {}
+            }
             stderr.push_str(&line);
             stderr.push_str("\n");
         }

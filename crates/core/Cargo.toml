@@ -20,7 +20,7 @@ fluentci-logging = {path = "../logging", version = "0.1.0"}
 fluentci-types = {path = "../types", version = "0.1.5"}
 opentelemetry = {version = "0.22.0", features = ["trace", "pin-project-lite"]}
 opentelemetry-jaeger = "0.21.0"
-opentelemetry-otlp = {version = "0.15.0", features = ["http-proto", "reqwest-rustls", "reqwest-client"], default-features = false}
+opentelemetry-otlp = {version = "0.15.0", features = ["http-proto", "reqwest-rustls", "reqwest-client", "grpc-tonic"], default-features = false}
 opentelemetry-zipkin = {version = "0.20.0", features = ["reqwest-rustls", "reqwest-client"], default-features = false}
 opentelemetry_sdk = {version = "0.22.1", features = ["tokio", "rt-tokio", "trace"]}
 owo-colors = "4.0.0"

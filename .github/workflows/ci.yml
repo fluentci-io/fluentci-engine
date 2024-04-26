@@ -47,7 +47,8 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           OTLP_API_KEY: ${{ secrets.OTLP_API_KEY }}
-          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: https://otel.baselime.io/v1/
+          OTEL_EXPORTER_OTLP_PROTOCOL: http
 
   publish:
     needs: tests
