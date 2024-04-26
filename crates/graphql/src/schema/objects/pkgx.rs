@@ -31,7 +31,9 @@ impl Pkgx {
         Ok(self)
     }
 
-    async fn with_service(&self, _service: ID) -> Result<&Pkgx, Error> {
+    async fn with_service(&self, ctx: &Context<'_>, service_id: ID) -> Result<&Pkgx, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_service(graph.clone(), service_id.into())?;
         Ok(self)
     }
 

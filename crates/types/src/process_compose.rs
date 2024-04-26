@@ -8,9 +8,11 @@ pub struct DependencyConfig {
     pub condition: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct Process {
     pub command: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_daemon: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub depends_on: Option<HashMap<String, DependencyConfig>>,
 }

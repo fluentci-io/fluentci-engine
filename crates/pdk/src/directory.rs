@@ -29,6 +29,7 @@ extern "ExtismHost" {
     fn stdout() -> String;
     fn stderr() -> String;
     fn as_service(name: String) -> Json<Service>;
+    fn with_service(service_id: String);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -172,5 +173,13 @@ impl Directory {
     pub fn as_service(&self, name: &str) -> Result<String, Error> {
         let service = unsafe { as_service(name.into())? };
         Ok(service.into_inner().id)
+    }
+
+    pub fn with_service(&self, service_id: &str) -> Result<Directory, Error> {
+        unsafe { with_service(service_id.into())? }
+        Ok(Directory {
+            id: self.id.clone(),
+            path: self.path.clone(),
+        })
     }
 }

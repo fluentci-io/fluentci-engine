@@ -436,7 +436,9 @@ impl Pipeline {
         Ok(self)
     }
 
-    async fn with_service(&self, service_id: ID) -> Result<&Pipeline, Error> {
+    async fn with_service(&self, ctx: &Context<'_>, service_id: ID) -> Result<&Pipeline, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_service(graph.clone(), service_id.into())?;
         Ok(self)
     }
 

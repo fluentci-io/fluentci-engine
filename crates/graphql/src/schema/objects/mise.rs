@@ -31,10 +31,11 @@ impl Mise {
         Ok(self)
     }
 
-    async fn with_service(&self, _service: ID) -> Result<&Mise, Error> {
+    async fn with_service(&self, ctx: &Context<'_>, service_id: ID) -> Result<&Mise, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_service(graph.clone(), service_id.into())?;
         Ok(self)
     }
-
     async fn with_cache(
         &self,
         ctx: &Context<'_>,

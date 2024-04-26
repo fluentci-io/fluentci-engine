@@ -12,6 +12,7 @@ extern "ExtismHost" {
     fn stdout() -> String;
     fn stderr() -> String;
     fn as_service(name: String) -> Json<Service>;
+    fn with_service(service_id: String);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -83,5 +84,12 @@ impl Proto {
     pub fn as_service(&self, name: &str) -> Result<String, Error> {
         let service = unsafe { as_service(name.into())? };
         Ok(service.into_inner().id)
+    }
+
+    pub fn with_service(&self, service_id: &str) -> Result<Proto, Error> {
+        unsafe { with_service(service_id.into())? }
+        Ok(Proto {
+            id: self.id.clone(),
+        })
     }
 }

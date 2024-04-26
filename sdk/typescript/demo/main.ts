@@ -1,30 +1,35 @@
 import { dag } from "../src/client.gen.ts";
 
 async function main() {
-  /*
-  Deno.env.set("FLUENTCI_SESSION_PORT", "6880"); */
+  Deno.env.set("FLUENTCI_SESSION_PORT", "6880");
   Deno.env.set("FLUENTCI_SESSION_TOKEN", "token");
 
   const cacheId = await dag.cache("pixi").id();
 
   console.log("cacheId: ", cacheId);
 
-  const id = await dag
+  const ping = await dag
     .pipeline("demo")
     .withExec(["ping", "fluentci.io"])
-    .withExec(["ping", "cli.fluentci.io"])
-    .asService("ping")
+    .asService("ping_fluentci")
     .id();
-  console.log(id);
+  console.log(ping);
+
+  const pingGh = await dag
+    .pipeline("demo")
+    .withExec(["ping", "github.com"])
+    .asService("ping_gh")
+    .id();
+  console.log(pingGh);
 
   const stdout = await dag
     .pipeline("demo")
-    .withService(id)
-    .withExec(["echo", "hello"])
+    .withService(ping)
+    .withService(pingGh)
+    .withExec(["ls", "-ltr", ".fluentci"])
     .stdout();
   console.log(stdout);
 
-  /*
   const demo = await dag
     .pipeline("demo")
     .withWorkdir("./")
@@ -85,7 +90,7 @@ async function main() {
   const sha256 = await dag.file("./flox-demo.tar.gz").sha256();
 
   console.log(sha256);
-  */
+
   /*
   await dag
     .pipeline("clean")
@@ -100,7 +105,7 @@ async function main() {
     ])
     .stdout();
 */
-  /*
+
   const mise = await dag
     .pipeline("mise-demo")
     .mise()
@@ -172,7 +177,6 @@ async function main() {
     .stdout();
 
   console.log(flox);
-  */
 }
 
 // Learn more at https://deno.land/manual/examples/module_metadata#concepts
