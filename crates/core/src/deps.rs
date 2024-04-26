@@ -182,6 +182,10 @@ impl Graph {
                 continue;
             }
 
+            if self.vertices[i].command.is_empty() {
+                continue;
+            }
+
             let vertex = self.vertices[i].clone();
             service.vertices.insert(0, vertex);
         }
