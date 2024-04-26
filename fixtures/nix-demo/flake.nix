@@ -20,6 +20,7 @@
       devShells.default = pkgs.mkShell {
          buildInputs = [
             pkgs.deno
+            pkgs.inetutils
          ];
       };
     });

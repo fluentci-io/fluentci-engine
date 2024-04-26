@@ -15,6 +15,8 @@ pub struct Process {
     pub is_daemon: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub depends_on: Option<HashMap<String, DependencyConfig>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub working_dir: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Default)]

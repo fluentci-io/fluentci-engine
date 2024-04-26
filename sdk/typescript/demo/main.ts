@@ -10,14 +10,18 @@ async function main() {
 
   const ping = await dag
     .pipeline("demo")
-    .withExec(["pkgx", "ping", "fluentci.io"])
+    .nix()
+    .withWorkdir("nix-demo")
+    .withExec(["ping", "fluentci.io"])
     .asService("ping_fluentci")
     .id();
   console.log(ping);
 
   const pingGh = await dag
     .pipeline("demo")
-    .withExec(["pkgx", "ping", "github.com"])
+    .pkgx()
+    .withPackages(["ping"])
+    .withExec(["ping", "github.com"])
     .asService("ping_gh")
     .id();
   console.log(pingGh);

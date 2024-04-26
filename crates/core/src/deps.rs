@@ -35,6 +35,7 @@ pub struct Service {
     pub id: String,
     pub name: String,
     pub vertices: Vec<Vertex>,
+    pub working_dir: String,
 }
 
 impl Into<Process> for Service {
@@ -43,10 +44,11 @@ impl Into<Process> for Service {
             command: self
                 .vertices
                 .iter()
-                .map(|v| v.command.clone())
+                .map(|v| v.runner.format_command(&v.command))
                 .collect::<Vec<String>>()
                 .join(" ; "),
             depends_on: None,
+            working_dir: Some(self.working_dir),
             ..Default::default()
         }
     }
@@ -120,6 +122,7 @@ impl Graph {
             id: id.to_string(),
             name: vertex.command.clone(),
             vertices: Vec::new(),
+            working_dir: self.work_dir.clone(),
         };
 
         let skip = vec![
@@ -163,7 +166,7 @@ impl Graph {
                     self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
                     break;
                 }
-                // self.work_dir = self.vertices[i].command.clone();
+                service.working_dir = self.vertices[i].command.clone();
                 continue;
             }
 
@@ -253,7 +256,7 @@ impl Graph {
 
         thread::spawn(move || {
             let (tx, _rx) = mpsc::channel();
-            match ServiceExt::default().exec(&yaml, tx.clone(), Output::Stdout, true, ".fluentci") {
+            match ServiceExt::default().exec(&yaml, tx.clone(), Output::Stdout, true, ".") {
                 Ok(_) => {}
                 Err(e) => {
                     println!("{}", e);

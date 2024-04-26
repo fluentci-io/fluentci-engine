@@ -62,4 +62,8 @@ impl Extension for Devbox {
         child.wait()?;
         Ok(())
     }
+
+    fn format_command(&self, cmd: &str) -> String {
+        format!("[ -f devbox.json ] || devbox init ; devbox run {}", cmd)
+    }
 }
