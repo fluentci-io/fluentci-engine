@@ -30,6 +30,7 @@ async function main() {
     .pipeline("demo")
     .withService(ping)
     .withService(pingGh)
+    .withExec(["sleep", "60"])
     .withExec(["ls", "-ltr", ".fluentci"])
     .stdout();
   console.log(stdout);
