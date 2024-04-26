@@ -52,7 +52,7 @@ impl Extension for Nix {
 
         Command::new("bash")
             .arg("-c")
-            .arg(&format!("nix flake init {}", args))
+            .arg(&format!("[ -f flake.nix ] || nix flake init {}", args))
             .current_dir(work_dir)
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
@@ -115,5 +115,13 @@ impl Extension for Nix {
             .spawn()?;
         child.wait()?;
         Ok(())
+    }
+
+    fn format_command(&self, cmd: &str) -> String {
+        let args = self.build_args();
+        format!(
+            "[ -f flake.nix ] || nix flake init {} ; nix develop {} -c {}",
+            args, args, cmd
+        )
     }
 }

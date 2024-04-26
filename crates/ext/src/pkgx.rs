@@ -63,4 +63,8 @@ impl Extension for Pkgx {
 
         Ok(())
     }
+
+    fn format_command(&self, cmd: &str) -> String {
+        format!("eval \"$(pkgx --shellcode)\" && dev ; {}", cmd)
+    }
 }

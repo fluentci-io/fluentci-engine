@@ -41,6 +41,9 @@ pub trait Extension {
         tx.send("".into())?;
         Ok(ExitStatus::default())
     }
+    fn format_command(&self, cmd: &str) -> String {
+        format!("{}", cmd)
+    }
 }
 
 pub fn exec(

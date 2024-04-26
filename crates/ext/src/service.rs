@@ -22,13 +22,12 @@ impl Extension for Service {
             return Ok(ExitStatus::default());
         }
 
-        fs::create_dir_all(work_dir)?;
+        fs::create_dir_all(".fluentci")?;
 
-        let path = format!("{}/process-compose.yaml", work_dir);
-        fs::write(&path, yaml)?;
+        fs::write(".fluentci/process-compose.yaml", yaml)?;
 
         exec(
-            "pkgx process-compose up -t=false -u process-compose.sock",
+            "pkgx process-compose up -t=false -f .fluentci/process-compose.yaml -u .fluentci/process-compose.sock",
             tx,
             out,
             last_cmd,

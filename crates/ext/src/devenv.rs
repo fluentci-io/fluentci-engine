@@ -79,4 +79,8 @@ impl Extension for Devenv {
 
         Ok(())
     }
+
+    fn format_command(&self, cmd: &str) -> String {
+        format!("[ -f devenv.nix ] || devenv init ; devenv shell {}", cmd)
+    }
 }

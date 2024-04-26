@@ -61,4 +61,11 @@ impl Extension for Mise {
 
         Ok(())
     }
+
+    fn format_command(&self, cmd: &str) -> String {
+        format!(
+            "mise install ; eval \"$(~/.local/bin/mise activate bash)\" && mise x -- {}",
+            cmd
+        )
+    }
 }
