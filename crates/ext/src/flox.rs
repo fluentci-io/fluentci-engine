@@ -70,4 +70,8 @@ impl Extension for Flox {
 
         Ok(())
     }
+
+    fn format_command(&self, cmd: &str) -> String {
+        format!("[ -d .flox ] || flox init ; flox activate -- {}", cmd)
+    }
 }

@@ -1,5 +1,5 @@
 use extism_pdk::*;
-use fluentci_types::{cache::Cache, directory as types, nix::NixArgs};
+use fluentci_types::{cache::Cache, directory as types, nix::NixArgs, service::Service};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -28,6 +28,8 @@ extern "ExtismHost" {
     fn with_cache(cache: Json<Cache>);
     fn stdout() -> String;
     fn stderr() -> String;
+    fn as_service(name: String) -> Json<Service>;
+    fn with_service(service_id: String);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -166,5 +168,18 @@ impl Directory {
 
     pub fn stderr(&self) -> Result<String, Error> {
         unsafe { stderr() }
+    }
+
+    pub fn as_service(&self, name: &str) -> Result<String, Error> {
+        let service = unsafe { as_service(name.into())? };
+        Ok(service.into_inner().id)
+    }
+
+    pub fn with_service(&self, service_id: &str) -> Result<Directory, Error> {
+        unsafe { with_service(service_id.into())? }
+        Ok(Directory {
+            id: self.id.clone(),
+            path: self.path.clone(),
+        })
     }
 }

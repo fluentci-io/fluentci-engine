@@ -25,6 +25,7 @@ pub mod pixi;
 pub mod pkgx;
 pub mod proto;
 pub mod runner;
+pub mod service;
 
 pub trait Extension {
     fn exec(
@@ -39,6 +40,9 @@ pub trait Extension {
     fn post_setup(&self, tx: Sender<String>) -> Result<ExitStatus, Error> {
         tx.send("".into())?;
         Ok(ExitStatus::default())
+    }
+    fn format_command(&self, cmd: &str) -> String {
+        format!("{}", cmd)
     }
 }
 
@@ -77,9 +81,7 @@ pub fn exec(
         if out_clone == Output::Stdout && last_cmd {
             match tx_clone.send(stdout) {
                 Ok(_) => {}
-                Err(e) => {
-                    eprintln!("Error: {}", e);
-                }
+                Err(_) => {}
             }
         }
     });
@@ -94,9 +96,7 @@ pub fn exec(
         if out == Output::Stderr && last_cmd {
             match tx.send(stderr) {
                 Ok(_) => {}
-                Err(e) => {
-                    eprintln!("Error: {}", e);
-                }
+                Err(_) => {}
             }
         }
     });

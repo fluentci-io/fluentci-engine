@@ -58,4 +58,8 @@ impl Extension for Pixi {
 
         Ok(())
     }
+
+    fn format_command(&self, cmd: &str) -> String {
+        format!("pixi install ; eval \"$(pixi shell-hook)\" ; {}", cmd)
+    }
 }

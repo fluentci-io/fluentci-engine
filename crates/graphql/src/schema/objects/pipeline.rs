@@ -28,7 +28,7 @@ use crate::{
 
 use super::{
     devbox::Devbox, devenv::Devenv, envhub::Envhub, flox::Flox, nix::Nix, pixi::Pixi, pkgx::Pkgx,
-    proto::Proto,
+    proto::Proto, service::Service,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -436,7 +436,9 @@ impl Pipeline {
         Ok(self)
     }
 
-    async fn with_service(&self, _service_id: ID) -> Result<&Pipeline, Error> {
+    async fn with_service(&self, ctx: &Context<'_>, service_id: ID) -> Result<&Pipeline, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_service(graph.clone(), service_id.into())?;
         Ok(self)
     }
 
@@ -472,6 +474,12 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();
         common::stderr(graph.clone(), rx.clone()).map_err(|e| Error::new(e.to_string()))
+    }
+
+    async fn as_service(&self, ctx: &Context<'_>, name: String) -> Result<Service, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let service = common::as_service(graph.clone(), name)?;
+        Ok(service.into())
     }
 }
 

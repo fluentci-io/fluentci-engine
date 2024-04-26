@@ -6,6 +6,8 @@ use fluentci_core::deps::Graph;
 use fluentci_ext::devenv::Devenv as DevenvExt;
 use fluentci_types::devenv as types;
 
+use super::service::Service;
+
 #[derive(Debug, Clone, Default)]
 pub struct Devenv {
     pub id: ID,
@@ -37,7 +39,9 @@ impl Devenv {
         Ok(self)
     }
 
-    async fn with_service(&self, _service: ID) -> Result<&Devenv, Error> {
+    async fn with_service(&self, ctx: &Context<'_>, service_id: ID) -> Result<&Devenv, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_service(graph.clone(), service_id.into())?;
         Ok(self)
     }
 
@@ -75,11 +79,10 @@ impl Devenv {
         common::stderr(graph.clone(), rx.clone()).map_err(|e| Error::new(e.to_string()))
     }
 
-    async fn as_service(&self, ctx: &Context<'_>) -> Result<ID, Error> {
+    async fn as_service(&self, ctx: &Context<'_>, name: String) -> Result<Service, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        let graph = graph.lock().unwrap();
-        let id = graph.vertices[graph.size() - 1].id.clone();
-        Ok(ID(id))
+        let service = common::as_service(graph.clone(), name)?;
+        Ok(service.into())
     }
 }
 

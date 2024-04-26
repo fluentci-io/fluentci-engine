@@ -8,6 +8,33 @@ async function main() {
 
   console.log("cacheId: ", cacheId);
 
+  const ping = await dag
+    .pipeline("demo")
+    .nix()
+    .withWorkdir("nix-demo")
+    .withExec(["ping", "fluentci.io"])
+    .asService("ping_fluentci")
+    .id();
+  console.log(ping);
+
+  const pingGh = await dag
+    .pipeline("demo")
+    .pkgx()
+    .withPackages(["ping"])
+    .withExec(["ping", "github.com"])
+    .asService("ping_gh")
+    .id();
+  console.log(pingGh);
+
+  const stdout = await dag
+    .pipeline("demo")
+    .withService(ping)
+    .withService(pingGh)
+    .withExec(["sleep", "60"])
+    .withExec(["ls", "-ltr", ".fluentci"])
+    .stdout();
+  console.log(stdout);
+
   const demo = await dag
     .pipeline("demo")
     .withWorkdir("./")
@@ -68,6 +95,7 @@ async function main() {
   const sha256 = await dag.file("./flox-demo.tar.gz").sha256();
 
   console.log(sha256);
+
   /*
   await dag
     .pipeline("clean")
@@ -82,6 +110,7 @@ async function main() {
     ])
     .stdout();
 */
+
   const mise = await dag
     .pipeline("mise-demo")
     .mise()

@@ -4,14 +4,20 @@ use opentelemetry::{
     trace::{Span, TraceContextExt, Tracer, TracerProvider},
     Context, KeyValue,
 };
+use owo_colors::OwoColorize;
 use std::env::current_dir;
-use std::path::Path;
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
+use std::{path::Path, thread};
 
 use fluentci_ext::envhub::Envhub;
+use fluentci_ext::service::Service as ServiceExt;
 use fluentci_ext::Extension;
-use fluentci_types::{nix::NixArgs, Output};
+use fluentci_types::{
+    nix::NixArgs,
+    process_compose::{self, Process},
+    Output,
+};
 
 use super::edge::Edge;
 use super::vertex::{Runnable, Vertex};
@@ -24,6 +30,30 @@ pub struct Volume {
     pub key: String,
 }
 
+#[derive(Default, Clone)]
+pub struct Service {
+    pub id: String,
+    pub name: String,
+    pub vertices: Vec<Vertex>,
+    pub working_dir: String,
+}
+
+impl Into<Process> for Service {
+    fn into(self) -> Process {
+        Process {
+            command: self
+                .vertices
+                .iter()
+                .map(|v| v.runner.format_command(&v.command))
+                .collect::<Vec<String>>()
+                .join(" ; "),
+            depends_on: None,
+            working_dir: Some(self.working_dir),
+            ..Default::default()
+        }
+    }
+}
+
 pub enum GraphCommand {
     AddVolume(String, String, String),
     AddVertex(
@@ -33,6 +63,7 @@ pub enum GraphCommand {
         Vec<String>,
         Arc<Box<dyn Extension + Send + Sync>>,
     ),
+    EnableService(String),
     AddEdge(usize, usize),
     Execute(Output),
 }
@@ -42,6 +73,9 @@ pub struct Graph {
     pub vertices: Vec<Vertex>,
     pub edges: Vec<Edge>,
     pub volumes: Vec<Volume>,
+    pub services: Vec<Service>,
+    pub enabled_services: Vec<Service>,
+
     tx: Sender<(String, usize)>,
     pub runner: Arc<Box<dyn Extension + Send + Sync>>,
     pub work_dir: String,
@@ -54,12 +88,109 @@ impl Graph {
         Graph {
             vertices: Vec::new(),
             volumes: Vec::new(),
+            services: Vec::new(),
+            enabled_services: Vec::new(),
             edges: Vec::new(),
             tx,
             runner,
             work_dir,
             nix_args: NixArgs::default(),
         }
+    }
+
+    pub fn register_service(&mut self, id: &str) {
+        // return if vertex at id is not found or is not a service
+        if self
+            .vertices
+            .iter()
+            .find(|v| v.id == id && v.label == "asService")
+            .is_none()
+        {
+            return;
+        }
+
+        let vertex = self
+            .vertices
+            .iter()
+            .find(|v| v.id == id && v.label == "asService")
+            .unwrap();
+
+        // browse the graph dependencies of the service
+        let mut visited = vec![false; self.vertices.len()];
+        let mut stack = Vec::new();
+        let mut service = Service {
+            id: id.to_string(),
+            name: vertex.command.clone(),
+            vertices: Vec::new(),
+            working_dir: self.work_dir.clone(),
+        };
+
+        let skip = vec![
+            "git",
+            "git-checkout",
+            "git-last-commit",
+            "tree",
+            "http",
+            "cache",
+            "file",
+            "directory",
+            "chmod",
+            "withFile",
+            "asService",
+        ];
+
+        for (i, vertex) in self.vertices.iter().enumerate() {
+            if vertex.id == id {
+                stack.push(i);
+                break;
+            }
+        }
+
+        while let Some(i) = stack.pop() {
+            if visited[i] {
+                continue;
+            }
+            visited[i] = true;
+
+            for edge in self.edges.iter().filter(|e| e.to == i) {
+                stack.push(edge.from);
+            }
+
+            if skip.contains(&self.vertices[i].label.as_str()) {
+                continue;
+            }
+
+            if self.vertices[i].label == "withWorkdir" {
+                if !Path::new(&self.vertices[i].command).exists() {
+                    println!("Error: {}", self.vertices[i].id);
+                    self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                    break;
+                }
+                service.working_dir = self.vertices[i].command.clone();
+                continue;
+            }
+
+            if self.vertices[i].label == "useEnv" {
+                match Envhub::default().r#use(&self.vertices[i].command, &self.work_dir) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("Error: {}", e);
+                        self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
+                        break;
+                    }
+                }
+                continue;
+            }
+
+            if self.vertices[i].command.is_empty() {
+                continue;
+            }
+
+            let vertex = self.vertices[i].clone();
+            service.vertices.insert(0, vertex);
+        }
+
+        self.services.push(service);
     }
 
     pub fn execute(&mut self, command: GraphCommand) {
@@ -73,16 +204,15 @@ impl Graph {
                 });
             }
             GraphCommand::AddVertex(id, label, command, needs, runner) => {
-                if let Some(vertex) = self.vertices.iter_mut().find(|v| v.id == id) {
-                    vertex.needs.extend(needs);
-                } else {
-                    self.vertices.push(Vertex {
+                match self.vertices.iter_mut().find(|v| v.id == id) {
+                    Some(vertex) => vertex.needs.extend(needs),
+                    None => self.vertices.push(Vertex {
                         id,
                         label,
                         command,
                         needs,
                         runner,
-                    });
+                    }),
                 }
             }
             GraphCommand::AddEdge(from, to) => {
@@ -94,7 +224,55 @@ impl Graph {
             GraphCommand::Execute(Output::Stderr) => {
                 self.execute_graph(Output::Stderr);
             }
+            GraphCommand::EnableService(id) => match self.services.iter().find(|s| s.id == id) {
+                Some(service) => self.enabled_services.push(service.clone()),
+                None => println!("Service not found"),
+            },
         }
+    }
+
+    pub fn execute_services(&mut self, ctx: &Context) -> Result<(), Error> {
+        let tracer_provider = global::tracer_provider();
+        let tracer = tracer_provider.versioned_tracer(
+            "fluentci-core",
+            Some(env!("CARGO_PKG_VERSION")),
+            Some("https://opentelemetry.io/schemas/1.17.0"),
+            None,
+        );
+
+        let mut span = tracer.start_with_context("start services", &ctx);
+
+        let process_compose_config = process_compose::ConfigFile {
+            version: "0.5".to_string(),
+            processes: self
+                .enabled_services
+                .iter()
+                .map(|s| (s.name.clone(), s.clone().into()))
+                .collect(),
+            ..Default::default()
+        };
+        let yaml = serde_yaml::to_string(&process_compose_config)?;
+
+        span.set_attribute(KeyValue::new("process_compose", yaml.clone()));
+
+        let label = format!("[{}]", "start services");
+        println!("{}", label.cyan());
+
+        thread::spawn(move || {
+            let (tx, _rx) = mpsc::channel();
+            match ServiceExt::default().exec(&yaml, tx.clone(), Output::Stdout, true, ".") {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("{}", e);
+                }
+            }
+        });
+
+        span.end();
+
+        thread::sleep(std::time::Duration::from_secs(5));
+
+        Ok(())
     }
 
     pub fn execute_graph(&mut self, output: Output) {
@@ -117,6 +295,7 @@ impl Graph {
             "directory",
             "chmod",
             "withFile",
+            "asService",
         ];
         let mut visited = vec![false; self.vertices.len()];
         let mut stack = Vec::new();
@@ -127,6 +306,15 @@ impl Graph {
         }
         let root_span = tracer.start("root");
         let context = Context::current_with_span(root_span);
+
+        match self.execute_services(&context) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("Error: {}", e);
+                self.tx.send(("Error".to_string(), 1)).unwrap();
+                return;
+            }
+        }
 
         while let Some(i) = stack.pop() {
             let label = &self.vertices[i].label.as_str();
@@ -275,6 +463,17 @@ impl Graph {
     }
 
     pub fn post_execute(&mut self, ctx: &Context) {
+        if !self.enabled_services.is_empty() {
+            let (tx, _) = mpsc::channel();
+            match ServiceExt::default().post_setup(tx) {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Failed to stop services: {}", e);
+                }
+            }
+        }
+
+        self.enabled_services.clear();
         let tracer_provider = global::tracer_provider();
         let tracer = tracer_provider.versioned_tracer(
             "fluentci-core",
@@ -283,7 +482,7 @@ impl Graph {
             None,
         );
 
-        let only = vec!["withCache"];
+        let only = vec!["withCache", "withService"];
 
         let mut visited = vec![false; self.vertices.len()];
         let mut stack = Vec::new();

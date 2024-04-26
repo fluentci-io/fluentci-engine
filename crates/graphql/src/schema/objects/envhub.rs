@@ -7,6 +7,8 @@ use fluentci_ext::envhub::Envhub as EnvhubExt;
 use fluentci_types::envhub as types;
 use uuid::Uuid;
 
+use super::service::Service;
+
 #[derive(Debug, Clone, Default)]
 pub struct Envhub {
     pub id: ID,
@@ -65,7 +67,9 @@ impl Envhub {
         Ok(self)
     }
 
-    async fn with_service(&self, _service: ID) -> Result<&Envhub, Error> {
+    async fn with_service(&self, ctx: &Context<'_>, service_id: ID) -> Result<&Envhub, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_service(graph.clone(), service_id.into())?;
         Ok(self)
     }
 
@@ -103,11 +107,10 @@ impl Envhub {
         common::stderr(graph.clone(), rx.clone()).map_err(|e| Error::new(e.to_string()))
     }
 
-    async fn as_service(&self, ctx: &Context<'_>) -> Result<ID, Error> {
+    async fn as_service(&self, ctx: &Context<'_>, name: String) -> Result<Service, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        let graph = graph.lock().unwrap();
-        let id = graph.vertices[graph.size() - 1].id.clone();
-        Ok(ID(id))
+        let service = common::as_service(graph.clone(), name)?;
+        Ok(service.into())
     }
 }
 

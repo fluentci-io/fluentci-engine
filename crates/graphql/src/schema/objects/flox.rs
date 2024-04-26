@@ -6,6 +6,8 @@ use fluentci_core::deps::Graph;
 use fluentci_ext::flox::Flox as FloxExt;
 use fluentci_types::flox as types;
 
+use super::service::Service;
+
 #[derive(Debug, Clone, Default)]
 pub struct Flox {
     pub id: ID,
@@ -29,7 +31,9 @@ impl Flox {
         Ok(self)
     }
 
-    async fn with_service(&self, _service: ID) -> Result<&Flox, Error> {
+    async fn with_service(&self, ctx: &Context<'_>, service_id: ID) -> Result<&Flox, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_service(graph.clone(), service_id.into())?;
         Ok(self)
     }
 
@@ -67,11 +71,10 @@ impl Flox {
         common::stderr(graph.clone(), rx.clone()).map_err(|e| Error::new(e.to_string()))
     }
 
-    async fn as_service(&self, ctx: &Context<'_>) -> Result<ID, Error> {
+    async fn as_service(&self, ctx: &Context<'_>, name: String) -> Result<Service, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        let graph = graph.lock().unwrap();
-        let id = graph.vertices[graph.size() - 1].id.clone();
-        Ok(ID(id))
+        let service = common::as_service(graph.clone(), name)?;
+        Ok(service.into())
     }
 }
 

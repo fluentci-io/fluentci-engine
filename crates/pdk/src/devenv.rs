@@ -1,5 +1,5 @@
 use extism_pdk::*;
-use fluentci_types::{cache::Cache, devenv as types, file::File};
+use fluentci_types::{cache::Cache, devenv as types, file::File, service::Service};
 use serde::{Deserialize, Serialize};
 
 #[host_fn]
@@ -11,6 +11,8 @@ extern "ExtismHost" {
     fn with_file(file: Json<File>);
     fn stdout() -> String;
     fn stderr() -> String;
+    fn as_service(name: String) -> Json<Service>;
+    fn with_service(service_id: String);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -77,5 +79,17 @@ impl Devenv {
 
     pub fn stderr(&self) -> Result<String, Error> {
         unsafe { stderr() }
+    }
+
+    pub fn as_service(&self, name: &str) -> Result<String, Error> {
+        let service = unsafe { as_service(name.into())? };
+        Ok(service.into_inner().id)
+    }
+
+    pub fn with_service(&self, service_id: &str) -> Result<Devenv, Error> {
+        unsafe { with_service(service_id.into())? }
+        Ok(Devenv {
+            id: self.id.clone(),
+        })
     }
 }

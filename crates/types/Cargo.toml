@@ -12,3 +12,4 @@ version = "0.1.5"
 
 [dependencies]
 serde = {version = "1.0.197", features = ["serde_derive", "derive"]}
+serde_yaml = "0.9.34"

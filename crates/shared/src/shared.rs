@@ -95,6 +95,14 @@ host_fn!(pub with_file(user_data: State;  file: Json<File>) {
   Ok(())
 });
 
+host_fn!(pub with_service(user_data: State; service_id: String) {
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  let graph = state.graph.clone();
+  common::with_service(graph, service_id)?;
+  Ok(())
+});
+
 host_fn!(pub stdout(user_data: State;) -> String {
   let state = user_data.get()?;
   let state = state.lock().unwrap();
@@ -159,6 +167,14 @@ host_fn!(pub get_arch(user_data: State;) -> String {
   Ok(std::env::consts::ARCH.to_string())
 });
 
+host_fn!(pub as_service(user_data: State; name: String) -> Json<Service> {
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  let graph = state.graph.clone();
+  let service = common::as_service(graph, name)?;
+  Ok(Json(service))
+});
+
 host_fn!(pub call(user_data: State; opts: Json<Module>) -> String {
     let opts = opts.into_inner();
     let module = opts.url.clone();
@@ -185,7 +201,7 @@ host_fn!(pub call(user_data: State; opts: Json<Module>) -> String {
         .with_function("commit", [], [PTR], user_data.clone(), commit)
         .with_function("tree", [], [PTR], user_data.clone(), tree)
         .with_function("http", [PTR], [PTR], user_data.clone(), http)
-        .with_function("nix", [], [PTR], user_data.clone(), nix)
+        .with_function("nix", [PTR], [PTR], user_data.clone(), nix)
         .with_function("pipeline", [PTR], [PTR], user_data.clone(), pipeline)
         .with_function("pixi", [], [PTR], user_data.clone(), pixi)
         .with_function("pkgx", [], [PTR], user_data.clone(), pkgx)
@@ -210,6 +226,8 @@ host_fn!(pub call(user_data: State; opts: Json<Module>) -> String {
         .with_function("get_arch", [], [PTR], user_data.clone(), get_arch)
         .with_function("call", [PTR], [PTR], user_data.clone(), call)
         .with_function("with_packages", [PTR], [], user_data.clone(), with_packages)
+        .with_function("as_service", [PTR], [PTR], user_data.clone(), as_service)
+        .with_function("with_service", [PTR], [], user_data.clone(), with_service)
         .build()
         .unwrap();
 

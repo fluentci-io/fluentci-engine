@@ -23,3 +23,4 @@ opentelemetry-otlp = {version = "0.15.0", features = ["http-proto", "reqwest-rus
 opentelemetry-zipkin = {version = "0.20.0", features = ["reqwest-rustls", "reqwest-client"], default-features = false}
 opentelemetry_sdk = {version = "0.22.1", features = ["tokio", "rt-tokio", "trace"]}
 owo-colors = "4.0.0"
+serde_yaml = "0.9.34"

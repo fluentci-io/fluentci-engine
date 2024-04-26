@@ -28,6 +28,7 @@ use super::{
     pixi::Pixi,
     pkgx::Pkgx,
     proto::Proto,
+    service::Service,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -128,7 +129,9 @@ impl Directory {
         Ok(self)
     }
 
-    async fn with_service(&self, _service: ID) -> Result<&Directory, Error> {
+    async fn with_service(&self, ctx: &Context<'_>, service_id: ID) -> Result<&Directory, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_service(graph.clone(), service_id.into())?;
         Ok(self)
     }
 
@@ -176,6 +179,12 @@ impl Directory {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let file = common::tar_czvf(graph.clone(), self.path.clone())?;
         Ok(File::from(file))
+    }
+
+    async fn as_service(&self, ctx: &Context<'_>, name: String) -> Result<Service, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let service = common::as_service(graph.clone(), name)?;
+        Ok(service.into())
     }
 }
 
