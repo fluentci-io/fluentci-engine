@@ -566,7 +566,15 @@ export async function typescriptE2e(
     .container()
     .from("debian:bookworm")
     .withExec(["apt-get", "update"])
-    .withExec(["apt-get", "install", "-y", "curl", "ca-certificates", "git"])
+    .withExec([
+      "apt-get",
+      "install",
+      "-y",
+      "curl",
+      "ca-certificates",
+      "git",
+      "iputils-ping",
+    ])
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
     .withFile(
