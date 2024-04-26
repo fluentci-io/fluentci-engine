@@ -19,25 +19,22 @@ pub fn init_tracer() -> Result<(), TraceError> {
             ..opentelemetry_otlp::ExportConfig::default()
         };
 
-        let mut exporter = opentelemetry_otlp::new_exporter()
+        let mut headers = HashMap::new();
+        let exporter = opentelemetry_otlp::new_exporter()
             .http()
             .with_export_config(export_config);
 
         if let Ok(api_key) = env::var("OTLP_API_KEY") {
-            let mut headers = HashMap::new();
             headers.insert("x-api-key".into(), api_key);
-            exporter = exporter.with_headers(headers);
         }
 
         if let Ok(baselime_dataset) = env::var("BASELIME_DATASET") {
-            let mut headers = HashMap::new();
             headers.insert("x-baselime-dataset".into(), baselime_dataset);
-            exporter = exporter.with_headers(headers);
         }
 
         let _ = opentelemetry_otlp::new_pipeline()
             .tracing()
-            .with_exporter(exporter)
+            .with_exporter(exporter.with_headers(headers))
             .with_trace_config(config().with_resource(Resource::new(vec![
                 KeyValue::new("service.name", "fluentci-engine"),
                 KeyValue::new("service.namespace", "fluentci-core"),

@@ -45,6 +45,8 @@ impl Runnable for Vertex {
         let label = format!("[{}]", self.label);
         println!("{} {}", label.cyan(), self.id.bright_yellow());
         println!("{} {}", label.cyan(), self.command.bright_green());
+        fluentci_logging::info(&format!("{} {}", label, self.id), "fluentci-core")?;
+        fluentci_logging::info(&format!("{} {}", label, self.command), "fluentci-core")?;
 
         if let Some(runner) = Arc::get_mut(&mut self.runner) {
             runner.exec(&self.command, tx, out, last_cmd, work_dir)

@@ -16,6 +16,7 @@ anyhow = "1.0.81"
 chrono = "0.4.35"
 dirs = "5.0.1"
 fluentci-ext = {path = "../ext", version = "0.1.6"}
+fluentci-logging = {path = "../logging", version = "0.1.0"}
 fluentci-types = {path = "../types", version = "0.1.5"}
 opentelemetry = {version = "0.22.0", features = ["trace", "pin-project-lite"]}
 opentelemetry-jaeger = "0.21.0"

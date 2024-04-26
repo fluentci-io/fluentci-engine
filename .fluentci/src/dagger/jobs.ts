@@ -488,6 +488,7 @@ export async function e2e(
       env.get("OTEL_EXPORTER_OTLP_ENDPOINT")!
     )
     .withEnvVariable("OTLP_API_KEY", env.get("OTLP_API_KEY")!)
+    .withEnvVariable("BASELIME_API_KEY", env.get("OTLP_API_KEY")!)
     .withExec(["/fluentci-engine", "serve"])
     .withExposedPort(6880)
     .asService();
@@ -606,6 +607,7 @@ export async function typescriptE2e(
       env.get("OTEL_EXPORTER_OTLP_ENDPOINT")!
     )
     .withEnvVariable("OTLP_API_KEY", env.get("OTLP_API_KEY")!)
+    .withEnvVariable("BASELIME_API_KEY", env.get("OTLP_API_KEY")!)
     .withExec(["/fluentci-engine", "serve"])
     .withExposedPort(6880)
     .asService();
