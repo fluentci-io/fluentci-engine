@@ -17,7 +17,7 @@ anyhow = "1.0.81"
 clap = "3.2.20"
 extism = "1.2.0"
 fluentci-core = {path = "../core", version = "0.1.8"}
-fluentci-ext = {path = "../ext", version = "0.1.6"}
+fluentci-ext = {path = "../ext", version = "0.2.0"}
 fluentci-server = {path = "../server", version = "0.1.11"}
 fluentci-shared = {path = "../shared", version = "0.1.7"}
 get-port = "4.0.0"

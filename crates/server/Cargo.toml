@@ -18,7 +18,7 @@ anyhow = "1.0.81"
 async-graphql = "7.0.2"
 async-graphql-actix-web = "7.0.2"
 fluentci-core = {path = "../core", version = "0.1.8"}
-fluentci-ext = {path = "../ext", version = "0.1.6"}
+fluentci-ext = {path = "../ext", version = "0.2.0"}
 fluentci-graphql = {path = "../graphql", version = "0.1.11"}
 mime_guess = "2.0.4"
 owo-colors = "4.0.0"
