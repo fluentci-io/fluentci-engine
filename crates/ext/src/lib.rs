@@ -70,12 +70,13 @@ pub fn exec(
 
     let out_clone = out.clone();
     let tx_clone = tx.clone();
+    let namespace = cmd.to_string().clone();
 
     thread::spawn(move || {
         let mut stdout = String::new();
         while let Ok(line) = stdout_rx.recv() {
             println!("{}", line);
-            match fluentci_logging::info(&line, "fluentci-core") {
+            match fluentci_logging::info(&line, &namespace) {
                 Ok(_) => {}
                 Err(e) => {
                     println!("Error: {}", e);
@@ -92,11 +93,13 @@ pub fn exec(
         }
     });
 
+    let namespace = cmd.to_string().clone();
+
     thread::spawn(move || {
         let mut stderr = String::new();
         while let Ok(line) = stderr_rx.recv() {
             println!("{}", line);
-            match fluentci_logging::info(&line, "fluentci-core") {
+            match fluentci_logging::info(&line, &namespace) {
                 Ok(_) => {}
                 Err(_) => {}
             }
