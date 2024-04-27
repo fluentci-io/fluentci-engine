@@ -57,6 +57,12 @@ async fn index_ws(
 
 pub async fn start(listen: &str) -> Result<(), Error> {
     fluentci_core::init_tracer().map_err(|e| Error::msg(e.to_string()))?;
+    match fluentci_core::set_git_repo_metadata() {
+        Ok(_) => {}
+        Err(e) => {
+            println!("{}", e.to_string().bright_red());
+        }
+    }
     let banner = r#"
 
     ________                 __  __________   ______            _          

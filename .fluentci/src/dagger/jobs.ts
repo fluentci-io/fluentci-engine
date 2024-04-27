@@ -15,7 +15,7 @@ export enum Job {
   typescriptE2e = "typescript_e2e",
 }
 
-export const exclude = ["target", ".git", ".devbox", ".fluentci"];
+export const exclude = ["target", ".devbox", ".fluentci"];
 
 export const getDirectory = async (
   src: string | Directory | undefined = "."
@@ -572,6 +572,7 @@ export async function typescriptE2e(
   options: string[] = []
 ): Promise<string> {
   let context = await getDirectory("./fixtures");
+  let git = await getDirectory(".git");
   const engine = dag
     .container()
     .from("debian:bookworm")
@@ -586,6 +587,8 @@ export async function typescriptE2e(
       "iputils-ping",
     ])
     .withDirectory("/app", context, { exclude })
+    .withDirectory("/.git", git, { exclude: [] })
+    .withExec(["cp", "-r", "/.git", "/app/.git"])
     .withWorkdir("/app")
     .withFile(
       "/fluentci-engine",

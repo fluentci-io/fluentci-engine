@@ -267,6 +267,7 @@ impl Graph {
         let label = format!("[{}]", "start services");
         println!("{}", label.cyan());
         fluentci_logging::info(&label, "process-compose")?;
+        fluentci_logging::info(&yaml, "process-compose")?;
 
         thread::spawn(move || {
             let (tx, _rx) = mpsc::channel();

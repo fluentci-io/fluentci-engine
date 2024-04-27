@@ -96,7 +96,7 @@ pub fn exec(
         let mut stderr = String::new();
         while let Ok(line) = stderr_rx.recv() {
             println!("{}", line);
-            match fluentci_logging::error(&line, "fluentci-core") {
+            match fluentci_logging::info(&line, "fluentci-core") {
                 Ok(_) => {}
                 Err(_) => {}
             }

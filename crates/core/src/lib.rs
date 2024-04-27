@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::env;
+use std::process::Command;
 
+use anyhow::Error;
 use opentelemetry::trace::noop::NoopTracerProvider;
 use opentelemetry::trace::TraceError;
 use opentelemetry::{global, KeyValue};
@@ -91,5 +93,53 @@ pub fn init_tracer() -> Result<(), TraceError> {
 
     let provider = NoopTracerProvider::new();
     let _ = global::set_tracer_provider(provider);
+    Ok(())
+}
+
+pub fn set_git_repo_metadata() -> Result<(), Error> {
+    let child = Command::new("sh")
+        .arg("-c")
+        .arg("git log -1 --pretty=%s")
+        .stdout(std::process::Stdio::piped())
+        .spawn()?;
+    let output = child.wait_with_output()?;
+    let commit_message = String::from_utf8(output.stdout)?;
+
+    let child = Command::new("sh")
+        .arg("-c")
+        .arg("git rev-parse --abbrev-ref HEAD")
+        .stdout(std::process::Stdio::piped())
+        .spawn()?;
+    let output = child.wait_with_output()?;
+    let branch = String::from_utf8(output.stdout)?;
+
+    let child = Command::new("sh")
+        .arg("-c")
+        .arg("git log -1 --pretty=%h")
+        .spawn()?;
+    let output = child.wait_with_output()?;
+    let commit_hash = String::from_utf8(output.stdout)?;
+
+    let child = Command::new("sh")
+        .arg("-c")
+        .arg("git remote get-url origin")
+        .stdout(std::process::Stdio::piped())
+        .spawn()?;
+    let output = child.wait_with_output()?;
+    let remote_url = String::from_utf8(output.stdout)?;
+
+    let child = Command::new("sh")
+        .arg("-c")
+        .arg("git log -1 --pretty=%an")
+        .stdout(std::process::Stdio::piped())
+        .spawn()?;
+    let output = child.wait_with_output()?;
+    let author = String::from_utf8(output.stdout)?;
+
+    env::set_var("GIT_COMMIT_MESSAGE", commit_message.trim());
+    env::set_var("GIT_BRANCH", branch.trim());
+    env::set_var("GIT_COMMIT_HASH", commit_hash.trim());
+    env::set_var("GIT_REMOTE_URL", remote_url.trim());
+    env::set_var("GIT_AUTHOR", author.trim());
     Ok(())
 }
