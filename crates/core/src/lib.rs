@@ -36,6 +36,14 @@ pub fn init_tracer() -> Result<(), TraceError> {
             headers.insert("x-api-key".into(), api_key);
         }
 
+        if let Ok(honeycomb_api_key) = env::var("HONEYCOMB_API_KEY") {
+            headers.insert("x-honeycomb-team".into(), honeycomb_api_key);
+        }
+
+        if let Ok(honeycomb_dataset) = env::var("HONEYCOMB_DATASET") {
+            headers.insert("x-honeycomb-dataset".into(), honeycomb_dataset);
+        }
+
         if let Ok(baselime_dataset) = env::var("BASELIME_DATASET") {
             headers.insert("x-baselime-dataset".into(), baselime_dataset);
         }
