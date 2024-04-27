@@ -493,7 +493,7 @@ export async function e2e(
     )
     .withEnvVariable("HONEYCOMB_API_KEY", env.get("HONEYCOMB_API_KEY")!)
     .withEnvVariable("HONEYCOMB_DATASET", env.get("HONEYCOMB_DATASET")!)
-    .withEnvVariable("BASELIME_API_KEY", env.get("OTLP_API_KEY")!)
+    .withEnvVariable("BASELIME_API_KEY", env.get("BASELIME_API_KEY")!)
     .withExec(["/fluentci-engine", "serve"])
     .withExposedPort(6880)
     .asService();
@@ -620,7 +620,7 @@ export async function typescriptE2e(
     )
     .withEnvVariable("HONEYCOMB_API_KEY", env.get("HONEYCOMB_API_KEY")!)
     .withEnvVariable("HONEYCOMB_DATASET", env.get("HONEYCOMB_DATASET")!)
-    .withEnvVariable("BASELIME_API_KEY", env.get("OTLP_API_KEY")!)
+    .withEnvVariable("BASELIME_API_KEY", env.get("BASELIME_API_KEY")!)
     .withExec(["/fluentci-engine", "serve"])
     .withExposedPort(6880)
     .asService();

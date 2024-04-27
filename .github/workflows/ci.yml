@@ -50,6 +50,7 @@ jobs:
           HONEYCOMB_DATASET: fluentci-engine
           OTEL_EXPORTER_OTLP_ENDPOINT: https://api.honeycomb.io/
           OTEL_EXPORTER_OTLP_PROTOCOL: http
+          BASELIME_API_KEY: ${{ secrets.BASELIME_API_KEY }}
 
   publish:
     needs: tests
