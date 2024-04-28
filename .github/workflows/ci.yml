@@ -35,9 +35,9 @@ jobs:
       - name: Run Build and e2e tests
         run: |
           export PATH=${HOME}/.cargo/bin:${PATH}
-          ls -ltr target
-          rm -rf target/release/build target/release/deps target/release/examples target/release/incremental
-          sudo cp target/release/fluentci-engine /usr/local/bin
+          ls -ltr ../target
+          rm -rf ../target/release/build target/release/deps target/release/examples target/release/incremental
+          sudo cp ../target/release/fluentci-engine /usr/local/bin
           fluentci-engine run -- deno run -A ../.fluentci/e2e.ts
         working-directory: fixtures
         env:
