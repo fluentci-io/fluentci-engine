@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-import { GraphQLClient, gql } from "../deps.ts";
+import { GraphQLClient, gql, _ } from "../deps.ts";
 import { Metadata, QueryTree } from "./client.gen.ts";
 
 /**
@@ -192,7 +192,7 @@ export async function compute<T>(
       `
     );
   } catch (e: any) {
-    throw new Error(e.message);
+    throw new Error(_.get(e, "response.errors[0].message", e.message));
   }
 
   return queryFlatten(computeQuery);
