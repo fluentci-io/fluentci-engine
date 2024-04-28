@@ -3,11 +3,11 @@ authors = ["Tsiry Sandratraina <tsiry.sndr@fluentci.io>"]
 categories = ["command-line-utilities", "development-tools"]
 description = "Programmable CI/CD engine without Containers, built on top of Nix ❄️"
 edition = "2021"
-keywords = ["nix", "environment", "ci", "cd", "devops"]
+keywords = ["nix", "environment", "ci", "wasm", "devops"]
 license = "MPL-2.0"
 name = "fluentci-core"
 repository = "https://github.com/fluentci-io/fluentci-engine"
-version = "0.1.8"
+version = "0.2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,11 +15,12 @@ version = "0.1.8"
 anyhow = "1.0.81"
 chrono = "0.4.35"
 dirs = "5.0.1"
-fluentci-ext = {path = "../ext", version = "0.1.6"}
-fluentci-types = {path = "../types", version = "0.1.5"}
+fluentci-ext = {path = "../ext", version = "0.2.0"}
+fluentci-logging = {path = "../logging", version = "0.1.0"}
+fluentci-types = {path = "../types", version = "0.1.6"}
 opentelemetry = {version = "0.22.0", features = ["trace", "pin-project-lite"]}
 opentelemetry-jaeger = "0.21.0"
-opentelemetry-otlp = {version = "0.15.0", features = ["http-proto", "reqwest-rustls", "reqwest-client"], default-features = false}
+opentelemetry-otlp = {version = "0.15.0", features = ["http-proto", "reqwest-rustls", "reqwest-client", "grpc-tonic"], default-features = false}
 opentelemetry-zipkin = {version = "0.20.0", features = ["reqwest-rustls", "reqwest-client"], default-features = false}
 opentelemetry_sdk = {version = "0.22.1", features = ["tokio", "rt-tokio", "trace"]}
 owo-colors = "4.0.0"

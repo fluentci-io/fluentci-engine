@@ -3,11 +3,11 @@ authors = ["Tsiry Sandratraina <tsiry.sndr@fluentci.io>"]
 categories = ["command-line-utilities"]
 description = "Programmable CI/CD engine without Containers, built on top of Nix ❄️"
 edition = "2021"
-keywords = ["nix", "environment", "ci", "cd", "devops"]
+keywords = ["nix", "environment", "ci", "wasm", "devops"]
 license = "MPL-2.0"
 name = "fluentci-graphql"
 repository = "https://github.com/fluentci-io/fluentci-engine"
-version = "0.1.11"
+version = "0.2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -16,10 +16,10 @@ anyhow = "1.0.80"
 async-graphql = "7.0.2"
 async-graphql-actix-web = "7.0.2"
 dirs = "5.0.1"
-fluentci-common = {path = "../common", version = "0.1.6"}
-fluentci-core = {path = "../core", version = "0.1.8"}
-fluentci-ext = {path = "../ext", version = "0.1.6"}
-fluentci-types = {path = "../types", version = "0.1.5"}
+fluentci-common = {path = "../common", version = "0.1.7"}
+fluentci-core = {path = "../core", version = "0.2.0"}
+fluentci-ext = {path = "../ext", version = "0.2.0"}
+fluentci-types = {path = "../types", version = "0.1.6"}
 regex = "1.10.3"
 sha256 = "1.5.0"
 tokio = "1.36.0"

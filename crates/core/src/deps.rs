@@ -163,6 +163,15 @@ impl Graph {
             if self.vertices[i].label == "withWorkdir" {
                 if !Path::new(&self.vertices[i].command).exists() {
                     println!("Error: {}", self.vertices[i].id);
+                    match fluentci_logging::error(
+                        &format!("Error: {}", self.vertices[i].id),
+                        "register-service",
+                    ) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            println!("{}", e);
+                        }
+                    }
                     self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
                     break;
                 }
@@ -257,6 +266,8 @@ impl Graph {
 
         let label = format!("[{}]", "start services");
         println!("{}", label.cyan());
+        fluentci_logging::info(&label, "process-compose")?;
+        fluentci_logging::info(&yaml, "process-compose")?;
 
         thread::spawn(move || {
             let (tx, _rx) = mpsc::channel();
@@ -264,6 +275,12 @@ impl Graph {
                 Ok(_) => {}
                 Err(e) => {
                     println!("{}", e);
+                    match fluentci_logging::error(&e.to_string(), "process-compose") {
+                        Ok(_) => {}
+                        Err(e) => {
+                            println!("{}", e);
+                        }
+                    }
                 }
             }
         });
@@ -518,6 +535,12 @@ impl Graph {
                 }
                 Err(e) => {
                     println!("Error: {}", e);
+                    match fluentci_logging::error(&e.to_string(), "post-setup") {
+                        Ok(_) => {}
+                        Err(e) => {
+                            println!("{}", e);
+                        }
+                    }
                     span.end();
                     break;
                 }

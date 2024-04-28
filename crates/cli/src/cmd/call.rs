@@ -24,6 +24,19 @@ use fluentci_shared::{
 };
 
 pub fn call(module: &str, command: &str) {
+    match fluentci_core::init_tracer() {
+        Ok(_) => {}
+        Err(e) => {
+            println!("{}", e.to_string());
+        }
+    }
+    match fluentci_core::set_git_repo_metadata() {
+        Ok(_) => {}
+        Err(e) => {
+            println!("{}", e.to_string());
+        }
+    }
+
     let (tx, rx) = mpsc::channel();
     let user_data = UserData::new(State {
         graph: Arc::new(Mutex::new(Graph::new(

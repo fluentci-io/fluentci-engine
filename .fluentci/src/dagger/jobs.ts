@@ -15,7 +15,7 @@ export enum Job {
   typescriptE2e = "typescript_e2e",
 }
 
-export const exclude = ["target", ".git", ".devbox", ".fluentci"];
+export const exclude = ["target", ".devbox", ".fluentci"];
 
 export const getDirectory = async (
   src: string | Directory | undefined = "."
@@ -483,6 +483,13 @@ export async function e2e(
     )
     .withEnvVariable("AWS_ACCESS_KEY_ID", env.get("AWS_ACCESS_KEY_ID")!)
     .withEnvVariable("AWS_SECRET_ACCESS_KEY", env.get("AWS_SECRET_ACCESS_KEY")!)
+    .withEnvVariable(
+      "OTEL_EXPORTER_OTLP_ENDPOINT",
+      env.get("OTEL_EXPORTER_OTLP_ENDPOINT")!
+    )
+    .withEnvVariable("HONEYCOMB_API_KEY", env.get("HONEYCOMB_API_KEY")!)
+    .withEnvVariable("HONEYCOMB_DATASET", env.get("HONEYCOMB_DATASET")!)
+    .withEnvVariable("BASELIME_API_KEY", env.get("BASELIME_API_KEY")!)
     .withExec(["/fluentci-engine", "serve"])
     .withExposedPort(6880)
     .asService();
@@ -562,6 +569,7 @@ export async function typescriptE2e(
   options: string[] = []
 ): Promise<string> {
   let context = await getDirectory("./fixtures");
+  let git = await getDirectory(".git");
   const engine = dag
     .container()
     .from("debian:bookworm")
@@ -576,6 +584,8 @@ export async function typescriptE2e(
       "iputils-ping",
     ])
     .withDirectory("/app", context, { exclude })
+    .withDirectory("/.git", git, { exclude: [] })
+    .withExec(["cp", "-r", "/.git", "/app/.git"])
     .withWorkdir("/app")
     .withFile(
       "/fluentci-engine",
@@ -596,6 +606,13 @@ export async function typescriptE2e(
     )
     .withEnvVariable("AWS_ACCESS_KEY_ID", env.get("AWS_ACCESS_KEY_ID")!)
     .withEnvVariable("AWS_SECRET_ACCESS_KEY", env.get("AWS_SECRET_ACCESS_KEY")!)
+    .withEnvVariable(
+      "OTEL_EXPORTER_OTLP_ENDPOINT",
+      env.get("OTEL_EXPORTER_OTLP_ENDPOINT")!
+    )
+    .withEnvVariable("HONEYCOMB_API_KEY", env.get("HONEYCOMB_API_KEY")!)
+    .withEnvVariable("HONEYCOMB_DATASET", env.get("HONEYCOMB_DATASET")!)
+    .withEnvVariable("BASELIME_API_KEY", env.get("BASELIME_API_KEY")!)
     .withExec(["/fluentci-engine", "serve"])
     .withExposedPort(6880)
     .asService();

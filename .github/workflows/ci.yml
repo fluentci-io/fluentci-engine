@@ -46,6 +46,11 @@ jobs:
           FLUENTCI_CACHE_S3_BUCKET: cache
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          HONEYCOMB_API_KEY: ${{ secrets.HONEYCOMB_API_KEY }}
+          HONEYCOMB_DATASET: fluentci-engine
+          OTEL_EXPORTER_OTLP_ENDPOINT: https://api.honeycomb.io
+          OTEL_EXPORTER_OTLP_PROTOCOL: http
+          BASELIME_API_KEY: ${{ secrets.BASELIME_API_KEY }}
 
   publish:
     needs: tests
