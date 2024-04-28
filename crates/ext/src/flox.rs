@@ -61,6 +61,15 @@ impl Extension for Flox {
 
         Command::new("sh")
             .arg("-c")
+            .arg(&format!(
+                "echo \"trusted-users = root $USER\" | {} tee -a /etc/nix/nix.conf",
+                sudo
+            ))
+            .spawn()?
+            .wait()?;
+
+        Command::new("sh")
+            .arg("-c")
             .arg(&format!("echo 'extra-trusted-substituters = https://cache.floxdev.com' | {} tee -a /etc/nix/nix.conf && echo 'extra-trusted-public-keys = flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs=' | {} tee -a /etc/nix/nix.conf", sudo, sudo))
             .spawn()?
             .wait()?;
