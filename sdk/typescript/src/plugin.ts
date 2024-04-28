@@ -44,6 +44,8 @@ declare const Host: {
     get_os: () => I64;
     get_arch: () => I64;
     call: (ptr: I64) => I64;
+    as_service: (ptr: I64) => I64;
+    with_service: (ptr: I64) => void;
   };
 };
 
@@ -87,6 +89,8 @@ export const remove_env: (ptr: I64) => void = fn.remove_env;
 export const get_os: () => I64 = fn.get_os;
 export const get_arch: () => I64 = fn.get_arch;
 export const call: (ptr: I64) => I64 = fn.call;
+export const as_service: (ptr: I64) => I64 = fn.as_service;
+export const with_service: (ptr: I64) => void = fn.with_service;
 
 export interface NixArgs {
   impure?: boolean;
