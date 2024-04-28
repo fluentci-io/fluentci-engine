@@ -31,6 +31,7 @@ extern "ExtismHost" {
     fn as_service(name: String) -> Json<Service>;
     fn with_service(service_id: String);
     fn set_envs(envs: Json<Vec<(String, String)>>);
+    fn wait_on(args: Json<Vec<u32>>);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -186,6 +187,16 @@ impl Directory {
 
     pub fn with_env_variable(&self, name: &str, value: &str) -> Result<Directory, Error> {
         unsafe { set_envs(Json(vec![(name.into(), value.into())]))? };
+        Ok(Directory {
+            id: self.id.clone(),
+            path: self.path.clone(),
+        })
+    }
+
+    pub fn wait_on(&self, port: u32, timeout: Option<u32>) -> Result<Directory, Error> {
+        unsafe {
+            wait_on(Json(vec![port, timeout.unwrap_or(60)]))?;
+        }
         Ok(Directory {
             id: self.id.clone(),
             path: self.path.clone(),

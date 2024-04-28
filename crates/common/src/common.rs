@@ -6,10 +6,10 @@ use std::{
 
 use anyhow::Error;
 use fluentci_core::deps::{Graph, GraphCommand};
-use fluentci_ext::archive::zip::Zip as ZipExt;
 use fluentci_ext::cache::Cache as CacheExt;
 use fluentci_ext::Extension;
 use fluentci_ext::{archive::tar::czvf::TarCzvf as TarCzvfExt, runner::Runner};
+use fluentci_ext::{archive::zip::Zip as ZipExt, pkgx::Pkgx as PkgxExt};
 use fluentci_types::{file::File, service::Service, Output};
 use uuid::Uuid;
 
@@ -329,4 +329,39 @@ pub fn with_env_variable(graph: Arc<Mutex<Graph>>, key: &str, value: &str) -> Re
     let mut graph = graph.lock().unwrap();
     graph.execute(GraphCommand::AddEnvVariable(key.into(), value.into()));
     Ok(())
+}
+
+pub fn wait_on(graph: Arc<Mutex<Graph>>, port: u32, timeout: Option<u32>) -> Result<(), Error> {
+    let mut graph = graph.lock().unwrap();
+    let runner = graph.runner.clone();
+    graph.runner = Arc::new(Box::new(PkgxExt::default()));
+    graph.runner.setup()?;
+
+    let id = Uuid::new_v4().to_string();
+    let dep_id = graph.vertices[graph.size() - 1].id.clone();
+    let deps = match graph.size() {
+        1 => vec![],
+        _ => vec![dep_id],
+    };
+    let cmd = format!(
+        "pkgx bunx wait-port localhost:{} -t {}",
+        port,
+        timeout.unwrap_or(60) * 1000
+    );
+    graph.execute(GraphCommand::AddVertex(
+        id.clone(),
+        "waitOn".into(),
+        cmd,
+        deps,
+        Arc::new(Box::new(PkgxExt::default())),
+    ));
+
+    if graph.size() > 2 {
+        let x = graph.size() - 2;
+        let y = graph.size() - 1;
+        graph.execute(GraphCommand::AddEdge(x, y));
+    }
+
+    graph.runner = runner;
+    return Ok(());
 }

@@ -97,6 +97,17 @@ impl Pkgx {
         common::with_env_variable(graph.clone(), &name, &value)?;
         Ok(self)
     }
+
+    async fn wait_on(
+        &self,
+        ctx: &Context<'_>,
+        port: u32,
+        timeout: Option<u32>,
+    ) -> Result<&Pkgx, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::wait_on(graph.clone(), port, timeout)?;
+        Ok(self)
+    }
 }
 
 impl From<types::Pkgx> for Pkgx {

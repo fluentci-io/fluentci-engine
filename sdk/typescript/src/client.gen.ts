@@ -390,6 +390,19 @@ export class Devbox extends BaseClient {
       ctx: this._ctx,
     });
   };
+
+  waitOn = (port: number, timeout?: number): Devbox => {
+    return new Devbox({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "waitOn",
+          args: { port, timeout },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
 }
 
 /**
@@ -528,6 +541,19 @@ export class Devenv extends BaseClient {
           args: {
             name,
           },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  waitOn = (port: number, timeout?: number): Devenv => {
+    return new Devenv({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "waitOn",
+          args: { port, timeout },
         },
       ],
       ctx: this._ctx,
@@ -803,6 +829,19 @@ export class Directory extends BaseClient {
         ...this.queryTree,
         {
           operation: "tarCzvf",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  waitOn = (port: number, timeout?: number): Directory => {
+    return new Directory({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "waitOn",
+          args: { port, timeout },
         },
       ],
       ctx: this._ctx,
@@ -1103,6 +1142,19 @@ export class Flox extends BaseClient {
       ctx: this._ctx,
     });
   };
+
+  waitOn = (port: number, timeout?: number): Flox => {
+    return new Flox({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "waitOn",
+          args: { port, timeout },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
 }
 
 /**
@@ -1301,6 +1353,19 @@ export class Nix extends BaseClient {
         {
           operation: "asService",
           args: { name },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  waitOn = (port: number, timeout?: number): Nix => {
+    return new Nix({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "waitOn",
+          args: { port, timeout },
         },
       ],
       ctx: this._ctx,
@@ -1570,6 +1635,19 @@ export class Pipeline extends BaseClient {
       ctx: this._ctx,
     });
   };
+
+  waitOn = (port: number, timeout?: number): Pipeline => {
+    return new Pipeline({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "waitOn",
+          args: { port, timeout },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
 }
 
 /**
@@ -1724,6 +1802,19 @@ export class Pkgx extends BaseClient {
       ctx: this._ctx,
     });
   };
+
+  waitOn = (port: number, timeout?: number): Pkgx => {
+    return new Pkgx({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "waitOn",
+          args: { port, timeout },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
 }
 
 /**
@@ -1865,6 +1956,19 @@ export class Pixi extends BaseClient {
       ctx: this._ctx,
     });
   };
+
+  waitOn = (port: number, timeout?: number): Pixi => {
+    return new Pixi({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "waitOn",
+          args: { port, timeout },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
 }
 
 /**
@@ -2001,6 +2105,19 @@ export class Mise extends BaseClient {
         {
           operation: "asService",
           args: { name },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  waitOn = (port: number, timeout?: number): Mise => {
+    return new Mise({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "waitOn",
+          args: { port, timeout },
         },
       ],
       ctx: this._ctx,
@@ -2155,6 +2272,19 @@ export class Envhub extends BaseClient {
         {
           operation: "asService",
           args: { name },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  waitOn = (port: number, timeout?: number): Envhub => {
+    return new Envhub({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "waitOn",
+          args: { port, timeout },
         },
       ],
       ctx: this._ctx,

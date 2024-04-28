@@ -98,6 +98,7 @@ pub fn call(module: &str, command: &str) {
         .with_function("with_packages", [PTR], [], user_data.clone(), with_packages)
         .with_function("as_service", [PTR], [PTR], user_data.clone(), as_service)
         .with_function("with_service", [PTR], [], user_data.clone(), with_service)
+        .with_function("wait_on", [PTR], [], user_data.clone(), wait_on)
         .build()
         .unwrap();
 
