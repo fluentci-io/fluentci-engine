@@ -146,7 +146,11 @@ const engine = await dag
   .asService("fluentci-engine")
   .id();
 
-let query = dag.pkgx().withService(engine).withPackages(["httpie"]);
+let query = dag
+  .pkgx()
+  .withService(engine)
+  .withPackages(["httpie"])
+  .waitOn(8080);
 
 for (const item of queries) {
   query = query.withExec([

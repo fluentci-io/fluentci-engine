@@ -46,6 +46,7 @@ declare const Host: {
     call: (ptr: I64) => I64;
     as_service: (ptr: I64) => I64;
     with_service: (ptr: I64) => void;
+    wait_on: (ptr: I64) => void;
   };
 };
 
@@ -91,6 +92,7 @@ export const get_arch: () => I64 = fn.get_arch;
 export const call: (ptr: I64) => I64 = fn.call;
 export const as_service: (ptr: I64) => I64 = fn.as_service;
 export const with_service: (ptr: I64) => void = fn.with_service;
+export const wait_on: (ptr: I64) => void = fn.wait_on;
 
 export interface NixArgs {
   impure?: boolean;
@@ -505,6 +507,23 @@ export class Devbox extends BaseClient {
   };
 
   /**
+   * Wait for a service to be available
+   * ```ts
+   * dag.devbox().waitOn(8080, 60).withExec(["curl", "http://localhost:8080"]).stdout();
+   * ```
+   * @param {port} number
+   * @param {timeout} number
+   * @returns {Devbox}
+   */
+  waitOn = (port: number, timeout = 60): Devbox => {
+    let mem = Memory.fromString("devbox");
+    set_runner(mem.offset);
+    mem = Memory.fromJsonObject([port, timeout]);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
    * Change the working directory
    * ```ts
    * dag.devbox().withWorkdir("/path/to/dir");
@@ -637,6 +656,23 @@ export class Devenv extends BaseClient {
     set_runner(mem.offset);
 
     mem = Memory.fromJsonObject(args);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
+   * Wait for a service to be available
+   * ```ts
+   * dag.devenv().waitOn(8080, 60).withExec(["curl", "http://localhost:8080"]).stdout();
+   * ```
+   * @param {port} number
+   * @param {timeout} number
+   * @returns {Devenv}
+   */
+  waitOn = (port: number, timeout = 60): Devenv => {
+    let mem = Memory.fromString("devenv");
+    set_runner(mem.offset);
+    mem = Memory.fromJsonObject([port, timeout]);
     with_exec(mem.offset);
     return this;
   };
@@ -989,6 +1025,21 @@ export class Directory extends BaseClient {
   };
 
   /**
+   * Wait for a service to be available
+   * ```ts
+   * dag.directory("/path/to/dir").waitOn(8080, 60).withExec(["curl", "http://localhost:8080"]).stdout();
+   * ```
+   * @param {port} number
+   * @param {timeout} number
+   * @returns {Directory}
+   */
+  waitOn = (port: number, timeout = 60): Directory => {
+    mem = Memory.fromJsonObject([port, timeout]);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
    * Change the working directory
    * ```ts
    * dag.directory("/path/to/dir").withWorkdir("/path/to/new/dir").stdout();
@@ -1270,6 +1321,23 @@ export class Flox extends BaseClient {
   };
 
   /**
+   * Wait for a service to be available
+   * ```ts
+   * dag.flox().waitOn(8080, 60).withExec(["curl", "http://localhost:8080"]).stdout();
+   * ```
+   * @param {port} number
+   * @param {timeout} number
+   * @returns {Flox}
+   */
+  waitOn = (port: number, timeout = 60): Devbox => {
+    let mem = Memory.fromString("flox");
+    set_runner(mem.offset);
+    mem = Memory.fromJsonObject([port, timeout]);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
    * Change the working directory
    * ```ts
    * dag.flox().withWorkdir("/path/to/dir");
@@ -1494,6 +1562,23 @@ export class Nix extends BaseClient {
     set_runner(mem.offset);
 
     mem = Memory.fromJsonObject(args);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
+   * Wait for a service to be available
+   * ```ts
+   * dag.nix().waitOn(8080, 60).withExec(["curl", "http://localhost:8080"]).stdout();
+   * ```
+   * @param {port} number
+   * @param {timeout} number
+   * @returns {Nix}
+   */
+  waitOn = (port: number, timeout = 60): Nix => {
+    let mem = Memory.fromString("nix");
+    set_runner(mem.offset);
+    mem = Memory.fromJsonObject([port, timeout]);
     with_exec(mem.offset);
     return this;
   };
@@ -1780,6 +1865,23 @@ export class Pipeline extends BaseClient {
   };
 
   /**
+   * Wait for a service to be available
+   * ```ts
+   * dag.pipeline("my-pipeline").waitOn(8080, 60).withExec(["curl", "http://localhost:8080"]).stdout();
+   * ```
+   * @param {port} number
+   * @param {timeout} number
+   * @returns {Pipeline}
+   */
+  waitOn = (port: number, timeout = 60): Pipeline => {
+    let mem = Memory.fromString("default");
+    set_runner(mem.offset);
+    mem = Memory.fromJsonObject([port, timeout]);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
    * Change the working directory
    * ```ts
    * dag.pipeline("my-pipeline").withWorkdir("/path/to/dir");
@@ -1917,6 +2019,23 @@ export class Pkgx extends BaseClient {
     let mem = Memory.fromString("pkgx");
     set_runner(mem.offset);
     mem = Memory.fromJsonObject(args);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
+   * Wait for a service to be available
+   * ```ts
+   * dag.pkgx().waitOn(8080, 60).withExec(["curl", "http://localhost:8080"]).stdout();
+   * ```
+   * @param {port} number
+   * @param {timeout} number
+   * @returns {Pkgx}
+   */
+  waitOn = (port: number, timeout = 60): Pkgx => {
+    let mem = Memory.fromString("pkgx");
+    set_runner(mem.offset);
+    mem = Memory.fromJsonObject([port, timeout]);
     with_exec(mem.offset);
     return this;
   };
@@ -2086,6 +2205,23 @@ export class Pixi extends BaseClient {
   };
 
   /**
+   * Wait for a service to be available
+   * ```ts
+   * dag.pixi().waitOn(8080, 60).withExec(["curl", "http://localhost:8080"]).stdout();
+   * ```
+   * @param {port} number
+   * @param {timeout} number
+   * @returns {Pixi}
+   */
+  waitOn = (port: number, timeout = 60): Pixi => {
+    let mem = Memory.fromString("pixi");
+    set_runner(mem.offset);
+    mem = Memory.fromJsonObject([port, timeout]);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
    * Change the working directory
    * ```ts
    * dag.pixi().withWorkdir("/path/to/dir");
@@ -2228,6 +2364,23 @@ export class Mise extends BaseClient {
   };
 
   /**
+   * Wait for a service to be available
+   * ```ts
+   * dag.mise().waitOn(8080, 60).withExec(["curl", "http://localhost:8080"]).stdout();
+   * ```
+   * @param {port} number
+   * @param {timeout} number
+   * @returns {Mise}
+   */
+  waitOn = (port: number, timeout = 60): Mise => {
+    let mem = Memory.fromString("mise");
+    set_runner(mem.offset);
+    mem = Memory.fromJsonObject([port, timeout]);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
    * Change the working directory
    * ```ts
    * dag.mise().withWorkdir("/path/to/dir");
@@ -2365,6 +2518,23 @@ export class Envhub extends BaseClient {
     let mem = Memory.fromString("envhub");
     set_runner(mem.offset);
     mem = Memory.fromJsonObject(args);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
+   * Wait for a service to be available
+   * ```ts
+   * dag.envhub().waitOn(8080, 60).withExec(["curl", "http://localhost:8080"]).stdout();
+   * ```
+   * @param {port} number
+   * @param {timeout} number
+   * @returns {Envhub}
+   */
+  waitOn = (port: number, timeout = 60): Envhub => {
+    let mem = Memory.fromString("devbox");
+    set_runner(mem.offset);
+    mem = Memory.fromJsonObject([port, timeout]);
     with_exec(mem.offset);
     return this;
   };

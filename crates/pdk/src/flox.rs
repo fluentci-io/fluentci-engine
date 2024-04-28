@@ -14,6 +14,7 @@ extern "ExtismHost" {
     fn as_service(name: String) -> Json<Service>;
     fn with_service(service_id: String);
     fn set_envs(envs: Json<Vec<(String, String)>>);
+    fn wait_on(args: Json<Vec<u32>>);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -97,6 +98,15 @@ impl Flox {
     pub fn with_env_variables(&self, name: &str, value: &str) -> Result<Flox, Error> {
         unsafe {
             set_envs(Json(vec![(name.into(), value.into())]))?;
+        }
+        Ok(Flox {
+            id: self.id.clone(),
+        })
+    }
+
+    pub fn wait_on(&self, port: u32, timeout: Option<u32>) -> Result<Flox, Error> {
+        unsafe {
+            wait_on(Json(vec![port, timeout.unwrap_or(60)]))?;
         }
         Ok(Flox {
             id: self.id.clone(),

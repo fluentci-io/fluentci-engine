@@ -236,3 +236,19 @@ host_fn!(pub call(user_data: State; opts: Json<Module>) -> String {
       let result = plugin.call::<&str, &str>(func, &args)?;
       Ok(result.to_string())
 });
+
+host_fn!(pub wait_on(user_data: State; args: Json<Vec<u32>>) {
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  let graph = state.graph.clone();
+  let args = args.into_inner();
+
+  if args.len() == 1 {
+    common::wait_on(graph, args[0], None)?;
+    return Ok(())
+  }
+  if args.len() >= 2 {
+    common::wait_on(graph, args[0], Some(args[1]))?;
+  }
+  Ok(())
+});
