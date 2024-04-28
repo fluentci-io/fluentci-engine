@@ -13,6 +13,7 @@ extern "ExtismHost" {
     fn stderr() -> String;
     fn as_service(name: String) -> Json<Service>;
     fn with_service(service_id: String);
+    fn set_envs(envs: Json<Vec<(String, String)>>);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -88,6 +89,13 @@ impl Pixi {
 
     pub fn with_service(&self, service_id: &str) -> Result<Pixi, Error> {
         unsafe { with_service(service_id.into())? }
+        Ok(Pixi {
+            id: self.id.clone(),
+        })
+    }
+
+    pub fn with_env_variable(&self, name: &str, value: &str) -> Result<Pixi, Error> {
+        unsafe { set_envs(Json(vec![(name.into(), value.into())]))? };
         Ok(Pixi {
             id: self.id.clone(),
         })

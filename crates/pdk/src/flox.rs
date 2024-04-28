@@ -13,6 +13,7 @@ extern "ExtismHost" {
     fn stderr() -> String;
     fn as_service(name: String) -> Json<Service>;
     fn with_service(service_id: String);
+    fn set_envs(envs: Json<Vec<(String, String)>>);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -88,6 +89,15 @@ impl Flox {
 
     pub fn with_service(&self, service_id: &str) -> Result<Flox, Error> {
         unsafe { with_service(service_id.into())? }
+        Ok(Flox {
+            id: self.id.clone(),
+        })
+    }
+
+    pub fn with_env_variables(&self, name: &str, value: &str) -> Result<Flox, Error> {
+        unsafe {
+            set_envs(Json(vec![(name.into(), value.into())]))?;
+        }
         Ok(Flox {
             id: self.id.clone(),
         })

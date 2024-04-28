@@ -356,7 +356,7 @@ name = "archive"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.12",
+ "fluentci-pdk 0.1.13",
 ]
 
 [[package]]
@@ -1207,7 +1207,7 @@ name = "chmod"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.12",
+ "fluentci-pdk 0.1.13",
 ]
 
 [[package]]
@@ -1613,7 +1613,7 @@ name = "devbox"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.12",
+ "fluentci-pdk 0.1.13",
 ]
 
 [[package]]
@@ -1747,7 +1747,7 @@ name = "env"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.12",
+ "fluentci-pdk 0.1.13",
 ]
 
 [[package]]
@@ -1920,12 +1920,12 @@ name = "flox"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.12",
+ "fluentci-pdk 0.1.13",
 ]
 
 [[package]]
 name = "fluentci-common"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "dirs 5.0.1",
@@ -1939,7 +1939,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1958,7 +1958,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-engine"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1998,7 +1998,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-graphql"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2038,7 +2038,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-pdk"
-version = "0.1.12"
+version = "0.1.13"
 dependencies = [
  "extism-pdk",
  "fluentci-types 0.1.6",
@@ -2047,7 +2047,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-server"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "actix-cors",
  "actix-web",
@@ -2064,7 +2064,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-shared"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "extism",
  "extism-pdk",
@@ -2273,7 +2273,7 @@ name = "git"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.12",
+ "fluentci-pdk 0.1.13",
 ]
 
 [[package]]
@@ -2331,7 +2331,7 @@ name = "hash"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.12",
+ "fluentci-pdk 0.1.13",
 ]
 
 [[package]]
@@ -2400,7 +2400,7 @@ name = "http"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.12",
+ "fluentci-pdk 0.1.13",
 ]
 
 [[package]]
@@ -2967,7 +2967,7 @@ name = "mise"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.12",
+ "fluentci-pdk 0.1.13",
 ]
 
 [[package]]
@@ -3003,7 +3003,7 @@ name = "nix"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.12",
+ "fluentci-pdk 0.1.13",
  "fluentci-types 0.1.6",
 ]
 
@@ -3398,7 +3398,7 @@ name = "pixi"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.12",
+ "fluentci-pdk 0.1.13",
 ]
 
 [[package]]
@@ -3422,7 +3422,7 @@ name = "pkgx"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.12",
+ "fluentci-pdk 0.1.13",
 ]
 
 [[package]]
@@ -3504,7 +3504,7 @@ name = "proto"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.1.12",
+ "fluentci-pdk 0.1.13",
 ]
 
 [[package]]

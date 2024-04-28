@@ -44,6 +44,8 @@ declare const Host: {
     get_os: () => I64;
     get_arch: () => I64;
     call: (ptr: I64) => I64;
+    as_service: (ptr: I64) => I64;
+    with_service: (ptr: I64) => void;
   };
 };
 
@@ -87,6 +89,8 @@ export const remove_env: (ptr: I64) => void = fn.remove_env;
 export const get_os: () => I64 = fn.get_os;
 export const get_arch: () => I64 = fn.get_arch;
 export const call: (ptr: I64) => I64 = fn.call;
+export const as_service: (ptr: I64) => I64 = fn.as_service;
+export const with_service: (ptr: I64) => void = fn.with_service;
 
 export interface NixArgs {
   impure?: boolean;
@@ -523,12 +527,51 @@ export class Devbox extends BaseClient {
    * @param {String} cacheId Unique cache identifier
    * @returns {Devbox} Devbox
    */
-  withCache = (path: string, cacheId: String): Devbox => {
+  withCache = (path: string, cacheId: string): Devbox => {
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
     with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Build a service
+   * ```ts
+   *  dag.devbox().withExec(["ping", "google.com"]).asService("ping");
+   * ```
+   *
+   * @param {string} name
+   * @returns {string}
+   */
+  asService = (name: string): string => {
+    const mem = Memory.fromString(name);
+    const offset = as_service(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response.id;
+  };
+
+  /**
+   * Add a service
+   * ```ts
+   *  dag.devbox().withService("service-id");
+   * ```
+   *
+   * @param {string} serviceId
+   * @returns {Devbox}
+   */
+  withService = (serviceId: string): Devbox => {
+    const mem = Memory.fromString(serviceId);
+    with_service(mem.offset);
+    return this;
+  };
+
+  withEnvVariable = (name: string, value: string): Devbox => {
+    const mem = Memory.fromJsonObject({
+      [name]: value,
+    });
+    set_envs(mem.offset);
     return this;
   };
 
@@ -621,12 +664,60 @@ export class Devenv extends BaseClient {
    * @param {String} cacheId Unique cache identifier
    * @returns {Devenv} Devenv
    */
-  withCache = (path: string, cacheId: String): Devenv => {
+  withCache = (path: string, cacheId: string): Devenv => {
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
     with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Setup a service
+   * ```ts
+   * dag.devenv().withExec(["ping", "google.com"]).asService("ping");
+   * ```
+   *
+   * @param {string} name
+   * @returns {string}
+   */
+  asService = (name: string): string => {
+    const mem = Memory.fromString(name);
+    const offset = as_service(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response.id;
+  };
+
+  /**
+   * Add a service
+   * ```ts
+   * dag.devenv().withService("service-id");
+   * ```
+   * @param {string} serviceId
+   * @returns
+   */
+  withService = (serviceId: string): Devenv => {
+    const mem = Memory.fromString(serviceId);
+    with_service(mem.offset);
+    return this;
+  };
+
+  /**
+   * Add an environment variable
+   * ```ts
+   * dag.devenv().withEnvVariable("ENV_NAME", "value");
+   *  ```
+   *
+   * @param name
+   * @param value
+   * @returns {Devenv}
+   */
+  withEnvVariable = (name: string, value: string): Devenv => {
+    const mem = Memory.fromJsonObject({
+      [name]: value,
+    });
+    set_envs(mem.offset);
     return this;
   };
 
@@ -919,12 +1010,61 @@ export class Directory extends BaseClient {
    * @param {String} cacheId Unique cache identifier
    * @returns {Directory}
    */
-  withCache = (path: string, cacheId: String): Directory => {
+  withCache = (path: string, cacheId: string): Directory => {
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
     with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Setup a service
+   * ```ts
+   * dag.directory("/path/to/dir").withExec(["ping", "google.com"]).asService("ping");
+   * ```
+   *
+   * @param {string} name
+   * @returns {string}
+   */
+  asService = (name: string): string => {
+    const mem = Memory.fromString(name);
+    const offset = as_service(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response.id;
+  };
+
+  /**
+   * Add a service
+   * ```ts
+   * dag.directory("/path/to/dir").withService("service-id");
+   * ```
+   *
+   * @param {string} serviceId
+   * @returns {Directory}
+   */
+  withService = (serviceId: string): Directory => {
+    const mem = Memory.fromString(serviceId);
+    with_service(mem.offset);
+    return this;
+  };
+
+  /**
+   * Add an environment variable
+   * ```ts
+   * dag.directory("/path/to/dir").withEnvVariable("ENV_NAME", "value");
+   * ```
+   *
+   * @param {string} name
+   * @param {string} value
+   * @returns {Directory}
+   */
+  withEnvVariable = (name: string, value: string): Directory => {
+    const mem = Memory.fromJsonObject({
+      [name]: value,
+    });
+    set_envs(mem.offset);
     return this;
   };
 
@@ -1152,13 +1292,60 @@ export class Flox extends BaseClient {
    * @param {String} cacheId Unique cache identifier
    * @returns {Flox}
    */
-  withCache = (path: string, cacheId: String): Flox => {
+  withCache = (path: string, cacheId: string): Flox => {
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
       key: "",
     });
     with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Setup a service
+   * ```ts
+   *  dag.flox().withExec(["ping", "google.com"]).asService("ping");
+   * ```
+   * @param {string} name
+   * @returns {string}
+   */
+  asService = (name: string): string => {
+    const mem = Memory.fromString(name);
+    const offset = as_service(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response.id;
+  };
+
+  /**
+   * Add a service
+   * ```ts
+   * dag.flox().withService("service-id");
+   * ```
+   *
+   * @param {string} serviceId
+   * @returns {Flox}
+   */
+  withService = (serviceId: string): Flox => {
+    const mem = Memory.fromString(serviceId);
+    with_service(mem.offset);
+    return this;
+  };
+
+  /**
+   * Add an environment variable
+   * ```ts
+   * dag.flox().withEnvVariable("ENV_NAME", "value");
+   * ```
+   * @param {string} name
+   * @param {string} value
+   * @returns {Flox}
+   */
+  withEnvVariable = (name: string, value: string): Flox => {
+    const mem = Memory.fromJsonObject({
+      [name]: value,
+    });
+    set_envs(mem.offset);
     return this;
   };
 
@@ -1171,7 +1358,7 @@ export class Flox extends BaseClient {
    * @param {String} fileId Unique file identifier
    * @returns {Flox}
    */
-  withFile = (path: string, fileId: String): Flox => {
+  withFile = (path: string, fileId: string): Flox => {
     let mem = Memory.fromJsonObject({
       path,
       id: fileId,
@@ -1334,12 +1521,58 @@ export class Nix extends BaseClient {
    * @param {String} cacheId Unique cache identifier
    * @returns {Nix}
    */
-  withCache = (path: string, cacheId: String): Nix => {
+  withCache = (path: string, cacheId: string): Nix => {
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
     with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Setup a service
+   * ```ts
+   * dag.nix().withExec(["ping", "google.com"]).asService("ping");
+   * ```
+   * @param {string} name
+   * @returns {string}
+   */
+  asService = (name: string): string => {
+    const mem = Memory.fromString(name);
+    const offset = as_service(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response.id;
+  };
+
+  /**
+   * Add a service
+   * ```ts
+   * dag.nix().withService("service-id");
+   * ```
+   * @param {string} serviceId
+   * @returns {Nix}
+   */
+  withService = (serviceId: string): Nix => {
+    const mem = Memory.fromString(serviceId);
+    with_service(mem.offset);
+    return this;
+  };
+
+  /**
+   * Add an environment variable
+   * ```ts
+   * dag.nix().withEnvVariable("ENV_NAME", "value");
+   * ```
+   * @param {string} name
+   * @param {string} value
+   * @returns {Nix}
+   */
+  withEnvVariable = (name: string, value: string): Nix => {
+    const mem = Memory.fromJsonObject({
+      [name]: value,
+    });
+    set_envs(mem.offset);
     return this;
   };
 
@@ -1352,7 +1585,7 @@ export class Nix extends BaseClient {
    * @param {String} fileId Unique file identifier
    * @returns {Nix}
    */
-  withFile = (path: string, fileId: String): Nix => {
+  withFile = (path: string, fileId: string): Nix => {
     let mem = Memory.fromJsonObject({
       path,
       id: fileId,
@@ -1569,12 +1802,41 @@ export class Pipeline extends BaseClient {
    * @param {String} cacheId Unique cache identifier
    * @returns {Pipeline}
    */
-  withCache = (path: string, cacheId: String): Pipeline => {
+  withCache = (path: string, cacheId: string): Pipeline => {
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
     with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Setup a service
+   * ```ts
+   * dag.pipeline("my-pipeline").withExec(["ping", "google.com"]).asService("ping");
+   * ```
+   * @param {string} name
+   * @returns {string}
+   */
+  asService = (name: string): string => {
+    const mem = Memory.fromString(name);
+    const offset = as_service(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response.id;
+  };
+
+  withService = (serviceId: string): Pipeline => {
+    const mem = Memory.fromString(serviceId);
+    with_service(mem.offset);
+    return this;
+  };
+
+  withEnvVariable = (name: string, value: string): Pipeline => {
+    const mem = Memory.fromJsonObject({
+      [name]: value,
+    });
+    set_envs(mem.offset);
     return this;
   };
 
@@ -1587,7 +1849,7 @@ export class Pipeline extends BaseClient {
    * @param {String} fileId Unique file identifier
    * @returns {Pipeline}
    */
-  withFile = (path: string, fileId: String): Pipeline => {
+  withFile = (path: string, fileId: string): Pipeline => {
     let mem = Memory.fromJsonObject({
       path,
       id: fileId,
@@ -1682,12 +1944,49 @@ export class Pkgx extends BaseClient {
    * @param {String} cacheId Unique cache identifier
    * @returns {Pkgx}
    */
-  withCache = (path: string, cacheId: String): Pkgx => {
+  withCache = (path: string, cacheId: string): Pkgx => {
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
     with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Setup a service
+   * ```ts
+   * dag.pkgx().withExec(["ping", "google.com"]).asService("ping");
+   * ```
+   * @param {string} name
+   * @returns {string}
+   */
+  asService = (name: string): string => {
+    const mem = Memory.fromString(name);
+    const offset = as_service(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response.id;
+  };
+
+  /**
+   * Add a service
+   * ```ts
+   * dag.pkgx().withService("service-id");
+   * ```
+   * @param {string} serviceId
+   * @returns {Pkgx}
+   */
+  withService = (serviceId: string): Pkgx => {
+    const mem = Memory.fromString(serviceId);
+    with_service(mem.offset);
+    return this;
+  };
+
+  withEnvVariable = (name: string, value: string): Pkgx => {
+    const mem = Memory.fromJsonObject({
+      [name]: value,
+    });
+    set_envs(mem.offset);
     return this;
   };
 
@@ -1700,7 +1999,7 @@ export class Pkgx extends BaseClient {
    * @param {String} fileId Unique file identifier
    * @returns {Pkgx}
    */
-  withFile = (path: string, fileId: String): Pkgx => {
+  withFile = (path: string, fileId: string): Pkgx => {
     let mem = Memory.fromJsonObject({
       path,
       id: fileId,
@@ -1809,12 +2108,41 @@ export class Pixi extends BaseClient {
    * @param {String} cacheId Unique cache identifier
    * @returns {Pixi}
    */
-  withCache = (path: string, cacheId: String): Pixi => {
+  withCache = (path: string, cacheId: string): Pixi => {
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
     with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Setup a service
+   * ```ts
+   * dag.pixi().withExec(["ping", "google.com"]).asService("ping");
+   * ```
+   * @param {string} name
+   * @returns {string}
+   */
+  asService = (name: string): string => {
+    const mem = Memory.fromString(name);
+    const offset = as_service(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response.id;
+  };
+
+  withService = (serviceId: string): Pixi => {
+    const mem = Memory.fromString(serviceId);
+    with_service(mem.offset);
+    return this;
+  };
+
+  withEnvVariable = (name: string, value: string): Pixi => {
+    const mem = Memory.fromJsonObject({
+      [name]: value,
+    });
+    set_envs(mem.offset);
     return this;
   };
 
@@ -1827,7 +2155,7 @@ export class Pixi extends BaseClient {
    * @param {String} fileId Unique file identifier
    * @returns {Pixi}
    */
-  withFile = (path: string, fileId: String): Pixi => {
+  withFile = (path: string, fileId: string): Pixi => {
     let mem = Memory.fromJsonObject({
       path,
       id: fileId,
@@ -1922,12 +2250,41 @@ export class Mise extends BaseClient {
    * @param {String} cacheId Unique cache identifier
    * @returns {Mise}
    */
-  withCache = (path: string, cacheId: String): Mise => {
+  withCache = (path: string, cacheId: string): Mise => {
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
     with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Setup a service
+   * ```ts
+   * dag.mise().withExec(["ping", "google.com"]).asService("ping");
+   * ```
+   * @param {string} name
+   * @returns {string}
+   */
+  asService = (name: string): string => {
+    const mem = Memory.fromString(name);
+    const offset = as_service(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response.id;
+  };
+
+  withService = (serviceId: string): Mise => {
+    const mem = Memory.fromString(serviceId);
+    with_service(mem.offset);
+    return this;
+  };
+
+  withEnvVariable = (name: string, value: string): Mise => {
+    const mem = Memory.fromJsonObject({
+      [name]: value,
+    });
+    set_envs(mem.offset);
     return this;
   };
 
@@ -1940,7 +2297,7 @@ export class Mise extends BaseClient {
    * @param {String} fileId Unique file identifier
    * @returns {Mise}
    */
-  withFile = (path: string, fileId: String): Mise => {
+  withFile = (path: string, fileId: string): Mise => {
     let mem = Memory.fromJsonObject({
       path,
       id: fileId,
@@ -2035,12 +2392,60 @@ export class Envhub extends BaseClient {
    * @param {String} cacheId Unique cache identifier
    * @returns {Envhub}
    */
-  withCache = (path: string, cacheId: String): Envhub => {
+  withCache = (path: string, cacheId: string): Envhub => {
     let mem = Memory.fromJsonObject({
       path,
       id: cacheId,
     });
     with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Build a service
+   * ```ts
+   * dag.envhub().withExec(["ping", "github.com"]).asService("ping");
+   * ```
+   * @param {string} name
+   * @returns {string}
+   */
+  asService = (name: string): string => {
+    const mem = Memory.fromString(name);
+    const offset = as_service(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response.id;
+  };
+
+  /**
+   * Add a service
+   * ```ts
+   *  dag.envhub().withService("service-id");
+   * ```
+   *
+   * @param {string} serviceId
+   * @returns {Envhub}
+   */
+  withService = (serviceId: string): Envhub => {
+    const mem = Memory.fromString(serviceId);
+    with_service(mem.offset);
+    return this;
+  };
+
+  /**
+   *  Add an environment variable
+   * ```ts
+   * dag.envhub().withEnvVariable("NAME", "value");
+   * ```
+   *
+   * @param {string} name
+   * @param { string} value
+   * @returns {Envhub}
+   */
+  withEnvVariable = (name: string, value: string): Envhub => {
+    const mem = Memory.fromJsonObject({
+      [name]: value,
+    });
+    set_envs(mem.offset);
     return this;
   };
 
@@ -2053,7 +2458,7 @@ export class Envhub extends BaseClient {
    * @param {String} fileId Unique file identifier
    * @returns {Envhub}
    */
-  withFile = (path: string, fileId: String): Envhub => {
+  withFile = (path: string, fileId: string): Envhub => {
     let mem = Memory.fromJsonObject({
       path,
       id: fileId,

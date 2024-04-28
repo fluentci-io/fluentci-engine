@@ -324,3 +324,9 @@ pub fn with_service(graph: Arc<Mutex<Graph>>, service_id: String) -> Result<(), 
         None => Err(Error::msg("Service not found")),
     }
 }
+
+pub fn with_env_variable(graph: Arc<Mutex<Graph>>, key: &str, value: &str) -> Result<(), Error> {
+    let mut graph = graph.lock().unwrap();
+    graph.execute(GraphCommand::AddEnvVariable(key.into(), value.into()));
+    Ok(())
+}

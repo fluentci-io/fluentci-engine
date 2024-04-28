@@ -313,6 +313,19 @@ export class Devbox extends BaseClient {
     });
   };
 
+  withEnvVariable = (name: String, value: String): Devbox => {
+    return new Devbox({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withEnvVariable",
+          args: { name, value },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   withCache = (path: string, cacheId: string): Devbox => {
     return new Devbox({
       queryTree: [
@@ -435,6 +448,19 @@ export class Devenv extends BaseClient {
         {
           operation: "withService",
           args: { serviceId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: String, value: String): Devenv => {
+    return new Devenv({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withEnvVariable",
+          args: { name, value },
         },
       ],
       ctx: this._ctx,
@@ -688,6 +714,19 @@ export class Directory extends BaseClient {
         {
           operation: "withService",
           args: { serviceId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: String, value: String): Directory => {
+    return new Directory({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withEnvVariable",
+          args: { name, value },
         },
       ],
       ctx: this._ctx,
@@ -987,6 +1026,19 @@ export class Flox extends BaseClient {
     });
   };
 
+  withEnvVariable = (name: String, value: String): Flox => {
+    return new Flox({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withEnvVariable",
+          args: { name, value },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   withCache = (path: string, cacheId: string): Flox => {
     return new Flox({
       queryTree: [
@@ -1171,6 +1223,19 @@ export class Nix extends BaseClient {
         {
           operation: "withService",
           args: { serviceId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: String, value: String): Nix => {
+    return new Nix({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withEnvVariable",
+          args: { name, value },
         },
       ],
       ctx: this._ctx,
@@ -1428,6 +1493,19 @@ export class Pipeline extends BaseClient {
     });
   };
 
+  withEnvVariable = (name: String, value: String): Pipeline => {
+    return new Pipeline({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withEnvVariable",
+          args: { name, value },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   withCache = (path: string, cacheId: string): Pipeline => {
     return new Pipeline({
       queryTree: [
@@ -1550,6 +1628,19 @@ export class Pkgx extends BaseClient {
         {
           operation: "withService",
           args: { serviceId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: String, value: String): Pkgx => {
+    return new Pkgx({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withEnvVariable",
+          args: { name, value },
         },
       ],
       ctx: this._ctx,
@@ -1697,6 +1788,19 @@ export class Pixi extends BaseClient {
     });
   };
 
+  withEnvVariable = (name: String, value: String): Pixi => {
+    return new Pixi({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withEnvVariable",
+          args: { name, value },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   withCache = (path: string, cacheId: string): Pixi => {
     return new Pixi({
       queryTree: [
@@ -1819,6 +1923,19 @@ export class Mise extends BaseClient {
         {
           operation: "withService",
           args: { serviceId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: String, value: String): Mise => {
+    return new Mise({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withEnvVariable",
+          args: { name, value },
         },
       ],
       ctx: this._ctx,
@@ -1960,6 +2077,19 @@ export class Envhub extends BaseClient {
         {
           operation: "withService",
           args: { serviceId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: String, value: String): Envhub => {
+    return new Envhub({
+      queryTree: [
+        ...this.queryTree,
+        {
+          operation: "withEnvVariable",
+          args: { name, value },
         },
       ],
       ctx: this._ctx,
