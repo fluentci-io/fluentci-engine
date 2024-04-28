@@ -37,6 +37,8 @@ pub async fn run(command: &str) -> Result<(), Error> {
         }
     });
 
+    thread::sleep(std::time::Duration::from_secs(5));
+
     let mut child = Command::new("sh")
         .arg("-c")
         .arg(command)

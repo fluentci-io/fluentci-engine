@@ -3,7 +3,8 @@
   "packages": {
     "specifiers": {
       "jsr:@tsirysndr/env-js@0.1.2": "jsr:@tsirysndr/env-js@0.1.2",
-      "npm:graphql-request@6.1.0": "npm:graphql-request@6.1.0_graphql@16.8.1"
+      "npm:graphql-request@6.1.0": "npm:graphql-request@6.1.0_graphql@16.8.1",
+      "npm:lodash@4.17.21": "npm:lodash@4.17.21"
     },
     "jsr": {
       "@tsirysndr/env-js@0.1.2": {
@@ -33,6 +34,10 @@
       },
       "graphql@16.8.1": {
         "integrity": "sha512-59LZHPdGZVh695Ud9lRzPBVTtlX9ZCV150Er2W43ro37wVof0ctenSaskPPjN7lVTIN8mSZt8PHUNKZuNQUuxw==",
+        "dependencies": {}
+      },
+      "lodash@4.17.21": {
+        "integrity": "sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==",
         "dependencies": {}
       },
       "node-fetch@2.7.0": {
