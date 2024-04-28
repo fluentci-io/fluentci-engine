@@ -5,7 +5,7 @@ on:
 jobs:
   release:
     name: release x86_64-apple-darwin
-    runs-on: macos-latest-large
+    runs-on: macos-12
     strategy:
       fail-fast: false
       matrix:
