@@ -150,7 +150,7 @@ let query = dag
   .pkgx()
   .withService(engine)
   .withPackages(["httpie"])
-  .waitOn(8080);
+  .waitOn(6880);
 
 for (const item of queries) {
   query = query.withExec([
