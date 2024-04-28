@@ -381,6 +381,7 @@ FluentCI Engine supports OpenTelemetry tracing. To enable it, set the `OTEL_EXPO
 
 ![jaeger](./.github/assets/jaeger.png)
 ![zipkin](./.github/assets/zipkin.png)
+![honeycomb](./.github/assets/honeycomb.png)
 
 ## 📑 Logging
 
