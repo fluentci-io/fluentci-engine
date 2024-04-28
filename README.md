@@ -385,4 +385,4 @@ FluentCI Engine supports OpenTelemetry tracing. To enable it, set the `OTEL_EXPO
 
 ## 📑 Logging
 
-FluentCI Engine supports sending logs to [Baselime](baselime.io). To enable it, set the `BASELIME_API_KEY` environment variable to the desired API key.
+FluentCI Engine supports sending logs to [Baselime](https://baselime.io). To enable it, set the `BASELIME_API_KEY` environment variable to the desired API key.
