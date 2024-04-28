@@ -51,9 +51,17 @@ impl Extension for Flox {
             return Ok(());
         }
 
+        let sudo = Command::new("sh")
+            .arg("-c")
+            .arg("type sudo > /dev/null")
+            .spawn()?
+            .wait()?;
+
+        let sudo = if sudo.success() { "sudo" } else { "" };
+
         Command::new("sh")
             .arg("-c")
-            .arg("echo 'extra-trusted-substituters = https://cache.floxdev.com' | tee -a /etc/nix/nix.conf && echo 'extra-trusted-public-keys = flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs=' | tee -a /etc/nix/nix.conf")
+            .arg(&format!("echo 'extra-trusted-substituters = https://cache.floxdev.com' | {} tee -a /etc/nix/nix.conf && echo 'extra-trusted-public-keys = flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs=' | {} tee -a /etc/nix/nix.conf", sudo, sudo))
             .spawn()?
             .wait()?;
 

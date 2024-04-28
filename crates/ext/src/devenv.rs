@@ -53,9 +53,20 @@ impl Extension for Devenv {
             return Ok(());
         }
 
+        let sudo = Command::new("sh")
+            .arg("-c")
+            .arg("type sudo > /dev/null")
+            .spawn()?
+            .wait()?;
+
+        let sudo = if sudo.success() { "sudo" } else { "" };
+
         Command::new("sh")
             .arg("-c")
-            .arg(r#"echo "trusted-users = root $USER" | tee -a /etc/nix/nix.conf"#)
+            .arg(&format!(
+                "echo \"trusted-users = root $USER\" | {} tee -a /etc/nix/nix.conf",
+                sudo
+            ))
             .spawn()?
             .wait()?;
 
