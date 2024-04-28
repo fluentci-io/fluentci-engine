@@ -344,9 +344,9 @@ pub fn wait_on(graph: Arc<Mutex<Graph>>, port: u32, timeout: Option<u32>) -> Res
         _ => vec![dep_id],
     };
     let cmd = format!(
-        "pkgx bunx wait-on http://localhost:{} -t {}s",
+        "pkgx bunx wait-port localhost:{} -t {}",
         port,
-        timeout.unwrap_or(60)
+        timeout.unwrap_or(60) * 1000
     );
     graph.execute(GraphCommand::AddVertex(
         id.clone(),
