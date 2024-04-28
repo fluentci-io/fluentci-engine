@@ -1,8 +1,10 @@
 import { dag } from "../src/client.gen.ts";
 
 async function main() {
-  Deno.env.set("FLUENTCI_SESSION_PORT", "6880");
-  Deno.env.set("FLUENTCI_SESSION_TOKEN", "token");
+  if (!Deno.env.has("FLUENTCI_SESSION_PORT")) {
+    Deno.env.set("FLUENTCI_SESSION_PORT", "6880");
+    Deno.env.set("FLUENTCI_SESSION_TOKEN", "token");
+  }
 
   const cacheId = await dag.cache("pixi").id();
 

@@ -192,7 +192,7 @@ export async function compute<T>(
       `
     );
   } catch (e: any) {
-    throw new Error(e.response.errors[0].message);
+    throw new Error(e.message);
   }
 
   return queryFlatten(computeQuery);
