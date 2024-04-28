@@ -1,4 +1,4 @@
-import { dag } from "jsr:@fluentci/sdk@0.3.0";
+import { dag } from "../sdk/typescript/mod.ts";
 
 const plugins = [
   "archive",
@@ -150,8 +150,6 @@ let query = dag.pkgx().withService(engine).withPackages(["httpie"]);
 
 for (const item of queries) {
   query = query.withExec([
-    "bash",
-    "-c",
     `http POST http://localhost:6880/graphql Content-Type:application/json query="$(cat ${item}.graphql)" --ignore-stdin --pretty format`,
   ]);
 }

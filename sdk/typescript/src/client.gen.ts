@@ -306,7 +306,7 @@ export class Devbox extends BaseClient {
         ...this.queryTree,
         {
           operation: "withService",
-          args: { service: serviceId },
+          args: { serviceId },
         },
       ],
       ctx: this._ctx,
@@ -434,7 +434,7 @@ export class Devenv extends BaseClient {
         ...this.queryTree,
         {
           operation: "withService",
-          args: { service: serviceId },
+          args: { serviceId },
         },
       ],
       ctx: this._ctx,
@@ -687,7 +687,7 @@ export class Directory extends BaseClient {
         ...this.queryTree,
         {
           operation: "withService",
-          args: { service: serviceId },
+          args: { serviceId },
         },
       ],
       ctx: this._ctx,
@@ -980,7 +980,7 @@ export class Flox extends BaseClient {
         ...this.queryTree,
         {
           operation: "withService",
-          args: { service: serviceId },
+          args: { serviceId },
         },
       ],
       ctx: this._ctx,
@@ -1170,7 +1170,7 @@ export class Nix extends BaseClient {
         ...this.queryTree,
         {
           operation: "withService",
-          args: { service: serviceId },
+          args: { serviceId },
         },
       ],
       ctx: this._ctx,
@@ -1549,7 +1549,7 @@ export class Pkgx extends BaseClient {
         ...this.queryTree,
         {
           operation: "withService",
-          args: { service: serviceId },
+          args: { serviceId },
         },
       ],
       ctx: this._ctx,
@@ -1690,7 +1690,7 @@ export class Pixi extends BaseClient {
         ...this.queryTree,
         {
           operation: "withService",
-          args: { service: serviceId },
+          args: { serviceId },
         },
       ],
       ctx: this._ctx,
@@ -1818,7 +1818,7 @@ export class Mise extends BaseClient {
         ...this.queryTree,
         {
           operation: "withService",
-          args: { service: serviceId },
+          args: { serviceId },
         },
       ],
       ctx: this._ctx,
@@ -1959,7 +1959,7 @@ export class Envhub extends BaseClient {
         ...this.queryTree,
         {
           operation: "withService",
-          args: { service: serviceId },
+          args: { serviceId },
         },
       ],
       ctx: this._ctx,

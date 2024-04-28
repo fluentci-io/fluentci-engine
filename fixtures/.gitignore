@@ -1,2 +1,7 @@
 *.zip
 *.tar.gz
+demo.html
+pkgx-demo-output-tar
+pkgx-demo-output-zip
+flox-demo-output-tar
+flox-demo-output-zip
