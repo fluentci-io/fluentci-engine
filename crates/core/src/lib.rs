@@ -124,6 +124,7 @@ pub fn set_git_repo_metadata() -> Result<(), Error> {
     let child = Command::new("sh")
         .arg("-c")
         .arg("git log -1 --pretty=%h")
+        .stdout(std::process::Stdio::piped())
         .spawn()?;
     let output = child.wait_with_output()?;
     let commit_hash = String::from_utf8(output.stdout)?;
