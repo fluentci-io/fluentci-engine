@@ -2,6 +2,7 @@
   "version": "3",
   "packages": {
     "specifiers": {
+      "jsr:@fluentci/sdk@0.3.0": "jsr:@fluentci/sdk@0.3.0",
       "jsr:@std/assert@^0.217.0": "jsr:@std/assert@0.217.0",
       "jsr:@std/assert@^0.218.2": "jsr:@std/assert@0.218.2",
       "jsr:@std/flags@0.218.2": "jsr:@std/flags@0.218.2",
@@ -29,6 +30,13 @@
       "npm:zod@3.22.1": "npm:zod@3.22.1"
     },
     "jsr": {
+      "@fluentci/sdk@0.3.0": {
+        "integrity": "6c5080417c702163d5680ea0466079aa669dca7278845bd9e6257b52d81525fa",
+        "dependencies": [
+          "jsr:@tsirysndr/env-js@0.1.2",
+          "npm:graphql-request@6.1.0"
+        ]
+      },
       "@std/assert@0.217.0": {
         "integrity": "c98e279362ca6982d5285c3b89517b757c1e3477ee9f14eb2fdf80a45aaa9642",
         "dependencies": [
