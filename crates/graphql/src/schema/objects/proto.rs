@@ -76,6 +76,17 @@ impl Proto {
         let service = common::as_service(graph.clone(), name)?;
         Ok(service.into())
     }
+
+    async fn with_env_variable(
+        &self,
+        ctx: &Context<'_>,
+        key: String,
+        value: String,
+    ) -> Result<&Proto, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_env_variable(graph.clone(), &key, &value)?;
+        Ok(self)
+    }
 }
 
 impl From<types::Proto> for Proto {

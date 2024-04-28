@@ -5,7 +5,7 @@ use opentelemetry::{
     Context, KeyValue,
 };
 use owo_colors::OwoColorize;
-use std::env::current_dir;
+use std::env::{self, current_dir};
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
 use std::{path::Path, thread};
@@ -63,6 +63,7 @@ pub enum GraphCommand {
         Vec<String>,
         Arc<Box<dyn Extension + Send + Sync>>,
     ),
+    AddEnvVariable(String, String),
     EnableService(String),
     AddEdge(usize, usize),
     Execute(Output),
@@ -227,6 +228,9 @@ impl Graph {
             GraphCommand::AddEdge(from, to) => {
                 self.edges.push(Edge { from, to });
             }
+            GraphCommand::AddEnvVariable(key, value) => {
+                env::set_var(key, value);
+            }
             GraphCommand::Execute(Output::Stdout) => {
                 self.execute_graph(Output::Stdout);
             }
@@ -241,6 +245,9 @@ impl Graph {
     }
 
     pub fn execute_services(&mut self, ctx: &Context) -> Result<(), Error> {
+        if self.enabled_services.is_empty() {
+            return Ok(());
+        }
         let tracer_provider = global::tracer_provider();
         let tracer = tracer_provider.versioned_tracer(
             "fluentci-core",

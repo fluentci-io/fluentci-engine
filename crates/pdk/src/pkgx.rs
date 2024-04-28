@@ -14,6 +14,7 @@ extern "ExtismHost" {
     fn stderr() -> String;
     fn as_service(name: String) -> Json<Service>;
     fn with_service(service_id: String);
+    fn set_envs(envs: Json<Vec<(String, String)>>);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -103,6 +104,15 @@ impl Pkgx {
 
     pub fn with_service(&self, service_id: &str) -> Result<Pkgx, Error> {
         unsafe { with_service(service_id.into())? }
+        Ok(Pkgx {
+            id: self.id.clone(),
+        })
+    }
+
+    pub fn with_env_variable(&self, key: &str, value: &str) -> Result<Pkgx, Error> {
+        unsafe {
+            set_envs(Json(vec![(key.into(), value.into())]))?;
+        }
         Ok(Pkgx {
             id: self.id.clone(),
         })
