@@ -63,5 +63,8 @@
       }
     }
   },
-  "remote": {}
+  "remote": {
+    "https://cdn.skypack.dev/-/lodash@v4.17.21-K6GEbP02mWFnLA45zAmi/dist=es2019,mode=imports/optimized/lodash.js": "10c4df47937ffc78548d136dd535a021df5f57182a653260d715c0690dd22978",
+    "https://cdn.skypack.dev/lodash": "8280de0b3efd87f06ea0eb330d15b8de32c059556023b8c6524e9eb9e4844dc0"
+  }
 }
