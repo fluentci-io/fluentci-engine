@@ -184,8 +184,8 @@ impl Directory {
         })
     }
 
-    pub fn with_env_variable(&self, key: &str, value: &str) -> Result<Directory, Error> {
-        unsafe { set_envs(Json(vec![(key.into(), value.into())]))? };
+    pub fn with_env_variable(&self, name: &str, value: &str) -> Result<Directory, Error> {
+        unsafe { set_envs(Json(vec![(name.into(), value.into())]))? };
         Ok(Directory {
             id: self.id.clone(),
             path: self.path.clone(),

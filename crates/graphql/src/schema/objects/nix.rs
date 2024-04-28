@@ -95,11 +95,11 @@ impl Nix {
     async fn with_env_variable(
         &self,
         ctx: &Context<'_>,
-        key: String,
+        name: String,
         value: String,
     ) -> Result<&Nix, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        common::with_env_variable(graph.clone(), &key, &value)?;
+        common::with_env_variable(graph.clone(), &name, &value)?;
         Ok(self)
     }
 }

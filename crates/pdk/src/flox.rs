@@ -94,9 +94,9 @@ impl Flox {
         })
     }
 
-    pub fn with_env_variables(&self, key: &str, value: &str) -> Result<Flox, Error> {
+    pub fn with_env_variables(&self, name: &str, value: &str) -> Result<Flox, Error> {
         unsafe {
-            set_envs(Json(vec![(key.into(), value.into())]))?;
+            set_envs(Json(vec![(name.into(), value.into())]))?;
         }
         Ok(Flox {
             id: self.id.clone(),

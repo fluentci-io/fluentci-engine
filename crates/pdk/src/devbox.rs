@@ -94,9 +94,9 @@ impl Devbox {
         })
     }
 
-    pub fn with_env_variable(&self, key: &str, value: &str) -> Result<Devbox, Error> {
+    pub fn with_env_variable(&self, name: &str, value: &str) -> Result<Devbox, Error> {
         unsafe {
-            set_envs(Json(vec![(key.into(), value.into())]))?;
+            set_envs(Json(vec![(name.into(), value.into())]))?;
         }
         Ok(Devbox {
             id: self.id.clone(),

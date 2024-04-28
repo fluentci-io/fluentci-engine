@@ -94,8 +94,8 @@ impl Pixi {
         })
     }
 
-    pub fn with_env_variable(&self, key: &str, value: &str) -> Result<Pixi, Error> {
-        unsafe { set_envs(Json(vec![(key.into(), value.into())]))? };
+    pub fn with_env_variable(&self, name: &str, value: &str) -> Result<Pixi, Error> {
+        unsafe { set_envs(Json(vec![(name.into(), value.into())]))? };
         Ok(Pixi {
             id: self.id.clone(),
         })

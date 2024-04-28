@@ -94,8 +94,8 @@ impl Nix {
         })
     }
 
-    pub fn with_env_variable(&self, key: &str, value: &str) -> Result<Nix, Error> {
-        unsafe { set_envs(Json(vec![(key.into(), value.into())]))? };
+    pub fn with_env_variable(&self, name: &str, value: &str) -> Result<Nix, Error> {
+        unsafe { set_envs(Json(vec![(name.into(), value.into())]))? };
         Ok(Nix {
             id: self.id.clone(),
         })

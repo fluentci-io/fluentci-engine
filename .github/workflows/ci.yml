@@ -10,7 +10,9 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+        with:
+          set-safe-directory: false
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
         with:
@@ -39,7 +41,6 @@ jobs:
           rm -rf ../target/release/build target/release/deps target/release/examples target/release/incremental
           sudo cp ../target/release/fluentci-engine $HOME/.local/bin
           fluentci-engine run -- deno run -A ../.fluentci/e2e.ts
-          rm -rf ../target pixi-demo/.pixi
         working-directory: fixtures
         env:
           FLUENTCI_CACHE_CDN_ENDPOINT: https://cache.fluentci.io

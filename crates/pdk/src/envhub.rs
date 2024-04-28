@@ -94,8 +94,8 @@ impl Envhub {
         })
     }
 
-    pub fn with_env_variable(&self, key: &str, value: &str) -> Result<Envhub, Error> {
-        unsafe { set_envs(Json(vec![(key.into(), value.into())]))? };
+    pub fn with_env_variable(&self, name: &str, value: &str) -> Result<Envhub, Error> {
+        unsafe { set_envs(Json(vec![(name.into(), value.into())]))? };
         Ok(Envhub {
             id: self.id.clone(),
         })
