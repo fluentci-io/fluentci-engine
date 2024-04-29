@@ -22,6 +22,7 @@ pub mod pipeline;
 pub mod pixi;
 pub mod pkgx;
 pub mod proto;
+pub mod secrets;
 
 #[derive(Default, MergedObject)]
 pub struct Query(
