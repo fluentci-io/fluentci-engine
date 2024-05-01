@@ -77,7 +77,7 @@ export class Client extends BaseClient {
   pipeline = (name: string): Pipeline => {
     return new Pipeline({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "pipeline",
           args: { name },
@@ -90,7 +90,7 @@ export class Client extends BaseClient {
   cache = (key: string): Cache => {
     return new Cache({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "cache",
           args: { key },
@@ -103,7 +103,7 @@ export class Client extends BaseClient {
   http = (url: string): File => {
     return new File({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "http",
           args: { url },
@@ -116,7 +116,7 @@ export class Client extends BaseClient {
   directory = (path: string): Directory => {
     return new Directory({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "directory",
           args: { path },
@@ -129,7 +129,7 @@ export class Client extends BaseClient {
   file = (path: string): File => {
     return new File({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "file",
           args: { path },
@@ -142,7 +142,7 @@ export class Client extends BaseClient {
   git = (url: string): Git => {
     return new Git({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "git",
           args: { url },
@@ -155,7 +155,7 @@ export class Client extends BaseClient {
   devbox = (): Devbox => {
     return new Devbox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "devbox",
         },
@@ -167,7 +167,7 @@ export class Client extends BaseClient {
   devenv = (): Devenv => {
     return new Devenv({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "devenv",
         },
@@ -179,7 +179,7 @@ export class Client extends BaseClient {
   flox = (): Flox => {
     return new Flox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "flox",
         },
@@ -191,7 +191,7 @@ export class Client extends BaseClient {
   nix = (args?: NixArgs): Nix => {
     return new Nix({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "nix",
           args: { args },
@@ -204,9 +204,105 @@ export class Client extends BaseClient {
   pkgx = (): Pkgx => {
     return new Pkgx({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "pkgx",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  setSecret = (name: string, value: string): Secret => {
+    return new Secret({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "setSecret",
+          args: { name, value },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  googleCloudSecretManager = (
+    project: string,
+    googleCredentialsFile: string
+  ): SecretManager => {
+    return new SecretManager({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "googleCloudSecretManager",
+          args: { project, googleCredentialsFile },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  awsSecretsManager = (
+    region: string,
+    accessKeyId: string,
+    secretAccessKey: string
+  ): SecretManager => {
+    return new SecretManager({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "awsSecretsManager",
+          args: {
+            region,
+            accessKeyId,
+            secretAccessKey,
+          },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  azureKeyvault = (
+    clientId: string,
+    clientSecret: string,
+    tenantId: string,
+    keyvaultName: string,
+    keyvaultUrl: string
+  ): SecretManager => {
+    return new SecretManager({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "azureKeyvault",
+          args: {
+            clientId,
+            clientSecret,
+            tenantId,
+            keyvaultName,
+            keyvaultUrl,
+          },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  hashicorpVault = (
+    address: string,
+    token: string,
+    cacerts: string
+  ): SecretManager => {
+    return new SecretManager({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "hashicorpVault",
+          args: {
+            address,
+            token,
+            cacerts,
+          },
         },
       ],
       ctx: this._ctx,
@@ -227,7 +323,7 @@ export class Cache extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -240,9 +336,104 @@ export class Cache extends BaseClient {
   key = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "key",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+}
+
+export class Secret extends BaseClient {
+  private readonly _id?: string = undefined;
+
+  constructor(parent?: { queryTree?: QueryTree[]; ctx: Context }) {
+    super(parent);
+  }
+
+  id = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this._queryTree,
+        {
+          operation: "id",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  plaintext = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this._queryTree,
+        {
+          operation: "plaintext",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  name = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this._queryTree,
+        {
+          operation: "name",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  mount = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this._queryTree,
+        {
+          operation: "mount",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+}
+
+export class SecretManager extends BaseClient {
+  private readonly _id?: string = undefined;
+
+  constructor(parent?: { queryTree?: QueryTree[]; ctx: Context }) {
+    super(parent);
+  }
+
+  id = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this._queryTree,
+        {
+          operation: "id",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  getSecret = async (name: string): Promise<Secret[]> => {
+    const response: Awaited<Secret[]> = await computeQuery(
+      [
+        ...this._queryTree,
+        {
+          operation: "getSecret",
+          args: { name },
         },
       ],
       await this._ctx.connection()
@@ -264,7 +455,7 @@ export class Devbox extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -277,7 +468,7 @@ export class Devbox extends BaseClient {
   withExec = (args: string[]): Devbox => {
     return new Devbox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withExec",
           args: { args },
@@ -290,7 +481,7 @@ export class Devbox extends BaseClient {
   withWorkdir = (path: string): Devbox => {
     return new Devbox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withWorkdir",
           args: { path },
@@ -300,23 +491,36 @@ export class Devbox extends BaseClient {
     });
   };
 
-  withService = (serviceId: string): Devbox => {
+  withService = (service: Service): Devbox => {
     return new Devbox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withService",
-          args: { serviceId },
+          args: { service },
         },
       ],
       ctx: this._ctx,
     });
   };
 
-  withEnvVariable = (name: String, value: String): Devbox => {
+  withSecretVariable = (name: string, secret: Secret): Devbox => {
     return new Devbox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
+        {
+          operation: "withSecretVariable",
+          args: { name, secret },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: string, value: string): Devbox => {
+    return new Devbox({
+      queryTree: [
+        ...this._queryTree,
         {
           operation: "withEnvVariable",
           args: { name, value },
@@ -326,13 +530,13 @@ export class Devbox extends BaseClient {
     });
   };
 
-  withCache = (path: string, cacheId: string): Devbox => {
+  withCache = (path: string, cache: Cache): Devbox => {
     return new Devbox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withCache",
-          args: { path, cacheId },
+          args: { path, cache },
         },
       ],
       ctx: this._ctx,
@@ -342,7 +546,7 @@ export class Devbox extends BaseClient {
   withFile = (path: string, fileId: string): Devbox => {
     return new Devbox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withFile",
           args: { path, fileId },
@@ -355,7 +559,7 @@ export class Devbox extends BaseClient {
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stdout",
         },
@@ -368,7 +572,7 @@ export class Devbox extends BaseClient {
   stderr = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stderr",
         },
@@ -381,7 +585,7 @@ export class Devbox extends BaseClient {
   asService = (name: string): Service => {
     return new Service({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "asService",
           args: { name },
@@ -394,7 +598,7 @@ export class Devbox extends BaseClient {
   waitOn = (port: number, timeout?: number): Devbox => {
     return new Devbox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "waitOn",
           args: { port, timeout },
@@ -418,7 +622,7 @@ export class Devenv extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -431,7 +635,7 @@ export class Devenv extends BaseClient {
   withExec = (args: string[]): Devenv => {
     return new Devenv({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withExec",
           args: { args },
@@ -444,7 +648,7 @@ export class Devenv extends BaseClient {
   withWorkdir = (path: string): Devenv => {
     return new Devenv({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withWorkdir",
           args: { path },
@@ -454,23 +658,35 @@ export class Devenv extends BaseClient {
     });
   };
 
-  withService = (serviceId: string): Devenv => {
+  withService = (service: Service): Devenv => {
     return new Devenv({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withService",
-          args: { serviceId },
+          args: { service },
         },
       ],
       ctx: this._ctx,
     });
   };
 
-  withEnvVariable = (name: String, value: String): Devenv => {
+  withSecretVariable = (name: string, secret: Secret): Devenv => {
     return new Devenv({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
+        {
+          operation: "withSecretVariable",
+          args: { name, secret },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+  withEnvVariable = (name: string, value: string): Devenv => {
+    return new Devenv({
+      queryTree: [
+        ...this._queryTree,
         {
           operation: "withEnvVariable",
           args: { name, value },
@@ -480,13 +696,13 @@ export class Devenv extends BaseClient {
     });
   };
 
-  withCache = (path: string, cacheId: string): Devenv => {
+  withCache = (path: string, cache: Cache): Devenv => {
     return new Devenv({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withCache",
-          args: { path, cacheId },
+          args: { path, cache },
         },
       ],
       ctx: this._ctx,
@@ -496,7 +712,7 @@ export class Devenv extends BaseClient {
   withFile = (path: string, fileId: string): Devenv => {
     return new Devenv({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withFile",
           args: { path, fileId },
@@ -509,7 +725,7 @@ export class Devenv extends BaseClient {
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stdout",
         },
@@ -522,7 +738,7 @@ export class Devenv extends BaseClient {
   stderr = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stderr",
         },
@@ -535,7 +751,7 @@ export class Devenv extends BaseClient {
   asService = (name: string): Service => {
     return new Service({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "asService",
           args: {
@@ -550,7 +766,7 @@ export class Devenv extends BaseClient {
   waitOn = (port: number, timeout?: number): Devenv => {
     return new Devenv({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "waitOn",
           args: { port, timeout },
@@ -574,7 +790,7 @@ export class Directory extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -587,7 +803,7 @@ export class Directory extends BaseClient {
   directory = (path: string): Directory => {
     return new Directory({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "directory",
           args: { path },
@@ -600,7 +816,7 @@ export class Directory extends BaseClient {
   entries = async (): Promise<string[]> => {
     const response: Awaited<string[]> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "entries",
         },
@@ -613,7 +829,7 @@ export class Directory extends BaseClient {
   devbox = (): Devbox => {
     return new Devbox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "devbox",
         },
@@ -625,7 +841,7 @@ export class Directory extends BaseClient {
   devenv = (): Devenv => {
     return new Devenv({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "devenv",
         },
@@ -637,7 +853,7 @@ export class Directory extends BaseClient {
   flox = (): Flox => {
     return new Flox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "flox",
         },
@@ -649,7 +865,7 @@ export class Directory extends BaseClient {
   nix = (args?: NixArgs): Nix => {
     return new Nix({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "nix",
           args: { args },
@@ -662,7 +878,7 @@ export class Directory extends BaseClient {
   pkgx = (): Pkgx => {
     return new Pkgx({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "pkgx",
         },
@@ -674,7 +890,7 @@ export class Directory extends BaseClient {
   pixi = (): Pixi => {
     return new Pixi({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "pixi",
         },
@@ -686,7 +902,7 @@ export class Directory extends BaseClient {
   mise = (): Mise => {
     return new Mise({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "mise",
         },
@@ -698,7 +914,7 @@ export class Directory extends BaseClient {
   envhub = (): Envhub => {
     return new Envhub({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "envhub",
         },
@@ -710,7 +926,7 @@ export class Directory extends BaseClient {
   withExec = (args: string[]): Pipeline => {
     return new Pipeline({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withExec",
           args: { args },
@@ -723,7 +939,7 @@ export class Directory extends BaseClient {
   withWorkdir = (path: string): Pipeline => {
     return new Pipeline({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withWorkdir",
           args: { path },
@@ -733,23 +949,35 @@ export class Directory extends BaseClient {
     });
   };
 
-  withService = (serviceId: string): Pipeline => {
+  withService = (service: Service): Pipeline => {
     return new Pipeline({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withService",
-          args: { serviceId },
+          args: { service },
         },
       ],
       ctx: this._ctx,
     });
   };
 
-  withEnvVariable = (name: String, value: String): Directory => {
+  withSecretVariable = (name: string, secret: Secret): Directory => {
     return new Directory({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
+        {
+          operation: "withSecretVariable",
+          args: { name, secret },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+  withEnvVariable = (name: string, value: string): Directory => {
+    return new Directory({
+      queryTree: [
+        ...this._queryTree,
         {
           operation: "withEnvVariable",
           args: { name, value },
@@ -759,13 +987,13 @@ export class Directory extends BaseClient {
     });
   };
 
-  withCache = (path: string, cacheId: string): Pipeline => {
+  withCache = (path: string, cache: Cache): Pipeline => {
     return new Pipeline({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withCache",
-          args: { path, cacheId },
+          args: { path, cache },
         },
       ],
       ctx: this._ctx,
@@ -775,7 +1003,7 @@ export class Directory extends BaseClient {
   withFile = (path: string, fileId: string): Pipeline => {
     return new Pipeline({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withFile",
           args: { path, fileId },
@@ -788,7 +1016,7 @@ export class Directory extends BaseClient {
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stdout",
         },
@@ -801,7 +1029,7 @@ export class Directory extends BaseClient {
   stderr = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stderr",
         },
@@ -814,7 +1042,7 @@ export class Directory extends BaseClient {
   zip = (): File => {
     return new File({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "zip",
         },
@@ -826,7 +1054,7 @@ export class Directory extends BaseClient {
   tarCzvf = (): File => {
     return new File({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "tarCzvf",
         },
@@ -838,7 +1066,7 @@ export class Directory extends BaseClient {
   waitOn = (port: number, timeout?: number): Directory => {
     return new Directory({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "waitOn",
           args: { port, timeout },
@@ -862,7 +1090,7 @@ export class Service extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -886,7 +1114,7 @@ export class File extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -899,7 +1127,7 @@ export class File extends BaseClient {
   path = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "path",
         },
@@ -912,7 +1140,7 @@ export class File extends BaseClient {
   zip = (): File => {
     return new File({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "zip",
         },
@@ -924,7 +1152,7 @@ export class File extends BaseClient {
   tarCzvf = (): File => {
     return new File({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "tarCzvf",
         },
@@ -933,10 +1161,10 @@ export class File extends BaseClient {
     });
   };
 
-  unzip = (outputDir?: String): Directory => {
+  unzip = (outputDir?: string): Directory => {
     return new Directory({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "unzip",
           args: {
@@ -948,10 +1176,10 @@ export class File extends BaseClient {
     });
   };
 
-  tarXzvf = (outputDir?: String): Directory => {
+  tarXzvf = (outputDir?: string): Directory => {
     return new Directory({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "tarXzvf",
           args: {
@@ -966,7 +1194,7 @@ export class File extends BaseClient {
   md5 = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "md5",
         },
@@ -979,7 +1207,7 @@ export class File extends BaseClient {
   sha256 = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "sha256",
         },
@@ -992,7 +1220,7 @@ export class File extends BaseClient {
   chmod = (mode: string): File => {
     return new File({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "chmod",
           args: { mode },
@@ -1016,7 +1244,7 @@ export class Flox extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -1029,7 +1257,7 @@ export class Flox extends BaseClient {
   withExec = (args: string[]): Flox => {
     return new Flox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withExec",
           args: { args },
@@ -1042,7 +1270,7 @@ export class Flox extends BaseClient {
   withWorkdir = (path: string): Flox => {
     return new Flox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withWorkdir",
           args: { path },
@@ -1052,23 +1280,36 @@ export class Flox extends BaseClient {
     });
   };
 
-  withService = (serviceId: string): Flox => {
+  withService = (service: Service): Flox => {
     return new Flox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withService",
-          args: { serviceId },
+          args: { service },
         },
       ],
       ctx: this._ctx,
     });
   };
 
-  withEnvVariable = (name: String, value: String): Flox => {
+  withSecretVariable = (name: string, secret: Secret): Flox => {
     return new Flox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
+        {
+          operation: "withSecretVariable",
+          args: { name, secret },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: string, value: string): Flox => {
+    return new Flox({
+      queryTree: [
+        ...this._queryTree,
         {
           operation: "withEnvVariable",
           args: { name, value },
@@ -1078,13 +1319,13 @@ export class Flox extends BaseClient {
     });
   };
 
-  withCache = (path: string, cacheId: string): Flox => {
+  withCache = (path: string, cache: Cache): Flox => {
     return new Flox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withCache",
-          args: { path, cacheId },
+          args: { path, cache },
         },
       ],
       ctx: this._ctx,
@@ -1094,7 +1335,7 @@ export class Flox extends BaseClient {
   withFile = (path: string, fileId: string): Flox => {
     return new Flox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withFile",
           args: { path, fileId },
@@ -1107,7 +1348,7 @@ export class Flox extends BaseClient {
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stdout",
         },
@@ -1120,7 +1361,7 @@ export class Flox extends BaseClient {
   stderr = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stderr",
         },
@@ -1133,7 +1374,7 @@ export class Flox extends BaseClient {
   asService = (name: string): Service => {
     return new Service({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "asService",
           args: { name },
@@ -1146,7 +1387,7 @@ export class Flox extends BaseClient {
   waitOn = (port: number, timeout?: number): Flox => {
     return new Flox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "waitOn",
           args: { port, timeout },
@@ -1170,7 +1411,7 @@ export class Git extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -1183,7 +1424,7 @@ export class Git extends BaseClient {
   branch = (name: string): Git => {
     return new Git({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "branch",
           args: { name },
@@ -1196,7 +1437,7 @@ export class Git extends BaseClient {
   commit = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "commit",
         },
@@ -1209,7 +1450,7 @@ export class Git extends BaseClient {
   tree = (): Directory => {
     return new Directory({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "tree",
         },
@@ -1232,7 +1473,7 @@ export class Nix extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -1245,7 +1486,7 @@ export class Nix extends BaseClient {
   withExec = (args: string[]): Nix => {
     return new Nix({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withExec",
           args: { args },
@@ -1258,7 +1499,7 @@ export class Nix extends BaseClient {
   withWorkdir = (path: string): Nix => {
     return new Nix({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withWorkdir",
           args: { path },
@@ -1268,23 +1509,36 @@ export class Nix extends BaseClient {
     });
   };
 
-  withService = (serviceId: string): Nix => {
+  withService = (service: Service): Nix => {
     return new Nix({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withService",
-          args: { serviceId },
+          args: { service },
         },
       ],
       ctx: this._ctx,
     });
   };
 
-  withEnvVariable = (name: String, value: String): Nix => {
+  withSecretVariable = (name: string, secret: Secret): Nix => {
     return new Nix({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
+        {
+          operation: "withSecretVariable",
+          args: { name, secret },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: string, value: string): Nix => {
+    return new Nix({
+      queryTree: [
+        ...this._queryTree,
         {
           operation: "withEnvVariable",
           args: { name, value },
@@ -1294,13 +1548,13 @@ export class Nix extends BaseClient {
     });
   };
 
-  withCache = (path: string, cacheId: string): Nix => {
+  withCache = (path: string, cache: Cache): Nix => {
     return new Nix({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withCache",
-          args: { path, cacheId },
+          args: { path, cache },
         },
       ],
       ctx: this._ctx,
@@ -1310,7 +1564,7 @@ export class Nix extends BaseClient {
   withFile = (path: string, fileId: string): Nix => {
     return new Nix({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withFile",
           args: { path, fileId },
@@ -1323,7 +1577,7 @@ export class Nix extends BaseClient {
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stdout",
         },
@@ -1336,7 +1590,7 @@ export class Nix extends BaseClient {
   stderr = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stderr",
         },
@@ -1349,7 +1603,7 @@ export class Nix extends BaseClient {
   asService = (name: string): Service => {
     return new Service({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "asService",
           args: { name },
@@ -1362,7 +1616,7 @@ export class Nix extends BaseClient {
   waitOn = (port: number, timeout?: number): Nix => {
     return new Nix({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "waitOn",
           args: { port, timeout },
@@ -1386,7 +1640,7 @@ export class Pipeline extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -1399,7 +1653,7 @@ export class Pipeline extends BaseClient {
   http = (url: string): File => {
     return new File({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "http",
           args: { url },
@@ -1412,7 +1666,7 @@ export class Pipeline extends BaseClient {
   git = (url: string): Git => {
     return new Git({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "git",
           args: { url },
@@ -1425,7 +1679,7 @@ export class Pipeline extends BaseClient {
   devbox = (): Devbox => {
     return new Devbox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "devbox",
         },
@@ -1437,7 +1691,7 @@ export class Pipeline extends BaseClient {
   devenv = (): Devenv => {
     return new Devenv({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "devenv",
         },
@@ -1449,7 +1703,7 @@ export class Pipeline extends BaseClient {
   flox = (): Flox => {
     return new Flox({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "flox",
         },
@@ -1461,7 +1715,7 @@ export class Pipeline extends BaseClient {
   nix = (args?: NixArgs): Nix => {
     return new Nix({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "nix",
           args: { args },
@@ -1474,7 +1728,7 @@ export class Pipeline extends BaseClient {
   pkgx = (): Pkgx => {
     return new Pkgx({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "pkgx",
         },
@@ -1486,7 +1740,7 @@ export class Pipeline extends BaseClient {
   pixi = (): Pixi => {
     return new Pixi({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "pixi",
         },
@@ -1498,7 +1752,7 @@ export class Pipeline extends BaseClient {
   mise = (): Mise => {
     return new Mise({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "mise",
         },
@@ -1510,7 +1764,7 @@ export class Pipeline extends BaseClient {
   envhub = (): Envhub => {
     return new Envhub({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "envhub",
         },
@@ -1522,7 +1776,7 @@ export class Pipeline extends BaseClient {
   withExec = (args: string[]): Pipeline => {
     return new Pipeline({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withExec",
           args: { args },
@@ -1535,7 +1789,7 @@ export class Pipeline extends BaseClient {
   withWorkdir = (path: string): Pipeline => {
     return new Pipeline({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withWorkdir",
           args: { path },
@@ -1545,23 +1799,36 @@ export class Pipeline extends BaseClient {
     });
   };
 
-  withService = (serviceId: string): Pipeline => {
+  withService = (service: Service): Pipeline => {
     return new Pipeline({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withService",
-          args: { serviceId },
+          args: { service },
         },
       ],
       ctx: this._ctx,
     });
   };
 
-  withEnvVariable = (name: String, value: String): Pipeline => {
+  withSecretVariable = (name: string, secret: Secret): Pipeline => {
     return new Pipeline({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
+        {
+          operation: "withSecretVariable",
+          args: { name, secret },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: string, value: string): Pipeline => {
+    return new Pipeline({
+      queryTree: [
+        ...this._queryTree,
         {
           operation: "withEnvVariable",
           args: { name, value },
@@ -1571,13 +1838,13 @@ export class Pipeline extends BaseClient {
     });
   };
 
-  withCache = (path: string, cacheId: string): Pipeline => {
+  withCache = (path: string, cache: Cache): Pipeline => {
     return new Pipeline({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withCache",
-          args: { path, cacheId },
+          args: { path, cache },
         },
       ],
       ctx: this._ctx,
@@ -1587,7 +1854,7 @@ export class Pipeline extends BaseClient {
   withFile = (path: string, fileId: string): Pipeline => {
     return new Pipeline({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withFile",
           args: { path, fileId },
@@ -1600,7 +1867,7 @@ export class Pipeline extends BaseClient {
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stdout",
         },
@@ -1613,7 +1880,7 @@ export class Pipeline extends BaseClient {
   stderr = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stderr",
         },
@@ -1626,7 +1893,7 @@ export class Pipeline extends BaseClient {
   asService = (name: string): Service => {
     return new Service({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "asService",
           args: { name },
@@ -1639,7 +1906,7 @@ export class Pipeline extends BaseClient {
   waitOn = (port: number, timeout?: number): Pipeline => {
     return new Pipeline({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "waitOn",
           args: { port, timeout },
@@ -1663,7 +1930,7 @@ export class Pkgx extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -1676,7 +1943,7 @@ export class Pkgx extends BaseClient {
   withExec = (args: string[]): Pkgx => {
     return new Pkgx({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withExec",
           args: { args },
@@ -1689,7 +1956,7 @@ export class Pkgx extends BaseClient {
   withWorkdir = (path: string): Pkgx => {
     return new Pkgx({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withWorkdir",
           args: { path },
@@ -1699,23 +1966,36 @@ export class Pkgx extends BaseClient {
     });
   };
 
-  withService = (serviceId: string): Pkgx => {
+  withService = (service: Service): Pkgx => {
     return new Pkgx({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withService",
-          args: { serviceId },
+          args: { service },
         },
       ],
       ctx: this._ctx,
     });
   };
 
-  withEnvVariable = (name: String, value: String): Pkgx => {
+  withSecretVariable = (name: string, secret: Secret): Pkgx => {
     return new Pkgx({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
+        {
+          operation: "withSecretVariable",
+          args: { name, secret },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: string, value: string): Pkgx => {
+    return new Pkgx({
+      queryTree: [
+        ...this._queryTree,
         {
           operation: "withEnvVariable",
           args: { name, value },
@@ -1725,13 +2005,13 @@ export class Pkgx extends BaseClient {
     });
   };
 
-  withCache = (path: string, cacheId: string): Pkgx => {
+  withCache = (path: string, cache: Cache): Pkgx => {
     return new Pkgx({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withCache",
-          args: { path, cacheId },
+          args: { path, cache },
         },
       ],
       ctx: this._ctx,
@@ -1741,7 +2021,7 @@ export class Pkgx extends BaseClient {
   withFile = (path: string, fileId: string): Pkgx => {
     return new Pkgx({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withFile",
           args: { path, fileId },
@@ -1754,7 +2034,7 @@ export class Pkgx extends BaseClient {
   withPackages = (packages: string[]): Pkgx => {
     return new Pkgx({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withPackages",
           args: { packages },
@@ -1767,7 +2047,7 @@ export class Pkgx extends BaseClient {
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stdout",
         },
@@ -1780,7 +2060,7 @@ export class Pkgx extends BaseClient {
   stderr = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stderr",
         },
@@ -1793,7 +2073,7 @@ export class Pkgx extends BaseClient {
   asService = (name: string): Service => {
     return new Service({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "asService",
           args: { name },
@@ -1806,7 +2086,7 @@ export class Pkgx extends BaseClient {
   waitOn = (port: number, timeout?: number): Pkgx => {
     return new Pkgx({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "waitOn",
           args: { port, timeout },
@@ -1830,7 +2110,7 @@ export class Pixi extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -1843,7 +2123,7 @@ export class Pixi extends BaseClient {
   withExec = (args: string[]): Pixi => {
     return new Pixi({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withExec",
           args: { args },
@@ -1856,7 +2136,7 @@ export class Pixi extends BaseClient {
   withWorkdir = (path: string): Pixi => {
     return new Pixi({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withWorkdir",
           args: { path },
@@ -1866,23 +2146,36 @@ export class Pixi extends BaseClient {
     });
   };
 
-  withService = (serviceId: string): Pixi => {
+  withService = (service: Service): Pixi => {
     return new Pixi({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withService",
-          args: { serviceId },
+          args: { service },
         },
       ],
       ctx: this._ctx,
     });
   };
 
-  withEnvVariable = (name: String, value: String): Pixi => {
+  withSecretVariable = (name: string, secret: Secret): Pixi => {
     return new Pixi({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
+        {
+          operation: "withSecretVariable",
+          args: { name, secret },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: string, value: string): Pixi => {
+    return new Pixi({
+      queryTree: [
+        ...this._queryTree,
         {
           operation: "withEnvVariable",
           args: { name, value },
@@ -1892,13 +2185,13 @@ export class Pixi extends BaseClient {
     });
   };
 
-  withCache = (path: string, cacheId: string): Pixi => {
+  withCache = (path: string, cache: Cache): Pixi => {
     return new Pixi({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withCache",
-          args: { path, cacheId },
+          args: { path, cache },
         },
       ],
       ctx: this._ctx,
@@ -1908,7 +2201,7 @@ export class Pixi extends BaseClient {
   withFile = (path: string, fileId: string): Pixi => {
     return new Pixi({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withFile",
           args: { path, fileId },
@@ -1921,7 +2214,7 @@ export class Pixi extends BaseClient {
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stdout",
         },
@@ -1934,7 +2227,7 @@ export class Pixi extends BaseClient {
   stderr = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stderr",
         },
@@ -1947,7 +2240,7 @@ export class Pixi extends BaseClient {
   asService = (name: string): Service => {
     return new Service({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "asService",
           args: { name },
@@ -1960,7 +2253,7 @@ export class Pixi extends BaseClient {
   waitOn = (port: number, timeout?: number): Pixi => {
     return new Pixi({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "waitOn",
           args: { port, timeout },
@@ -1984,7 +2277,7 @@ export class Mise extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -1997,7 +2290,7 @@ export class Mise extends BaseClient {
   withExec = (args: string[]): Mise => {
     return new Mise({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withExec",
           args: { args },
@@ -2010,7 +2303,7 @@ export class Mise extends BaseClient {
   withWorkdir = (path: string): Mise => {
     return new Mise({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withWorkdir",
           args: { path },
@@ -2020,23 +2313,36 @@ export class Mise extends BaseClient {
     });
   };
 
-  withService = (serviceId: string): Mise => {
+  withService = (service: Service): Mise => {
     return new Mise({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withService",
-          args: { serviceId },
+          args: { service },
         },
       ],
       ctx: this._ctx,
     });
   };
 
-  withEnvVariable = (name: String, value: String): Mise => {
+  withSecretVariable = (name: string, secret: Secret): Mise => {
     return new Mise({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
+        {
+          operation: "withSecretVariable",
+          args: { name, secret },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: string, value: string): Mise => {
+    return new Mise({
+      queryTree: [
+        ...this._queryTree,
         {
           operation: "withEnvVariable",
           args: { name, value },
@@ -2046,13 +2352,13 @@ export class Mise extends BaseClient {
     });
   };
 
-  withCache = (path: string, cacheId: string): Mise => {
+  withCache = (path: string, cache: Cache): Mise => {
     return new Mise({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withCache",
-          args: { path, cacheId },
+          args: { path, cache },
         },
       ],
       ctx: this._ctx,
@@ -2062,7 +2368,7 @@ export class Mise extends BaseClient {
   withFile = (path: string, fileId: string): Mise => {
     return new Mise({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withFile",
           args: { path, fileId },
@@ -2075,7 +2381,7 @@ export class Mise extends BaseClient {
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stdout",
         },
@@ -2088,7 +2394,7 @@ export class Mise extends BaseClient {
   stderr = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stderr",
         },
@@ -2101,7 +2407,7 @@ export class Mise extends BaseClient {
   asService = (name: string): Service => {
     return new Service({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "asService",
           args: { name },
@@ -2114,7 +2420,7 @@ export class Mise extends BaseClient {
   waitOn = (port: number, timeout?: number): Mise => {
     return new Mise({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "waitOn",
           args: { port, timeout },
@@ -2138,7 +2444,7 @@ export class Envhub extends BaseClient {
   id = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "id",
         },
@@ -2151,7 +2457,7 @@ export class Envhub extends BaseClient {
   use = (environment: string): Envhub => {
     return new Envhub({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "use",
           args: { environment },
@@ -2164,7 +2470,7 @@ export class Envhub extends BaseClient {
   withExec = (args: string[]): Envhub => {
     return new Envhub({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withExec",
           args: { args },
@@ -2177,7 +2483,7 @@ export class Envhub extends BaseClient {
   withWorkdir = (path: string): Envhub => {
     return new Envhub({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withWorkdir",
           args: { path },
@@ -2187,23 +2493,36 @@ export class Envhub extends BaseClient {
     });
   };
 
-  withService = (serviceId: string): Envhub => {
+  withService = (service: Service): Envhub => {
     return new Envhub({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withService",
-          args: { serviceId },
+          args: { service },
         },
       ],
       ctx: this._ctx,
     });
   };
 
-  withEnvVariable = (name: String, value: String): Envhub => {
+  withSecretVariable = (name: string, secret: Secret): Envhub => {
     return new Envhub({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
+        {
+          operation: "withSecretVariable",
+          args: { name, secret },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: string, value: string): Envhub => {
+    return new Envhub({
+      queryTree: [
+        ...this._queryTree,
         {
           operation: "withEnvVariable",
           args: { name, value },
@@ -2213,13 +2532,13 @@ export class Envhub extends BaseClient {
     });
   };
 
-  withCache = (path: string, cacheId: string): Envhub => {
+  withCache = (path: string, cache: Cache): Envhub => {
     return new Envhub({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withCache",
-          args: { path, cacheId },
+          args: { path, cache },
         },
       ],
       ctx: this._ctx,
@@ -2229,7 +2548,7 @@ export class Envhub extends BaseClient {
   withFile = (path: string, fileId: string): Envhub => {
     return new Envhub({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "withFile",
           args: { path, fileId },
@@ -2242,7 +2561,7 @@ export class Envhub extends BaseClient {
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stdout",
         },
@@ -2255,7 +2574,7 @@ export class Envhub extends BaseClient {
   stderr = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "stderr",
         },
@@ -2268,7 +2587,7 @@ export class Envhub extends BaseClient {
   asService = (name: string): Service => {
     return new Service({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "asService",
           args: { name },
@@ -2281,7 +2600,7 @@ export class Envhub extends BaseClient {
   waitOn = (port: number, timeout?: number): Envhub => {
     return new Envhub({
       queryTree: [
-        ...this.queryTree,
+        ...this._queryTree,
         {
           operation: "waitOn",
           args: { port, timeout },

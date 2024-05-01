@@ -14,9 +14,9 @@ use fluentci_ext::pixi::Pixi as PixiExt;
 use fluentci_ext::pkgx::Pkgx as PkgxExt;
 use fluentci_ext::runner::Runner as RunnerExt;
 use fluentci_ext::Extension;
+use fluentci_secrets::Provider;
 use fluentci_types::cache::Cache;
 use fluentci_types::file::File;
-use fluentci_secrets::Provider;
 use fluentci_types::Module;
 use std::sync::Arc;
 
@@ -288,10 +288,15 @@ host_fn!(pub with_secret_variable(user_data: State; params: Json<Vec<String>>) {
   let state = state.lock().unwrap();
   let graph = state.graph.clone();
   let params = params.into_inner();
-  if params.len() != 3 {
+  if params.len() != 2 {
     return Err(Error::msg("Invalid number of arguments"));
   }
-  common::with_secret_variable(graph, &params[0], &params[1], &params[2])?;
+  let g = graph.lock().unwrap();
+  let secret_name = g.secret_names.get(&params[1]).unwrap();
+  let secret_name = secret_name.clone();
+  drop(g);
+
+  common::with_secret_variable(graph, &params[0], &params[1], &secret_name)?;
   Ok(())
 });
 

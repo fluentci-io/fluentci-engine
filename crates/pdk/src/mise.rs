@@ -112,18 +112,9 @@ impl Mise {
         })
     }
 
-    pub fn with_secret_variable(
-        &self,
-        name: &str,
-        secret_id: &str,
-        secret_name: &str,
-    ) -> Result<Mise, Error> {
+    pub fn with_secret_variable(&self, name: &str, secret_id: &str) -> Result<Mise, Error> {
         unsafe {
-            with_secret_variable(Json(vec![
-                name.into(),
-                secret_id.into(),
-                secret_name.into(),
-            ]))?;
+            with_secret_variable(Json(vec![name.into(), secret_id.into()]))?;
         }
         Ok(Mise {
             id: self.id.clone(),

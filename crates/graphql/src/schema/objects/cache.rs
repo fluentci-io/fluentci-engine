@@ -1,5 +1,14 @@
-use async_graphql::{Object, ID};
+use async_graphql::{InputObject, Object, ID};
 use fluentci_types::cache as types;
+
+pub mod input {
+    use super::*;
+
+    #[derive(Debug, Clone, InputObject)]
+    pub struct CacheInput {
+        pub id: ID,
+    }
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct Cache {

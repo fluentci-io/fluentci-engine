@@ -112,18 +112,9 @@ impl Envhub {
         })
     }
 
-    pub fn with_secret_variable(
-        &self,
-        name: &str,
-        secret_id: &str,
-        secret_name: &str,
-    ) -> Result<Envhub, Error> {
+    pub fn with_secret_variable(&self, name: &str, secret_id: &str) -> Result<Envhub, Error> {
         unsafe {
-            with_secret_variable(Json(vec![
-                name.into(),
-                secret_id.into(),
-                secret_name.into(),
-            ]))?;
+            with_secret_variable(Json(vec![name.into(), secret_id.into()]))?;
         }
         Ok(Envhub {
             id: self.id.clone(),

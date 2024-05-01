@@ -114,18 +114,9 @@ impl Devbox {
         })
     }
 
-    pub fn with_secret_variable(
-        &self,
-        name: &str,
-        secret_id: &str,
-        secret_name: &str,
-    ) -> Result<Devbox, Error> {
+    pub fn with_secret_variable(&self, name: &str, secret_id: &str) -> Result<Devbox, Error> {
         unsafe {
-            with_secret_variable(Json(vec![
-                name.into(),
-                secret_id.into(),
-                secret_name.into(),
-            ]))?;
+            with_secret_variable(Json(vec![name.into(), secret_id.into()]))?;
         }
         Ok(Devbox {
             id: self.id.clone(),

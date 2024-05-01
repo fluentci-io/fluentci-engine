@@ -129,18 +129,9 @@ impl Pkgx {
         })
     }
 
-    pub fn with_secret_variable(
-        &self,
-        name: &str,
-        secret_id: &str,
-        secret_name: &str,
-    ) -> Result<Pkgx, Error> {
+    pub fn with_secret_variable(&self, name: &str, secret_id: &str) -> Result<Pkgx, Error> {
         unsafe {
-            with_secret_variable(Json(vec![
-                name.into(),
-                secret_id.into(),
-                secret_name.into(),
-            ]))?;
+            with_secret_variable(Json(vec![name.into(), secret_id.into()]))?;
         }
         Ok(Pkgx {
             id: self.id.clone(),

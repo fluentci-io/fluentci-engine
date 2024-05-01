@@ -1,3 +1,4 @@
+use anyhow::Error;
 use extism_pdk::*;
 use fluentci_pdk::dag;
 
@@ -8,9 +9,16 @@ pub fn get_secret(name: String) -> FnResult<String> {
     let secrets = dag()
         .hashicorp_vault(&address, &token, None)?
         .get_secret(&name)?;
-    Ok(secrets
-        .into_iter()
-        .map(|s| s.plaintext().unwrap_or_default())
-        .collect::<Vec<_>>()
-        .join("\n"))
+
+    if secrets.is_empty() {
+        return Err(WithReturnCode::from(Error::msg("secret not found")).into());
+    }
+
+    let stdout = dag()
+        .pipeline("demo")?
+        .with_secret_variable("DEMO", &secrets[0].id)?
+        .with_exec(vec!["echo", "$DEMO"])?
+        .stdout()?;
+
+    Ok(stdout)
 }

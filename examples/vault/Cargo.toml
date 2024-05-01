@@ -9,5 +9,6 @@ crate_type = ["cdylib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.82"
 extism-pdk = "1.1.0"
 fluentci-pdk = {path = "../../crates/pdk", version = "0.2.0"}

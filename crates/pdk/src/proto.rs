@@ -115,18 +115,9 @@ impl Proto {
         })
     }
 
-    pub fn with_secret_variable(
-        &self,
-        name: &str,
-        secret_id: &str,
-        secret_name: &str,
-    ) -> Result<Proto, Error> {
+    pub fn with_secret_variable(&self, name: &str, secret_id: &str) -> Result<Proto, Error> {
         unsafe {
-            with_secret_variable(Json(vec![
-                name.into(),
-                secret_id.into(),
-                secret_name.into(),
-            ]))?;
+            with_secret_variable(Json(vec![name.into(), secret_id.into()]))?;
         }
         Ok(Proto {
             id: self.id.clone(),

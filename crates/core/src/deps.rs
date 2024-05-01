@@ -88,6 +88,7 @@ pub struct Graph {
     pub enabled_services: Vec<Service>,
     pub vaults: HashMap<String, Arc<Box<dyn Vault + Send + Sync>>>,
     pub secrets: HashMap<String, String>,
+    pub secret_names: HashMap<String, String>,
 
     tx: Sender<(String, usize)>,
     pub runner: Arc<Box<dyn Extension + Send + Sync>>,
@@ -110,13 +111,15 @@ impl Graph {
             nix_args: NixArgs::default(),
             vaults: HashMap::new(),
             secrets: HashMap::new(),
+            secret_names: HashMap::new(),
         }
     }
 
     pub fn set_secret(&mut self, name: String, value: String) -> Result<String, Error> {
         let id = Uuid::new_v4().to_string();
-        let key = get_hmac(id.clone(), name)?;
+        let key = get_hmac(id.clone(), name.clone())?;
         self.secrets.insert(key, value);
+        self.secret_names.insert(id.clone(), name);
         Ok(id)
     }
 
@@ -152,10 +155,11 @@ impl Graph {
                 }
 
                 let mut results = Vec::new();
-                let id = Uuid::new_v4().to_string();
                 secrets.iter().for_each(|(key, value)| {
+                    let id = Uuid::new_v4().to_string();
                     let hmac = get_hmac(id.clone(), key.clone()).unwrap();
                     self.secrets.insert(hmac, value.clone());
+                    self.secret_names.insert(id.clone(), key.clone());
                     results.push(Secret {
                         id: id.clone(),
                         name: key.clone(),

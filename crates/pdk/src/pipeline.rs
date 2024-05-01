@@ -186,18 +186,9 @@ impl Pipeline {
         })
     }
 
-    pub fn with_secret_variable(
-        &self,
-        name: &str,
-        secret_id: &str,
-        secret_name: &str,
-    ) -> Result<Pipeline, Error> {
+    pub fn with_secret_variable(&self, name: &str, secret_id: &str) -> Result<Pipeline, Error> {
         unsafe {
-            with_secret_variable(Json(vec![
-                name.into(),
-                secret_id.into(),
-                secret_name.into(),
-            ]))?;
+            with_secret_variable(Json(vec![name.into(), secret_id.into()]))?;
         }
         Ok(Pipeline {
             id: self.id.clone(),

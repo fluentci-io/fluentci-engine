@@ -112,18 +112,9 @@ impl Nix {
         })
     }
 
-    pub fn with_secret_variable(
-        &self,
-        name: &str,
-        secret_id: &str,
-        secret_name: &str,
-    ) -> Result<Nix, Error> {
+    pub fn with_secret_variable(&self, name: &str, secret_id: &str) -> Result<Nix, Error> {
         unsafe {
-            with_secret_variable(Json(vec![
-                name.into(),
-                secret_id.into(),
-                secret_name.into(),
-            ]))?;
+            with_secret_variable(Json(vec![name.into(), secret_id.into()]))?;
         }
         Ok(Nix {
             id: self.id.clone(),
