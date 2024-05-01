@@ -1,3 +1,6 @@
+use std::str::FromStr;
+
+use async_trait::async_trait;
 use futures::future::try_join_all;
 use rusoto_core::{request::TlsError, HttpClient, Region};
 use rusoto_credential::{CredentialsError, DefaultCredentialsProvider, StaticProvider};
@@ -5,6 +8,7 @@ use rusoto_secretsmanager::{
     GetSecretValueError, GetSecretValueRequest, GetSecretValueResponse, ListSecretsError,
     ListSecretsRequest, SecretsManager, SecretsManagerClient,
 };
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 
@@ -13,11 +17,11 @@ use crate::{
     Vault, VaultConfig,
 };
 
+#[derive(Serialize, Deserialize)]
 pub struct AwsConfig {
-    enabled: bool,
-    aws_access_key_id: Option<String>,
-    aws_secret_access_key: Option<String>,
-    aws_region: Option<Region>,
+    pub aws_access_key_id: Option<String>,
+    pub aws_secret_access_key: Option<String>,
+    pub aws_region: String,
 }
 
 #[derive(Error, Debug)]
@@ -30,7 +34,7 @@ pub enum AwsError {
     GetSecretError(#[source] rusoto_core::RusotoError<GetSecretValueError>),
     #[error("the secret does not have string data")]
     NoStringData(String),
-    #[error("the secret name is not valid environemnt variable name")]
+    #[error("the secret name is not valid environment variable name")]
     InvalidSecretName(String),
     #[error("cannot list secrets from Secrets Manager")]
     ListSecretsError(#[source] rusoto_core::RusotoError<ListSecretsError>),
@@ -49,10 +53,6 @@ pub struct AwsVault {
 impl VaultConfig for AwsConfig {
     type Vault = AwsVault;
 
-    fn is_enabled(&self) -> bool {
-        self.enabled
-    }
-
     fn into_vault(self) -> anyhow::Result<Self::Vault> {
         let http_client = HttpClient::new().map_err(AwsError::TlsError)?;
         if let Some(key_id) = self.aws_access_key_id {
@@ -62,7 +62,7 @@ impl VaultConfig for AwsConfig {
                 client: SecretsManagerClient::new_with(
                     http_client,
                     provider,
-                    self.aws_region.unwrap(),
+                    Region::from_str(&self.aws_region)?,
                 ),
             })
         } else {
@@ -71,15 +71,15 @@ impl VaultConfig for AwsConfig {
                 client: SecretsManagerClient::new_with(
                     http_client,
                     provider,
-                    self.aws_region.unwrap(),
+                    Region::from_str(&self.aws_region)?,
                 ),
             })
         }
     }
 }
 
+#[async_trait]
 impl Vault for AwsVault {
-    #[tokio::main]
     async fn download_prefixed(&self, prefix: &str) -> anyhow::Result<Vec<(String, String)>> {
         let list = self
             .client
@@ -100,6 +100,7 @@ impl Vault for AwsVault {
                     .unwrap_or(false)
             })
             .map(|s| async {
+                println!("{:?}", s);
                 let name = s.name.unwrap();
                 let secret = self
                     .client
@@ -110,6 +111,7 @@ impl Vault for AwsVault {
                     })
                     .await
                     .map_err(AwsError::GetSecretError)?;
+                println!("{:?}", secret);
                 let value = secret
                     .secret_string
                     .ok_or_else(|| AwsError::NoStringData(name.clone()))?;
@@ -121,7 +123,6 @@ impl Vault for AwsVault {
         Ok(values)
     }
 
-    #[tokio::main]
     async fn download_json(&self, secret_name: &str) -> anyhow::Result<Vec<(String, String)>> {
         let secret = self
             .client

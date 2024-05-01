@@ -1,5 +1,7 @@
 use extism_pdk::*;
-use fluentci_types::{cache::Cache, file::File, proto as types, service::Service};
+use fluentci_types::{
+    cache::Cache, file::File, proto as types, secret::Provider, service::Service,
+};
 use serde::{Deserialize, Serialize};
 
 #[host_fn]
@@ -15,6 +17,8 @@ extern "ExtismHost" {
     fn with_service(service_id: String);
     fn set_envs(envs: Json<Vec<(String, String)>>);
     fn wait_on(args: Json<Vec<u32>>);
+    fn add_secretmanager(provider: Json<Provider>) -> String;
+    fn with_secret_variable(params: Json<Vec<String>>);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -106,6 +110,24 @@ impl Proto {
 
     pub fn wait_on(&self, port: u32, timeout: Option<u32>) -> Result<Proto, Error> {
         unsafe { wait_on(Json(vec![port, timeout.unwrap_or(60)])) }?;
+        Ok(Proto {
+            id: self.id.clone(),
+        })
+    }
+
+    pub fn with_secret_variable(
+        &self,
+        name: &str,
+        secret_id: &str,
+        secret_name: &str,
+    ) -> Result<Proto, Error> {
+        unsafe {
+            with_secret_variable(Json(vec![
+                name.into(),
+                secret_id.into(),
+                secret_name.into(),
+            ]))?;
+        }
         Ok(Proto {
             id: self.id.clone(),
         })

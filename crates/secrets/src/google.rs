@@ -1,7 +1,9 @@
+use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD as base64, Engine as _};
 use google_secretmanager1::{
     hyper, hyper::client::HttpConnector, hyper_rustls, hyper_rustls::HttpsConnector, oauth2,
 };
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
 use thiserror::Error;
@@ -10,11 +12,11 @@ use super::{convert::decode_env_from_json, Vault, VaultConfig};
 
 type SecretManager = google_secretmanager1::SecretManager<HttpsConnector<HttpConnector>>;
 
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct GoogleConfig {
-    enabled: bool,
-    google_credentials_file: Option<PathBuf>,
-    google_credentials_json: Option<String>,
-    google_project: Option<String>,
+    pub google_credentials_file: Option<PathBuf>,
+    pub google_credentials_json: Option<String>,
+    pub google_project: Option<String>,
 }
 
 #[derive(Error, Debug)]
@@ -37,10 +39,6 @@ pub type Result<T, E = GoogleError> = std::result::Result<T, E>;
 
 impl VaultConfig for GoogleConfig {
     type Vault = GoogleConfig;
-
-    fn is_enabled(&self) -> bool {
-        self.enabled
-    }
 
     fn into_vault(self) -> anyhow::Result<Self::Vault> {
         Ok(self)
@@ -98,8 +96,8 @@ impl GoogleConfig {
     }
 }
 
+#[async_trait]
 impl Vault for GoogleConfig {
-    #[tokio::main]
     async fn download_prefixed(&self, prefix: &str) -> anyhow::Result<Vec<(String, String)>> {
         let mut manager = self.to_manager().await?;
         let project = self.google_project.as_ref().unwrap();
@@ -131,7 +129,6 @@ impl Vault for GoogleConfig {
         Ok(from_kv)
     }
 
-    #[tokio::main]
     async fn download_json(&self, secret_name: &str) -> anyhow::Result<Vec<(String, String)>> {
         let mut manager = self.to_manager().await?;
         let secret = self.get_secret(&mut manager, secret_name).await?;

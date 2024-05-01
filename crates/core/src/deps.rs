@@ -1,14 +1,19 @@
 use anyhow::Error;
+use fluentci_secrets::{Provider, Vault, VaultConfig};
 use opentelemetry::{
     global,
     trace::{Span, TraceContextExt, Tracer, TracerProvider},
     Context, KeyValue,
 };
 use owo_colors::OwoColorize;
-use std::env::{self, current_dir};
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    env::{self, current_dir},
+};
 use std::{path::Path, thread};
+use uuid::Uuid;
 
 use fluentci_ext::envhub::Envhub;
 use fluentci_ext::service::Service as ServiceExt;
@@ -16,8 +21,11 @@ use fluentci_ext::Extension;
 use fluentci_types::{
     nix::NixArgs,
     process_compose::{self, Process},
+    secret::Secret,
     Output,
 };
+
+use crate::get_hmac;
 
 use super::edge::Edge;
 use super::vertex::{Runnable, Vertex};
@@ -64,9 +72,11 @@ pub enum GraphCommand {
         Arc<Box<dyn Extension + Send + Sync>>,
     ),
     AddEnvVariable(String, String),
+    AddSecretVariable(String, String, String),
     EnableService(String),
     AddEdge(usize, usize),
     Execute(Output),
+    AddSecretManager(String, Provider),
 }
 
 #[derive(Clone)]
@@ -76,6 +86,8 @@ pub struct Graph {
     pub volumes: Vec<Volume>,
     pub services: Vec<Service>,
     pub enabled_services: Vec<Service>,
+    pub vaults: HashMap<String, Arc<Box<dyn Vault + Send + Sync>>>,
+    pub secrets: HashMap<String, String>,
 
     tx: Sender<(String, usize)>,
     pub runner: Arc<Box<dyn Extension + Send + Sync>>,
@@ -96,6 +108,67 @@ impl Graph {
             runner,
             work_dir,
             nix_args: NixArgs::default(),
+            vaults: HashMap::new(),
+            secrets: HashMap::new(),
+        }
+    }
+
+    pub fn set_secret(&mut self, name: String, value: String) -> Result<String, Error> {
+        let id = Uuid::new_v4().to_string();
+        let key = get_hmac(id.clone(), name)?;
+        self.secrets.insert(key, value);
+        Ok(id)
+    }
+
+    pub fn get_secret_plaintext(&self, secret_id: String, name: String) -> Result<String, Error> {
+        let key = get_hmac(secret_id, name)?;
+        match self.secrets.get(&key) {
+            Some(value) => Ok(value.clone()),
+            None => Err(Error::msg("Secret not found")),
+        }
+    }
+
+    pub fn get_secret(
+        &mut self,
+        secret_manager_id: &str,
+        name: String,
+    ) -> Result<Vec<Secret>, Error> {
+        match self.vaults.get(secret_manager_id) {
+            Some(provider) => {
+                let provider = provider.clone();
+                let cloned_name = name.clone();
+                let handler = thread::spawn(move || {
+                    let rt = tokio::runtime::Runtime::new().unwrap();
+                    rt.block_on(provider.download_json(&name))
+                });
+                let secrets = match handler.join() {
+                    Ok(Ok(secrets)) => secrets,
+                    Ok(Err(e)) => return Err(Error::msg(e)),
+                    Err(_) => return Err(Error::msg("Failed to join thread")),
+                };
+
+                if secrets.is_empty() {
+                    return Err(Error::msg(format!("Secret {} not found", cloned_name)));
+                }
+
+                let mut results = Vec::new();
+                let id = Uuid::new_v4().to_string();
+                secrets.iter().for_each(|(key, value)| {
+                    let hmac = get_hmac(id.clone(), key.clone()).unwrap();
+                    self.secrets.insert(hmac, value.clone());
+                    results.push(Secret {
+                        id: id.clone(),
+                        name: key.clone(),
+                        mount: cloned_name.clone(),
+                    });
+                });
+
+                Ok(results)
+            }
+            None => Err(Error::msg(format!(
+                "Secret manager {} not found",
+                secret_manager_id
+            ))),
         }
     }
 
@@ -203,7 +276,7 @@ impl Graph {
         self.services.push(service);
     }
 
-    pub fn execute(&mut self, command: GraphCommand) {
+    pub fn execute(&mut self, command: GraphCommand) -> Result<(), Error> {
         match command {
             GraphCommand::AddVolume(id, label, path) => {
                 self.volumes.push(Volume {
@@ -231,6 +304,10 @@ impl Graph {
             GraphCommand::AddEnvVariable(key, value) => {
                 env::set_var(key, value);
             }
+            GraphCommand::AddSecretVariable(env_name, secret_id, secret_name) => {
+                let value = self.get_secret_plaintext(secret_id, secret_name)?;
+                env::set_var(env_name, value);
+            }
             GraphCommand::Execute(Output::Stdout) => {
                 self.execute_graph(Output::Stdout);
             }
@@ -239,9 +316,28 @@ impl Graph {
             }
             GraphCommand::EnableService(id) => match self.services.iter().find(|s| s.id == id) {
                 Some(service) => self.enabled_services.push(service.clone()),
-                None => println!("Service not found"),
+                None => return Err(Error::msg("Service not found")),
+            },
+            GraphCommand::AddSecretManager(id, provider) => match provider {
+                Provider::Aws(config) => {
+                    self.vaults
+                        .insert(id, Arc::new(Box::new(config.into_vault()?)));
+                }
+                Provider::Google(config) => {
+                    self.vaults
+                        .insert(id, Arc::new(Box::new(config.into_vault()?)));
+                }
+                Provider::Hashicorp(config) => {
+                    self.vaults
+                        .insert(id, Arc::new(Box::new(config.into_vault()?)));
+                }
+                Provider::Azure(config) => {
+                    self.vaults
+                        .insert(id, Arc::new(Box::new(config.into_vault()?)));
+                }
             },
         }
+        Ok(())
     }
 
     pub fn execute_services(&mut self, ctx: &Context) -> Result<(), Error> {
@@ -576,7 +672,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_graph() {
+    fn test_graph() -> Result<(), Error> {
         let (tx, _) = mpsc::channel();
         let mut graph = Graph::new(tx, Arc::new(Box::new(Runner::default())));
         graph.execute(GraphCommand::AddVertex(
@@ -585,32 +681,32 @@ mod tests {
             "echo A".into(),
             vec![],
             Arc::new(Box::new(Runner::default())),
-        ));
+        ))?;
         graph.execute(GraphCommand::AddVertex(
             "2".into(),
             "B".into(),
             "echo B".into(),
             vec!["1".into()],
             Arc::new(Box::new(Runner::default())),
-        ));
+        ))?;
         graph.execute(GraphCommand::AddVertex(
             "3".into(),
             "C".into(),
             "echo C".into(),
             vec!["1".into()],
             Arc::new(Box::new(Runner::default())),
-        ));
+        ))?;
         graph.execute(GraphCommand::AddVertex(
             "4".into(),
             "D".into(),
             "echo D".into(),
             vec!["2".into(), "3".into()],
             Arc::new(Box::new(Runner::default())),
-        ));
-        graph.execute(GraphCommand::AddEdge(0, 1));
-        graph.execute(GraphCommand::AddEdge(0, 2));
-        graph.execute(GraphCommand::AddEdge(1, 3));
-        graph.execute(GraphCommand::AddEdge(2, 3));
+        ))?;
+        graph.execute(GraphCommand::AddEdge(0, 1))?;
+        graph.execute(GraphCommand::AddEdge(0, 2))?;
+        graph.execute(GraphCommand::AddEdge(1, 3))?;
+        graph.execute(GraphCommand::AddEdge(2, 3))?;
 
         assert_eq!(graph.size(), 4);
         assert_eq!(graph.vertices[0].id, "1");
@@ -626,10 +722,11 @@ mod tests {
         assert_eq!(graph.vertices[2].command, "echo C");
         assert_eq!(graph.vertices[3].command, "echo D");
 
-        graph.execute(GraphCommand::Execute(Output::Stdout));
+        graph.execute(GraphCommand::Execute(Output::Stdout))?;
 
         graph.reset();
 
         assert_eq!(graph.size(), 0);
+        Ok(())
     }
 }

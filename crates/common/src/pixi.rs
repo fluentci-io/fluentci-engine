@@ -23,7 +23,7 @@ pub fn pixi(graph: Arc<Mutex<Graph>>, reset: bool) -> Result<Pixi, Error> {
         "".into(),
         vec![],
         Arc::new(Box::new(PixiExt::default())),
-    ));
+    ))?;
 
     let pixi = Pixi { id };
     Ok(pixi)

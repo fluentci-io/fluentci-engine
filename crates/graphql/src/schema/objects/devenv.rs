@@ -25,7 +25,7 @@ impl Devenv {
             graph.clone(),
             args,
             Arc::new(Box::new(DevenvExt::default())),
-        );
+        )?;
         Ok(self)
     }
 
@@ -104,6 +104,18 @@ impl Devenv {
     ) -> Result<&Devenv, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         common::wait_on(graph.clone(), port, timeout)?;
+        Ok(self)
+    }
+
+    async fn with_secret_variable(
+        &self,
+        ctx: &Context<'_>,
+        name: String,
+        secret_id: ID,
+        secret_name: String,
+    ) -> Result<&Devenv, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_secret_variable(graph.clone(), &name, &secret_id.to_string(), &secret_name)?;
         Ok(self)
     }
 }

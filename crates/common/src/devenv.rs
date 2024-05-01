@@ -23,7 +23,7 @@ pub fn devenv(graph: Arc<Mutex<Graph>>, reset: bool) -> Result<Devenv, Error> {
         "".into(),
         vec![],
         Arc::new(Box::new(DevenvExt::default())),
-    ));
+    ))?;
 
     let devenv = Devenv { id };
     Ok(devenv)

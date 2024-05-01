@@ -67,13 +67,13 @@ impl Pipeline {
             url.clone(),
             deps,
             Arc::new(Box::new(HttpExt::default())),
-        ));
+        ))?;
         graph.execute_vertex(&id)?;
 
         if graph.size() > 2 {
             let x = graph.size() - 2;
             let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
+            graph.execute(GraphCommand::AddEdge(x, y))?;
         }
         let filename = sha256::digest(url).to_string();
         let work_dir = graph.work_dir.clone();
@@ -87,7 +87,7 @@ impl Pipeline {
             id,
             "file".into(),
             file.path.clone(),
-        ));
+        ))?;
 
         Ok(file)
     }
@@ -123,13 +123,13 @@ impl Pipeline {
             url.clone(),
             deps,
             Arc::new(Box::new(GitExt::default())),
-        ));
+        ))?;
         graph.execute_vertex(&id)?;
 
         if graph.size() > 2 {
             let x = graph.size() - 2;
             let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
+            graph.execute(GraphCommand::AddEdge(x, y))?;
         }
 
         graph.work_dir = format!(
@@ -161,12 +161,12 @@ impl Pipeline {
             "".into(),
             deps,
             Arc::new(Box::new(DevboxExt::default())),
-        ));
+        ))?;
 
         if graph.size() > 2 {
             let x = graph.size() - 2;
             let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
+            graph.execute(GraphCommand::AddEdge(x, y))?;
         }
 
         let devbox = Devbox { id: ID(id) };
@@ -192,12 +192,12 @@ impl Pipeline {
             "".into(),
             deps,
             Arc::new(Box::new(DevenvExt::default())),
-        ));
+        ))?;
 
         if graph.size() > 2 {
             let x = graph.size() - 2;
             let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
+            graph.execute(GraphCommand::AddEdge(x, y))?;
         }
 
         let devenv = Devenv { id: ID(id) };
@@ -223,12 +223,12 @@ impl Pipeline {
             "".into(),
             deps,
             Arc::new(Box::new(FloxExt::default())),
-        ));
+        ))?;
 
         if graph.size() > 2 {
             let x = graph.size() - 2;
             let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
+            graph.execute(GraphCommand::AddEdge(x, y))?;
         }
 
         let flox = Flox { id: ID(id) };
@@ -257,12 +257,12 @@ impl Pipeline {
             "".into(),
             deps,
             Arc::new(Box::new(NixExt::new(args))),
-        ));
+        ))?;
 
         if graph.size() > 2 {
             let x = graph.size() - 2;
             let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
+            graph.execute(GraphCommand::AddEdge(x, y))?;
         }
 
         let nix = Nix { id: ID(id) };
@@ -288,12 +288,12 @@ impl Pipeline {
             "".into(),
             deps,
             Arc::new(Box::new(PkgxExt::default())),
-        ));
+        ))?;
 
         if graph.size() > 2 {
             let x = graph.size() - 2;
             let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
+            graph.execute(GraphCommand::AddEdge(x, y))?;
         }
 
         let pkgx = Pkgx { id: ID(id) };
@@ -319,12 +319,12 @@ impl Pipeline {
             "".into(),
             deps,
             Arc::new(Box::new(PixiExt::default())),
-        ));
+        ))?;
 
         if graph.size() > 2 {
             let x = graph.size() - 2;
             let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
+            graph.execute(GraphCommand::AddEdge(x, y))?;
         }
 
         let pixi = Pixi { id: ID(id) };
@@ -350,12 +350,12 @@ impl Pipeline {
             "".into(),
             deps,
             Arc::new(Box::new(ProtoExt::default())),
-        ));
+        ))?;
 
         if graph.size() > 2 {
             let x = graph.size() - 2;
             let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
+            graph.execute(GraphCommand::AddEdge(x, y))?;
         }
 
         let proto = Proto { id: ID(id) };
@@ -381,12 +381,12 @@ impl Pipeline {
             "".into(),
             deps,
             Arc::new(Box::new(MiseExt::default())),
-        ));
+        ))?;
 
         if graph.size() > 2 {
             let x = graph.size() - 2;
             let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
+            graph.execute(GraphCommand::AddEdge(x, y))?;
         }
 
         let mise = Mise { id: ID(id) };
@@ -412,12 +412,12 @@ impl Pipeline {
             "".into(),
             deps,
             Arc::new(Box::new(EnvhubExt::default())),
-        ));
+        ))?;
 
         if graph.size() > 2 {
             let x = graph.size() - 2;
             let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
+            graph.execute(GraphCommand::AddEdge(x, y))?;
         }
 
         let envhub = Envhub { id: ID(id) };
@@ -426,7 +426,7 @@ impl Pipeline {
 
     async fn with_exec(&self, ctx: &Context<'_>, args: Vec<String>) -> Result<&Pipeline, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        common::with_exec(graph.clone(), args, Arc::new(Box::new(Runner::default())));
+        common::with_exec(graph.clone(), args, Arc::new(Box::new(Runner::default())))?;
         Ok(self)
     }
 
@@ -501,6 +501,18 @@ impl Pipeline {
     ) -> Result<&Pipeline, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         common::wait_on(graph.clone(), port, timeout)?;
+        Ok(self)
+    }
+
+    async fn with_secret_variable(
+        &self,
+        ctx: &Context<'_>,
+        name: String,
+        secret_id: ID,
+        secret_name: String,
+    ) -> Result<&Pipeline, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_secret_variable(graph.clone(), &name, &secret_id.to_string(), &secret_name)?;
         Ok(self)
     }
 }

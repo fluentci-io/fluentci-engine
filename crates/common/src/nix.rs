@@ -23,7 +23,7 @@ pub fn nix(graph: Arc<Mutex<Graph>>, reset: bool, args: NixArgs) -> Result<Nix, 
         "".into(),
         vec![],
         Arc::new(Box::new(NixExt::default())),
-    ));
+    ))?;
 
     let nix = Nix { id };
     Ok(nix)

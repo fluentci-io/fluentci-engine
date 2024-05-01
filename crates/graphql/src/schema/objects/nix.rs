@@ -41,7 +41,7 @@ impl Nix {
             graph.clone(),
             args,
             Arc::new(Box::new(NixExt::new(nix_args))),
-        );
+        )?;
         Ok(self)
     }
 
@@ -111,6 +111,18 @@ impl Nix {
     ) -> Result<&Nix, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         common::wait_on(graph.clone(), port, timeout)?;
+        Ok(self)
+    }
+
+    async fn with_secret_variable(
+        &self,
+        ctx: &Context<'_>,
+        name: String,
+        secret_id: ID,
+        secret_name: String,
+    ) -> Result<&Nix, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_secret_variable(graph.clone(), &name, &secret_id.to_string(), &secret_name)?;
         Ok(self)
     }
 }

@@ -36,12 +36,12 @@ impl Envhub {
             environment,
             deps,
             Arc::new(Box::new(EnvhubExt::default())),
-        ));
+        ))?;
 
         if graph.size() > 2 {
             let x = graph.size() - 2;
             let y = graph.size() - 1;
-            graph.execute(GraphCommand::AddEdge(x, y));
+            graph.execute(GraphCommand::AddEdge(x, y))?;
         }
 
         Ok(self)
@@ -53,7 +53,7 @@ impl Envhub {
             graph.clone(),
             args,
             Arc::new(Box::new(EnvhubExt::default())),
-        );
+        )?;
         Ok(self)
     }
 
@@ -132,6 +132,18 @@ impl Envhub {
     ) -> Result<&Envhub, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         common::wait_on(graph.clone(), port, timeout)?;
+        Ok(self)
+    }
+
+    async fn with_secret_variable(
+        &self,
+        ctx: &Context<'_>,
+        name: String,
+        secret_id: ID,
+        secret_name: String,
+    ) -> Result<&Envhub, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common::with_secret_variable(graph.clone(), &name, &secret_id.to_string(), &secret_name)?;
         Ok(self)
     }
 }

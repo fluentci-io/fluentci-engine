@@ -4,6 +4,7 @@ use self::{
     cache::CacheQuery, devbox::DevboxQuery, devenv::DevenvQuery, directory::DirectoryQuery,
     file::FileQuery, flox::FloxQuery, git::GitQuery, http::HttpQuery, mise::MiseQuery,
     nix::NixQuery, pipeline::PipelineQuery, pixi::PixiQuery, pkgx::PkgxQuery, proto::ProtoQuery,
+    secrets::SecretsQuery,
 };
 
 pub mod cache;
@@ -40,4 +41,5 @@ pub struct Query(
     MiseQuery,
     PixiQuery,
     ProtoQuery,
+    SecretsQuery,
 );

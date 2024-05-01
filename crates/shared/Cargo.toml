@@ -12,11 +12,13 @@ version = "0.1.9"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.82"
 extism = "1.2.0"
 extism-pdk = "1.1.0"
 fluentci-common = {path = "../common", version = "0.1.8"}
 fluentci-core = {path = "../core", version = "0.2.1"}
 fluentci-ext = {path = "../ext", version = "0.2.0"}
+fluentci-secrets = {path = "../secrets", version = "0.1.0"}
 fluentci-types = {path = "../types", version = "0.1.6"}
 serde = {version = "1.0.197", features = ["serde_derive", "derive"]}
 uuid = {version = "1.8.0", features = [

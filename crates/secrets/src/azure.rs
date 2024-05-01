@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use azure_core::auth::TokenCredential;
 use azure_identity::{
     ClientSecretCredential, DefaultAzureCredentialBuilder, TokenCredentialOptions,
@@ -7,6 +8,7 @@ use azure_identity::{
 use azure_security_keyvault::prelude::*;
 use futures::future::try_join_all;
 use futures::stream::StreamExt;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 
@@ -15,18 +17,18 @@ use super::{
     Vault, VaultConfig,
 };
 
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct AzureConfig {
-    enabled: bool,
-    credential: AzureCredential,
-    azure_keyvault_name: Option<String>,
-    azure_keyvault_url: Option<String>,
+    pub credential: AzureCredential,
+    pub azure_keyvault_name: Option<String>,
+    pub azure_keyvault_url: Option<String>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct AzureCredential {
-    azure_tenant_id: Option<String>,
-    azure_client_id: Option<String>,
-    azure_client_secret: Option<String>,
+    pub azure_tenant_id: Option<String>,
+    pub azure_client_id: Option<String>,
+    pub azure_client_secret: Option<String>,
 }
 
 #[derive(Error, Debug)]
@@ -96,7 +98,7 @@ impl AzureConfig {
             Ok(format!("https://{name}.vault.azure.net"))
         } else {
             Err(AzureError::WrongConfiguration(anyhow::Error::msg(
-                "configuration is invalid (Clap should not validate that)",
+                "configuration is invalid",
             )))
         }
     }
@@ -104,10 +106,6 @@ impl AzureConfig {
 
 impl VaultConfig for AzureConfig {
     type Vault = AzureVault;
-
-    fn is_enabled(&self) -> bool {
-        self.enabled
-    }
 
     fn into_vault(self) -> anyhow::Result<Self::Vault> {
         let kv_address = self.get_kv_address()?;
@@ -131,8 +129,8 @@ impl AzureVault {
     }
 }
 
+#[async_trait]
 impl Vault for AzureVault {
-    #[tokio::main]
     async fn download_prefixed(&self, prefix: &str) -> anyhow::Result<Vec<(String, String)>> {
         let client = self.get_client()?;
 
@@ -169,7 +167,6 @@ impl Vault for AzureVault {
         Ok(from_kv)
     }
 
-    #[tokio::main]
     async fn download_json(&self, secret_name: &str) -> anyhow::Result<Vec<(String, String)>> {
         let client = self.get_client()?;
         let secret = client

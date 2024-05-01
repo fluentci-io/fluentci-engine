@@ -1,18 +1,19 @@
 use std::{collections::HashMap, path::PathBuf};
 
+use async_trait::async_trait;
 use futures::future::try_join_all;
 use reqwest::{self, StatusCode};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
 
 use super::{convert::as_valid_env_name, Vault, VaultConfig};
 
+#[derive(Serialize, Deserialize)]
 pub struct HashicorpVaultConfig {
-    enabled: bool,
-    vault_address: Option<String>,
-    vault_token: Option<String>,
-    vault_cacert: Option<PathBuf>,
+    pub vault_address: Option<String>,
+    pub vault_token: Option<String>,
+    pub vault_cacert: Option<PathBuf>,
 }
 
 #[derive(Error, Debug)]
@@ -51,10 +52,6 @@ pub struct HashicorpVault {
 impl VaultConfig for HashicorpVaultConfig {
     type Vault = HashicorpVault;
 
-    fn is_enabled(&self) -> bool {
-        self.enabled
-    }
-
     fn into_vault(self) -> anyhow::Result<Self::Vault> {
         Ok(Self::Vault {
             address: self.vault_address.unwrap(),
@@ -66,7 +63,7 @@ impl VaultConfig for HashicorpVaultConfig {
 
 impl HashicorpVault {
     async fn client(&self) -> Result<reqwest::Client, HashicorpVaultError> {
-        let mut builder = reqwest::Client::builder().user_agent("kvenv");
+        let mut builder = reqwest::Client::builder().user_agent("fluentci-engine");
 
         if let Some(path) = self.cacert.as_ref() {
             let mut buffer = Vec::new();
@@ -123,8 +120,8 @@ impl HashicorpVault {
     }
 }
 
+#[async_trait]
 impl Vault for HashicorpVault {
-    #[tokio::main]
     async fn download_prefixed(&self, prefix: &str) -> anyhow::Result<Vec<(String, String)>> {
         let client = self.client().await?;
 
@@ -155,7 +152,6 @@ impl Vault for HashicorpVault {
         Ok(env_values)
     }
 
-    #[tokio::main]
     async fn download_json(&self, secret_name: &str) -> anyhow::Result<Vec<(String, String)>> {
         let client = self.client().await?;
         let result = self.get_single_key(&client, secret_name).await?;

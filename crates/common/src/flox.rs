@@ -23,7 +23,7 @@ pub fn flox(graph: Arc<Mutex<Graph>>, reset: bool) -> Result<Flox, Error> {
         "".into(),
         vec![],
         Arc::new(Box::new(FloxExt::default())),
-    ));
+    ))?;
 
     let flox = Flox { id };
     Ok(flox)

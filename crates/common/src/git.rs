@@ -43,7 +43,7 @@ pub fn git(graph: Arc<Mutex<Graph>>, url: String, reset: bool) -> Result<Git, Er
         url.clone(),
         vec![],
         Arc::new(Box::new(GitExt::default())),
-    ));
+    ))?;
     graph.execute_vertex(&id)?;
     graph.work_dir = format!(
         "{}/{}",
@@ -72,13 +72,13 @@ pub fn branch(graph: Arc<Mutex<Graph>>, name: String) -> Result<(), Error> {
         name,
         deps,
         Arc::new(Box::new(GitCheckoutExt::default())),
-    ));
+    ))?;
     graph.execute_vertex(&id)?;
 
     if graph.size() > 2 {
         let x = graph.size() - 2;
         let y = graph.size() - 1;
-        graph.execute(GraphCommand::AddEdge(x, y));
+        graph.execute(GraphCommand::AddEdge(x, y))?;
     }
     Ok(())
 }
@@ -101,12 +101,12 @@ pub fn commit(graph: Arc<Mutex<Graph>>) -> Result<String, Error> {
         "".into(),
         deps,
         Arc::new(Box::new(GitLastCommitExt::default())),
-    ));
+    ))?;
 
     if graph.size() > 2 {
         let x = graph.size() - 2;
         let y = graph.size() - 1;
-        graph.execute(GraphCommand::AddEdge(x, y));
+        graph.execute(GraphCommand::AddEdge(x, y))?;
     }
 
     graph.execute_vertex(&id)
@@ -124,11 +124,11 @@ pub fn tree(graph: Arc<Mutex<Graph>>) -> Result<Directory, Error> {
         "".into(),
         vec![dep_id],
         Arc::new(Box::new(RunnerExt::default())),
-    ));
+    ))?;
 
     let x = graph.size() - 2;
     let y = graph.size() - 1;
-    graph.execute(GraphCommand::AddEdge(x, y));
+    graph.execute(GraphCommand::AddEdge(x, y))?;
     graph.runner = Arc::new(Box::new(RunnerExt::default()));
 
     let path = graph.work_dir.clone();
@@ -137,7 +137,7 @@ pub fn tree(graph: Arc<Mutex<Graph>>) -> Result<Directory, Error> {
         id.clone(),
         "directory".into(),
         path.clone(),
-    ));
+    ))?;
 
     let directory = Directory { id, path };
 

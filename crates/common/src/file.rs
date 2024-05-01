@@ -42,13 +42,13 @@ pub fn file(graph: Arc<Mutex<Graph>>, path: String, reset: bool) -> Result<File,
         path.clone(),
         vec![],
         Arc::new(Box::new(Runner::default())),
-    ));
+    ))?;
 
     graph.execute(GraphCommand::AddVolume(
         id.clone(),
         "file".into(),
         path.clone(),
-    ));
+    ))?;
 
     let file = File { id, path };
     Ok(file)
@@ -68,11 +68,11 @@ pub fn md5(graph: Arc<Mutex<Graph>>, path: String) -> Result<String, Error> {
         path.clone(),
         vec![dep_id],
         Arc::new(Box::new(Md5Ext::default())),
-    ));
+    ))?;
 
     let x = graph.size() - 2;
     let y = graph.size() - 1;
-    graph.execute(GraphCommand::AddEdge(x, y));
+    graph.execute(GraphCommand::AddEdge(x, y))?;
 
     let hash = graph.execute_vertex(&id)?;
     Ok(hash)
@@ -92,11 +92,11 @@ pub fn sha256(graph: Arc<Mutex<Graph>>, path: String) -> Result<String, Error> {
         path.clone(),
         vec![dep_id],
         Arc::new(Box::new(Sha256Ext::default())),
-    ));
+    ))?;
 
     let x = graph.size() - 2;
     let y = graph.size() - 1;
-    graph.execute(GraphCommand::AddEdge(x, y));
+    graph.execute(GraphCommand::AddEdge(x, y))?;
 
     let hash = graph.execute_vertex(&id)?;
     Ok(hash)
@@ -120,11 +120,11 @@ pub fn tar_xzvf(
         path.clone(),
         vec![dep_id],
         Arc::new(Box::new(TarXzvfExt::default())),
-    ));
+    ))?;
 
     let x = graph.size() - 2;
     let y = graph.size() - 1;
-    graph.execute(GraphCommand::AddEdge(x, y));
+    graph.execute(GraphCommand::AddEdge(x, y))?;
 
     let output_dir = match output_dir {
         Some(dir) => dir,
@@ -147,7 +147,7 @@ pub fn tar_xzvf(
         id,
         "directory".into(),
         dir.path.clone(),
-    ));
+    ))?;
 
     Ok(dir)
 }
@@ -170,11 +170,11 @@ pub fn unzip(
         path.clone(),
         vec![dep_id],
         Arc::new(Box::new(UnzipExt::default())),
-    ));
+    ))?;
 
     let x = graph.size() - 2;
     let y = graph.size() - 1;
-    graph.execute(GraphCommand::AddEdge(x, y));
+    graph.execute(GraphCommand::AddEdge(x, y))?;
 
     let output_dir = match output_dir {
         Some(dir) => dir,
@@ -197,7 +197,7 @@ pub fn unzip(
         id,
         "directory".into(),
         dir.path.clone(),
-    ));
+    ))?;
 
     Ok(dir)
 }
@@ -216,11 +216,11 @@ pub fn chmod(graph: Arc<Mutex<Graph>>, path: String, mode: String) -> Result<Fil
         format!("chmod {} {}", mode, path),
         vec![dep_id],
         Arc::new(Box::new(Runner::default())),
-    ));
+    ))?;
 
     let x = graph.size() - 2;
     let y = graph.size() - 1;
-    graph.execute(GraphCommand::AddEdge(x, y));
+    graph.execute(GraphCommand::AddEdge(x, y))?;
 
     graph.execute_vertex(&id)?;
 
