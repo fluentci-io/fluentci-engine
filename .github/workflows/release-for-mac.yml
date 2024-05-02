@@ -14,8 +14,6 @@ jobs:
           - aarch64-apple-darwin
 
     steps:
-      - name: Setup Fluent CI CLI
-        uses: fluentci-io/setup-fluentci@v4
       - name: Installing needed dependencies
         run: brew install protobuf sccache
       - name: Checking out sources
