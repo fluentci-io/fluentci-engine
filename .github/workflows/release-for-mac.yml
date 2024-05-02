@@ -18,25 +18,18 @@ jobs:
         uses: fluentci-io/setup-fluentci@v4
       - name: Installing needed dependencies
         run: brew install protobuf sccache
-      - name: Installing Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
       - name: Checking out sources
         uses: actions/checkout@v1
-      - name: Running cargo build
-        uses: actions-rs/cargo@v1
+      - name: Setup Fluent CI
+        uses: fluentci-io/setup-fluentci@v5
         with:
-          command: build
-          toolchain: stable
-          args: --release --target ${{ matrix.target }}
+          wasm: true
+          pipeline: rust
+          args: |
+            target_add aarch64-apple-darwin
+            build --release --target ${{ matrix.target }}
         env:
           RUSTC_WRAPPER: /usr/local/bin/sccache
-      - name: Install aarch64-apple-darwin toolchain
-        if: matrix.target == 'aarch64-apple-darwin'
-        run: rustup target add aarch64-apple-darwin
       - name: Set env
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: Packaging final binary
@@ -50,7 +43,7 @@ jobs:
         run: |
           for ext in tar.gz tar.gz.sha256; do
             export FILE=fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.$ext
-            fluentci run github_pipeline release_upload
+            fluentci run --wasm github release_upload $TAG $FILE
           done
         env:
           TAG: ${{ env.RELEASE_VERSION }}
