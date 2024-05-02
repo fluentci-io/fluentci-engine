@@ -122,6 +122,76 @@ Creates a pixi environment.
 
 **type**: [Pixi](#pixi-1)
 
+### googleCloudSecretManager
+
+Set up Google Cloud Secret Manager Client
+
+**type**: [SecretManager!](#secretmanager)
+
+**Arguments for `googleCloudSecretManager`**
+
+| Name    | type        | Description  |
+| ------- | ----------- | ------------ |
+| project    | [String](https://spec.graphql.org/October2021/#sec-String)! | Google Cloud Project name |
+| googleCredentialsFile | [String](https://spec.graphql.org/October2021/#sec-String)! | Path to the Google Credentials file |
+
+### awsSecretsManager
+
+Set up AWS Secrets Manager Client
+
+**type**: [SecretManager!](#secretmanager)
+
+**Arguments for `awsSecretsManager`**
+
+| Name            | type                                                        |
+| --------------- | ----------------------------------------------------------- |
+| region          | [String](https://spec.graphql.org/October2021/#sec-String)! |
+| accessKeyId     | [String](https://spec.graphql.org/October2021/#sec-String)! |
+| secretAccessKey | [String](https://spec.graphql.org/October2021/#sec-String)! |
+
+### azureKeyvault
+
+Set up Azure Key Vault Client
+
+**type**: [SecretManager!](#secretmanager)
+
+**Arguments for `azureKeyvault`**
+
+| Name            | type                                                        |
+| --------------- | ----------------------------------------------------------- |
+| clientId          | [String](https://spec.graphql.org/October2021/#sec-String)! |
+| clientSecret     | [String](https://spec.graphql.org/October2021/#sec-String)! |
+| tenantId | [String](https://spec.graphql.org/October2021/#sec-String)! |
+| keyvaultName | [String](https://spec.graphql.org/October2021/#sec-String)! |
+| keyvaultUrl | [String](https://spec.graphql.org/October2021/#sec-String)! |
+
+### hashicorpVault
+
+Set up HashiCorp Vault Client
+
+**type**: [SecretManager!](#secretmanager)
+
+**Arguments for `hashicorpVault`**
+
+| Name      | type                                                        |
+| --------- | ----------------------------------------------------------- |
+| address   | [String](https://spec.graphql.org/October2021/#sec-String)! |
+| token     | [String](https://spec.graphql.org/October2021/#sec-String)! |
+| cacerts   | [String](https://spec.graphql.org/October2021/#sec-String)  |
+
+### setSecret
+
+Create a new Secret
+
+**type**: [Secret!](#secret)
+
+**Arguments for `setSecret`**
+
+| Name      | type                                                        |
+| --------- | ----------------------------------------------------------- |
+| name   | [String](https://spec.graphql.org/October2021/#sec-String)! |
+| value   | [String](https://spec.graphql.org/October2021/#sec-String)! |
+
 ## Objects
 
 [Objects](https://spec.graphql.org/June2018/#sec-Objects) in GraphQL represent the resources you can access. An object can contain a list of fields, which are specifically typed.
@@ -150,6 +220,10 @@ Fields of the Devbox object:
 | withFile    |  path: `String!`, fileId: `ID!` | [Devbox](#devbox-1) | Add file at the specified path.            |
 | withExec    |  args: `[String!]!` | [Devbox](#devbox-1) | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Devbox](#devbox-1) | Set the working directory.          |
+| withEnvVariable |  name: `String!`, value: `String!`     | [Devbox](#devbox-1) | Add an Environment Variable          |
+| withSecretVariable |  name: `String!`, secret: `ID!`     | [Devbox](#devbox-1) | Add an Secret Variable          |
+| asService | name: `String!` | [Service](#service) | Convert into a Service |
+| waitOn | port: `Int!`, timeout: `Int` | [Devbox](#devbox-1) | Wait on a service at a specific port to be ready |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -164,6 +238,10 @@ Fields of the Devenv object:
 | withFile    |  path: `String!`, fileId: `ID!` | [Devenv](#devenv-1) | Add file at the specified path.            |
 | withExec    |  args: `[String!]!` | [Devenv](#devenv-1) | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Devenv](#devenv-1) | Set the working directory.          |
+| withEnvVariable |  name: `String!`, value: `String!`     | [Devenv](#devenv-1) | Add an Environment Variable          |
+| withSecretVariable |  name: `String!`, secret: `ID!`     | [Devenv](#devenv-1) | Add an Secret Variable          |
+| asService | name: `String!` | [Service](#service) | Convert into a Service |
+| waitOn | port: `Int!`, timeout: `Int` | [Devbox](#devbox-1) | Wait on a service at a specific port to be ready |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)           | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -190,8 +268,12 @@ Fields of the Directory object:
 | withWorkdir  | path: String!           | [Directory](#directory-1)       | Change the work directory  |
 | tarCzvf     |                     | [File](#file-1)              | Compress the directory to a tar gzip archive. |
 | zip          |                    | [File](#file-1)              | Compress the directory to a zip archive.      |
-| withExec    |  args: `[String!]!`    | [Envhub](#envhub)   | Add command to execute.             |
-| withWorkdir |  path: `String!`        | [Envhub](#envhub)   | Set the working directory.          |
+| withExec    |  args: `[String!]!`    | [Directory](#directory)   | Add command to execute.             |
+| withWorkdir |  path: `String!`        | [Directory](#directory)   | Set the working directory.          |
+| withEnvVariable |  name: `String!`, value: `String!`     | [Directory](#directory) | Add an Environment Variable          |
+| withSecretVariable |  name: `String!`, secret: `ID!`     | [Directory](#directory) | Add an Secret Variable          |
+| asService | name: `String!` | [Service](#service) | Convert into a Service |
+| waitOn | port: `Int!`, timeout: `Int` | [Directory](#directory) | Wait on a service at a specific port to be ready |
 | stdout      |                        | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
 | stderr      |                        | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -207,6 +289,10 @@ Fields of the Envhub object:
 | withFile    |  path: `String!`, fileId: `ID!` | [Envhub](#envhub) | Add file at the specified path.            |
 | withExec    |  args: `[String!]!`    | [Envhub](#envhub)   | Add command to execute.             |
 | withWorkdir |  path: `String!`        | [Envhub](#envhub)   | Set the working directory.          |
+| withEnvVariable |  name: `String!`, value: `String!`     | [Envhub](#envhub) | Add an Environment Variable          |
+| withSecretVariable |  name: `String!`, secret: `ID!`     | [Envhub](#envhub) | Add an Secret Variable          |
+| asService | name: `String!` | [Service](#service) | Convert into a Service |
+| waitOn | port: `Int!`, timeout: `Int` | [Envhub](#envhub) | Wait on a service at a specific port to be ready |
 | stdout      |                        | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
 | stderr      |                        | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -236,6 +322,10 @@ Fields of the Flox object:
 | withFile    |  path: `String!`, fileId: `ID!` | [Flox](#flox-1) | Add file at the specified path.            |
 | withExec    |  args: `[String!]!` | [Flox](#flox-1)     | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Flox](#flox-1)     | Set the working directory.          |
+| withEnvVariable |  name: `String!`, value: `String!`     | [Flox](#flox-1) | Add an Environment Variable          |
+| withSecretVariable |  name: `String!`, secret: `ID!`     | [Flox](#flox-1) | Add an Secret Variable          |
+| asService | name: `String!` | [Service](#service) | Convert into a Service |
+| waitOn | port: `Int!`, timeout: `Int` | [Flox](#flox-1) | Wait on a service at a specific port to be ready |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)           | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -262,6 +352,10 @@ Fields of the Mise object:
 | withFile    |  path: `String!`, fileId: `ID!` | [Mise](#mise-1) | Add file at the specified path.            |
 | withExec    |  args: `[String!]!` | [Mise](#mise-1)     | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Mise](#mise-1)     | Set the working directory.          |
+| withEnvVariable |  name: `String!`, value: `String!`     | [Mise](#mise-1) | Add an Environment Variable          |
+| withSecretVariable |  name: `String!`, secret: `ID!`     | [Mise](#mise-1) | Add an Secret Variable          |
+| asService | name: `String!` | [Service](#service) | Convert into a Service |
+| waitOn | port: `Int!`, timeout: `Int` | [Mise](#mise-1) | Wait on a service at a specific port to be ready |
 | stdout      |                     |[String](https://spec.graphql.org/October2021/#sec-String)           | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)          | Get the standard error output.      |
 
@@ -276,6 +370,10 @@ Fields of the Nix object:
 | withFile    |  path: `String!`, fileId: `ID!` | [Nix](#nix-1) | Add file at the specified path.            |
 | withExec    |  args: `[String!]!` | [Nix](#nix-1) | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Nix](#nix-1) | Set the working directory.          |
+| withEnvVariable |  name: `String!`, value: `String!`     | [Nix](#nix-1) | Add an Environment Variable          |
+| withSecretVariable |  name: `String!`, secret: `ID!`     | [Nix](#nix-1) | Add an Secret Variable          |
+| asService | name: `String!` | [Service](#service) | Convert into a Service |
+| waitOn | port: `Int!`, timeout: `Int` | [Nix](#nix-1) | Wait on a service at a specific port to be ready |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -290,9 +388,12 @@ Fields of the Pipeline object:
 | withFile    |  path: `String!`, fileId: `ID!` | [Pipeline](#pipeline-1) | Add file at the specified path.            |
 | withExec    |  args: `[String!]!` | [Pipeline](#pipeline-1) | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Pipeline](#pipeline-1) | Set the working directory.          |
+| withEnvVariable |  name: `String!`, value: `String!`     | [Pipeline](#pipeline-1) | Add an Environment Variable          |
+| withSecretVariable |  name: `String!`, secret: `ID!`     | [Pipeline](#pipeline-1) | Add an Secret Variable          |
+| asService | name: `String!` | [Service](#service) | Convert into a Service |
+| waitOn | port: `Int!`, timeout: `Int` | [Pipeline](#pipeline-1) | Wait on a service at a specific port to be ready |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)           | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
-
 
 ### Pixi
 
@@ -305,6 +406,10 @@ Fields of the Pixi object:
 | withFile    |  path: `String!`, fileId: `ID!` | [Pixi](#pixi-1) | Add file at the specified path.            |
 | withExec    |  args: `[String!]!` | [Pixi](#pixi-1) | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Pixi](#pixi-1) | Set the working directory.          |
+| withEnvVariable |  name: `String!`, value: `String!`     | [Pixi](#pixi-1) | Add an Environment Variable          |
+| withSecretVariable |  name: `String!`, secret: `ID!`     | [Pixi](#pixi-1) | Add an Secret Variable          |
+| asService | name: `String!` | [Service](#service) | Convert into a Service |
+| waitOn | port: `Int!`, timeout: `Int` | [Pixi](#pixi-1) | Wait on a service at a specific port to be ready |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
 
@@ -319,5 +424,37 @@ Fields of the Pixi object:
 | withFile    |  path: `String!`, fileId: `ID!` | [Pkgx](#pkgx-1) | Add file at the specified path.            |
 | withExec    |  args: `[String!]!` | [Pkgx](#pkgx-1)     | Add command to execute.             |
 | withWorkdir |  path: `String!`     | [Pkgx](#pkgx-1)     | Set the working directory.          |
+| withEnvVariable |  name: `String!`, value: `String!`     | [Pkgx](#pkgx-1) | Add an Environment Variable          |
+| withSecretVariable |  name: `String!`, secret: `ID!`     | [Pkgx](#pkgx-1) | Add an Secret Variable          |
+| asService | name: `String!` | [Service](#service) | Convert into a Service |
+| waitOn | port: `Int!`, timeout: `Int` | [Pkgx](#pkgx-1) | Wait on a service at a specific port to be ready |
 | stdout      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard output.            |
 | stderr      |                     | [String](https://spec.graphql.org/October2021/#sec-String)            | Get the standard error output.      |
+
+### Secret
+
+Fields of the Secret object:
+
+| Name        | Arguments           | Type                | Description                         |
+| ----------- | ------------------- |-------------------- | ----------------------------------- |
+| id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)                | Unique identifier.                  |
+| plaintext  |                        | `String!`   | The value of the secret in plain text |
+| name       |                       | `String!`  | The name of the secret |
+| mount      |            | The mount point of the secret |
+
+### Service
+
+Fields of the Service:
+
+| Name        | Arguments           | Type                | Description                         |
+| ----------- | ------------------- |-------------------- | ----------------------------------- |
+| id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)                | Unique identifier.                  |
+
+### SecretManager
+
+Fields of the SecretManager object:
+
+| Name        | Arguments           | Type                | Description                         |
+| ----------- | ------------------- |-------------------- | ----------------------------------- |
+| id          |                     | [ID](https://spec.graphql.org/October2021/#sec-ID)                | Unique identifier.                  |
+| getSecret   | name: `String` | `[Secret!]!` | Download secrets from the Secret Provider |
