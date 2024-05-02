@@ -13,5 +13,5 @@ version = "0.2.0"
 
 [dependencies]
 extism-pdk = "1.1.0"
-fluentci-types = {path = "../types", version = "0.1.6"}
+fluentci-types = {path = "../types", version = "0.1.7"}
 serde = {version = "1.0.197", features = ["serde_derive", "derive"]}
