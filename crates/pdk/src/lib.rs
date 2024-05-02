@@ -1,6 +1,8 @@
 use extism_pdk::*;
-use fluentci_types::{nix::NixArgs, Module};
+use fluentci_types::{nix::NixArgs, secret::*, Module};
 use proto::Proto;
+use secret::Secret;
+use secret_manager::SecretManager;
 
 use self::{
     cache::Cache, devbox::Devbox, directory::Directory, envhub::Envhub, file::File, flox::Flox,
@@ -21,6 +23,8 @@ pub mod pipeline;
 pub mod pixi;
 pub mod pkgx;
 pub mod proto;
+pub mod secret;
+pub mod secret_manager;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -45,6 +49,8 @@ extern "ExtismHost" {
     fn get_os() -> String;
     fn get_arch() -> String;
     fn call(opts: Json<Module>) -> String;
+    fn add_secretmanager(provider: Json<Provider>) -> String;
+    fn set_secret(params: Json<Vec<String>>) -> String;
 }
 
 pub struct Client {}
@@ -142,5 +148,79 @@ impl Client {
                 args: args.join(" "),
             }))
         }
+    }
+
+    pub fn google_secret_manager(
+        &self,
+        project: &str,
+        google_credentials_file: &str,
+    ) -> Result<SecretManager, Error> {
+        let provider = Provider::Google(GoogleConfig {
+            google_project: Some(project.to_string()),
+            google_credentials_file: Some(google_credentials_file.into()),
+            ..Default::default()
+        });
+        let id = unsafe { add_secretmanager(Json(provider))? };
+        Ok(SecretManager { id })
+    }
+
+    pub fn aws_secrets_manager(
+        &self,
+        region: &str,
+        access_key_id: &str,
+        secret_access_key: &str,
+    ) -> Result<SecretManager, Error> {
+        let provider = Provider::Aws(AwsConfig {
+            aws_region: region.into(),
+            aws_access_key_id: Some(access_key_id.to_string()),
+            aws_secret_access_key: Some(secret_access_key.to_string()),
+        });
+        let id = unsafe { add_secretmanager(Json(provider))? };
+        Ok(SecretManager { id })
+    }
+
+    pub fn azure_keyvault(
+        &self,
+        client_id: &str,
+        client_secret: &str,
+        tenant_id: &str,
+        keyvault_name: &str,
+        keyvault_url: &str,
+    ) -> Result<SecretManager, Error> {
+        let provider = Provider::Azure(AzureConfig {
+            credential: AzureCredential {
+                azure_client_id: Some(client_id.to_string()),
+                azure_client_secret: Some(client_secret.to_string()),
+                azure_tenant_id: Some(tenant_id.to_string()),
+            },
+            azure_keyvault_name: Some(keyvault_name.to_string()),
+            azure_keyvault_url: Some(keyvault_url.to_string()),
+        });
+        let id = unsafe { add_secretmanager(Json(provider))? };
+        Ok(SecretManager { id })
+    }
+
+    pub fn hashicorp_vault(
+        &self,
+        address: &str,
+        token: &str,
+        cacert: Option<&str>,
+    ) -> Result<SecretManager, Error> {
+        let provider = Provider::Hashicorp(HashicorpVaultConfig {
+            vault_address: Some(address.to_string()),
+            vault_token: Some(token.to_string()),
+            vault_cacert: cacert.map(|x| x.into()),
+        });
+        let id = unsafe { add_secretmanager(Json(provider))? };
+        Ok(SecretManager { id })
+    }
+
+    pub fn set_secret(&self, name: &str, value: &str) -> Result<Secret, Error> {
+        let id = unsafe { set_secret(Json(vec![name.into(), value.into()]))? };
+        Ok(Secret {
+            id,
+            name: name.into(),
+            mount: "default".into(),
+        })
     }
 }

@@ -140,11 +140,10 @@ const queries = [
   "proto",
 ];
 
-const engine = await dag
+const engine = dag
   .pipeline("fluentci-service")
   .withExec(["fluentci-engine", "serve"])
-  .asService("fluentci-engine")
-  .id();
+  .asService("fluentci-engine");
 
 let query = dag
   .pkgx()

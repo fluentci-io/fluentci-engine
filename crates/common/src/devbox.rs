@@ -23,7 +23,7 @@ pub fn devbox(graph: Arc<Mutex<Graph>>, reset: bool) -> Result<Devbox, Error> {
         "".into(),
         vec![],
         Arc::new(Box::new(DevboxExt::default())),
-    ));
+    ))?;
 
     let devbox = Devbox { id };
     Ok(devbox)

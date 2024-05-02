@@ -47,6 +47,11 @@ declare const Host: {
     as_service: (ptr: I64) => I64;
     with_service: (ptr: I64) => void;
     wait_on: (ptr: I64) => void;
+    add_secretmanager: (ptr: I64) => I64;
+    get_secret: (ptr: I64) => I64;
+    set_secret: (ptr: I64) => I64;
+    with_secret_variable: (ptr: I64) => void;
+    get_secret_plaintext: (ptr: I64) => I64;
   };
 };
 
@@ -93,6 +98,11 @@ export const call: (ptr: I64) => I64 = fn.call;
 export const as_service: (ptr: I64) => I64 = fn.as_service;
 export const with_service: (ptr: I64) => void = fn.with_service;
 export const wait_on: (ptr: I64) => void = fn.wait_on;
+export const add_secretmanager: (ptr: I64) => I64 = fn.add_secretmanager;
+export const get_secret: (ptr: I64) => I64 = fn.get_secret;
+export const set_secret: (ptr: I64) => I64 = fn.set_secret;
+export const with_secret_variable: (ptr: I64) => void = fn.with_secret_variable;
+export const get_secret_plaintext: (ptr: I64) => I64 = fn.get_secret_plaintext;
 
 export interface NixArgs {
   impure?: boolean;
@@ -430,6 +440,123 @@ export class Client extends BaseClient {
     const offset = call(mem.offset);
     return Memory.find(offset).readString();
   };
+
+  googleCloudSecretManager = (
+    project: string,
+    googleCredentialsFile: string
+  ): SecretManager => {
+    const mem = Memory.fromJsonObject({
+      google_project: project,
+      google_credentials_file: googleCredentialsFile,
+    });
+    const offset = add_secretmanager(mem.offset);
+    const { id } = Memory.find(offset).readJsonObject();
+    return new SecretManager({ id });
+  };
+
+  awsSecretsManager = (
+    region: string,
+    accessKeyId: string,
+    secretAccessKey: string
+  ): SecretManager => {
+    const mem = Memory.fromJsonObject({
+      aws_region: region,
+      aws_access_key_id: accessKeyId,
+      aws_secret_access_key: secretAccessKey,
+    });
+    const offset = add_secretmanager(mem.offset);
+    const { id } = Memory.find(offset).readJsonObject();
+    return new SecretManager({ id });
+  };
+
+  azureKeyvault = (
+    clientId: string,
+    clientSecret: string,
+    tenantId: string,
+    keyvaultName: string,
+    keyvaultUrl: string
+  ): SecretManager => {
+    const mem = Memory.fromJsonObject({
+      azure_client_id: clientId,
+      azure_client_secret: clientSecret,
+      azure_tenant_id: tenantId,
+      azure_keyvault_name: keyvaultName,
+      azure_keyvault_url: keyvaultUrl,
+    });
+    const offset = add_secretmanager(mem.offset);
+    const { id } = Memory.find(offset).readJsonObject();
+    return new SecretManager({ id });
+  };
+
+  hashicorpVault = (
+    address: string,
+    token: string,
+    cacerts: string
+  ): SecretManager => {
+    const mem = Memory.fromJsonObject({
+      vault_address: address,
+      vault_token: token,
+      vault_cacerts: cacerts,
+    });
+    const offset = add_secretmanager(mem.offset);
+    const { id } = Memory.find(offset).readJsonObject();
+    return new SecretManager({ id });
+  };
+
+  setSecret = (name: string, value: string): Secret => {
+    const mem = Memory.fromJsonObject([name, value]);
+    const offset = set_secret(mem.offset);
+    const id = Memory.find(offset).readString();
+    return new Secret({ id });
+  };
+}
+
+export class SecretManager extends BaseClient {
+  private _id?: string;
+
+  constructor({ id }: { id: string }) {
+    super();
+    this._id = id;
+  }
+
+  id = (): string => {
+    return this._id!;
+  };
+
+  getSecret = (name: string): Secret[] => {
+    const mem = Memory.fromString(name);
+    const offset = get_secret(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response;
+  };
+}
+
+export class Secret extends BaseClient {
+  private _id?: string;
+  private _plaintext?: string;
+  private _name?: string;
+  private _mount?: string;
+
+  constructor({ id }: { id: string }) {
+    super();
+    this._id = id;
+  }
+
+  id = (): string => {
+    return this._id!;
+  };
+
+  plaintext = (): string => {
+    return this._plaintext!;
+  };
+
+  name = (): string => {
+    return this._name!;
+  };
+
+  mount = (): string => {
+    return this._mount!;
+  };
 }
 
 /**
@@ -594,6 +721,16 @@ export class Devbox extends BaseClient {
     return this;
   };
 
+  withSecretVariable = (
+    name: string,
+    secretId: string,
+    secretName: string
+  ): Devbox => {
+    const mem = Memory.fromJsonObject([name, secretId, secretName]);
+    with_secret_variable(mem.offset);
+    return this;
+  };
+
   /**
    * Returns the stdout of the last executed command
    * ```ts
@@ -615,8 +752,7 @@ export class Devbox extends BaseClient {
    * @returns {string}
    */
   stderr = (): string => {
-    let offset = stderr();
-
+    const offset = stderr();
     return Memory.find(offset).readString();
   };
 }
@@ -754,6 +890,16 @@ export class Devenv extends BaseClient {
       [name]: value,
     });
     set_envs(mem.offset);
+    return this;
+  };
+
+  withSecretVariable = (
+    name: string,
+    secretId: string,
+    secretName: string
+  ): Devenv => {
+    const mem = Memory.fromJsonObject([name, secretId, secretName]);
+    with_secret_variable(mem.offset);
     return this;
   };
 
@@ -1119,6 +1265,16 @@ export class Directory extends BaseClient {
     return this;
   };
 
+  withSecretVariable = (
+    name: string,
+    secretId: string,
+    secretName: string
+  ): Directory => {
+    const mem = Memory.fromJsonObject([name, secretId, secretName]);
+    with_secret_variable(mem.offset);
+    return this;
+  };
+
   /**
    * Returns the stdout of the last executed command
    * ```ts
@@ -1417,6 +1573,16 @@ export class Flox extends BaseClient {
     return this;
   };
 
+  withSecretVariable = (
+    name: string,
+    secretId: string,
+    secretName: string
+  ): Flox => {
+    const mem = Memory.fromJsonObject([name, secretId, secretName]);
+    with_secret_variable(mem.offset);
+    return this;
+  };
+
   /**
    * Create file at the given path
    * ```ts
@@ -1658,6 +1824,16 @@ export class Nix extends BaseClient {
       [name]: value,
     });
     set_envs(mem.offset);
+    return this;
+  };
+
+  withSecretVariable = (
+    name: string,
+    secretId: string,
+    secretName: string
+  ): Nix => {
+    const mem = Memory.fromJsonObject([name, secretId, secretName]);
+    with_secret_variable(mem.offset);
     return this;
   };
 
@@ -1942,6 +2118,16 @@ export class Pipeline extends BaseClient {
     return this;
   };
 
+  withSecretVariable = (
+    name: string,
+    secretId: string,
+    secretName: string
+  ): Pipeline => {
+    const mem = Memory.fromJsonObject([name, secretId, secretName]);
+    with_secret_variable(mem.offset);
+    return this;
+  };
+
   /**
    * Create file at the given path
    * ```ts
@@ -2106,6 +2292,16 @@ export class Pkgx extends BaseClient {
       [name]: value,
     });
     set_envs(mem.offset);
+    return this;
+  };
+
+  withSecretVariable = (
+    name: string,
+    secretId: string,
+    secretName: string
+  ): Pkgx => {
+    const mem = Memory.fromJsonObject([name, secretId, secretName]);
+    with_secret_variable(mem.offset);
     return this;
   };
 
@@ -2282,6 +2478,16 @@ export class Pixi extends BaseClient {
     return this;
   };
 
+  withSecretVariable = (
+    name: string,
+    secretId: string,
+    secretName: string
+  ): Pixi => {
+    const mem = Memory.fromJsonObject([name, secretId, secretName]);
+    with_secret_variable(mem.offset);
+    return this;
+  };
+
   /**
    * Create file at the given path
    * ```ts
@@ -2438,6 +2644,16 @@ export class Mise extends BaseClient {
       [name]: value,
     });
     set_envs(mem.offset);
+    return this;
+  };
+
+  withSecretVariable = (
+    name: string,
+    secretId: string,
+    secretName: string
+  ): Mise => {
+    const mem = Memory.fromJsonObject([name, secretId, secretName]);
+    with_secret_variable(mem.offset);
     return this;
   };
 
@@ -2616,6 +2832,16 @@ export class Envhub extends BaseClient {
       [name]: value,
     });
     set_envs(mem.offset);
+    return this;
+  };
+
+  withSecretVariable = (
+    name: string,
+    secretId: string,
+    secretName: string
+  ): Envhub => {
+    const mem = Memory.fromJsonObject([name, secretId, secretName]);
+    with_secret_variable(mem.offset);
     return this;
   };
 

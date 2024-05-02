@@ -99,6 +99,29 @@ pub fn call(module: &str, command: &str) {
         .with_function("as_service", [PTR], [PTR], user_data.clone(), as_service)
         .with_function("with_service", [PTR], [], user_data.clone(), with_service)
         .with_function("wait_on", [PTR], [], user_data.clone(), wait_on)
+        .with_function(
+            "add_secretmanager",
+            [PTR],
+            [PTR],
+            user_data.clone(),
+            add_secretmanager,
+        )
+        .with_function("get_secret", [PTR], [PTR], user_data.clone(), get_secret)
+        .with_function("set_secret", [PTR], [PTR], user_data.clone(), set_secret)
+        .with_function(
+            "with_secret_variable",
+            [PTR],
+            [],
+            user_data.clone(),
+            with_secret_variable,
+        )
+        .with_function(
+            "get_secret_plaintext",
+            [PTR],
+            [PTR],
+            user_data.clone(),
+            get_secret_plaintext,
+        )
         .build()
         .unwrap();
 

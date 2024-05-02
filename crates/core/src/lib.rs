@@ -3,16 +3,20 @@ use std::env;
 use std::process::Command;
 
 use anyhow::Error;
+use hmac::{Hmac, Mac};
 use opentelemetry::trace::noop::NoopTracerProvider;
 use opentelemetry::trace::TraceError;
 use opentelemetry::{global, KeyValue};
 use opentelemetry_otlp::{Protocol, WithExportConfig};
 use opentelemetry_sdk::trace::config;
 use opentelemetry_sdk::Resource;
+use sha2::Sha256;
 
 pub mod deps;
 pub mod edge;
 pub mod vertex;
+
+type HmacSha256 = Hmac<Sha256>;
 
 pub fn init_tracer() -> Result<(), TraceError> {
     if let Ok(endpoint) = env::var("OTEL_EXPORTER_OTLP_ENDPOINT") {
@@ -151,4 +155,11 @@ pub fn set_git_repo_metadata() -> Result<(), Error> {
     env::set_var("GIT_REMOTE_URL", remote_url.trim());
     env::set_var("GIT_AUTHOR", author.trim());
     Ok(())
+}
+
+pub fn get_hmac(id: String, name: String) -> Result<String, Error> {
+    let mut mac = HmacSha256::new_from_slice(&id.into_bytes())?;
+    mac.update(name.as_bytes());
+    let key = mac.finalize().into_bytes();
+    Ok(hex::encode(key))
 }

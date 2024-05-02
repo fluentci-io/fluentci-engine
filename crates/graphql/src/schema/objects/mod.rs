@@ -12,4 +12,6 @@ pub mod pipeline;
 pub mod pixi;
 pub mod pkgx;
 pub mod proto;
+pub mod secret;
+pub mod secret_manager;
 pub mod service;

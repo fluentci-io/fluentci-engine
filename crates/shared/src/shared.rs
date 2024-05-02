@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use anyhow::Error;
 use extism::{convert::Json, host_fn};
 use extism::{Manifest, PluginBuilder, Wasm, PTR};
 use fluentci_common::common;
@@ -15,9 +14,11 @@ use fluentci_ext::pixi::Pixi as PixiExt;
 use fluentci_ext::pkgx::Pkgx as PkgxExt;
 use fluentci_ext::runner::Runner as RunnerExt;
 use fluentci_ext::Extension;
+use fluentci_secrets::Provider;
 use fluentci_types::cache::Cache;
 use fluentci_types::file::File;
 use fluentci_types::Module;
+use std::sync::Arc;
 
 use crate::{
     cache::*, devbox::*, devenv::*, directory::*, envhub::*, file::*, flox::*, git::*, http::*,
@@ -50,7 +51,7 @@ host_fn!(pub with_exec(user_data: State; args: Json<Vec<String>>) {
     "pkgx" => Arc::new(Box::new(PkgxExt::default())),
     _ => Arc::new(Box::new(RunnerExt::default()))
   };
-  common::with_exec(graph, args.into_inner(), runner);
+  common::with_exec(graph, args.into_inner(), runner)?;
   Ok(())
 });
 
@@ -228,6 +229,12 @@ host_fn!(pub call(user_data: State; opts: Json<Module>) -> String {
         .with_function("with_packages", [PTR], [], user_data.clone(), with_packages)
         .with_function("as_service", [PTR], [PTR], user_data.clone(), as_service)
         .with_function("with_service", [PTR], [], user_data.clone(), with_service)
+        .with_function("wait_on", [PTR], [], user_data.clone(), wait_on)
+        .with_function("add_secretmanager", [PTR], [PTR], user_data.clone(), add_secretmanager)
+        .with_function("get_secret", [PTR], [PTR], user_data.clone(), get_secret)
+        .with_function("set_secret", [PTR], [PTR], user_data.clone(), set_secret)
+        .with_function("with_secret_variable", [PTR], [], user_data.clone(), with_secret_variable)
+        .with_function("get_secret_plaintext", [PTR], [PTR], user_data.clone(), get_secret_plaintext)
         .build()
         .unwrap();
 
@@ -251,4 +258,72 @@ host_fn!(pub wait_on(user_data: State; args: Json<Vec<u32>>) {
     common::wait_on(graph, args[0], Some(args[1]))?;
   }
   Ok(())
+});
+
+host_fn!(pub add_secretmanager(user_data: State; provider: Json<Provider>) -> String {
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  let graph = state.graph.clone();
+  let provider = provider.into_inner();
+  let id = common::add_secretmanager(graph, provider)?;
+  Ok(id)
+});
+
+host_fn!(pub get_secret(user_data: State; params: Json<Vec<String>>) -> Json<Vec<Secret>> {
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  let graph = state.graph.clone();
+  let params = params.into_inner();
+
+  if params.len() != 2 {
+    return Err(Error::msg("Invalid number of arguments"));
+  }
+
+  let secret = common::get_secret(graph, &params[0], &params[1])?;
+  Ok(Json(secret))
+});
+
+host_fn!(pub with_secret_variable(user_data: State; params: Json<Vec<String>>) {
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  let graph = state.graph.clone();
+  let params = params.into_inner();
+  if params.len() != 2 {
+    return Err(Error::msg("Invalid number of arguments"));
+  }
+  let g = graph.lock().unwrap();
+  let secret_name = g.secret_names.get(&params[1]).unwrap();
+  let secret_name = secret_name.clone();
+  drop(g);
+
+  common::with_secret_variable(graph, &params[0], &params[1], &secret_name)?;
+  Ok(())
+});
+
+host_fn!(pub set_secret(user_data: State; params: Json<Vec<String>>) -> String {
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  let graph = state.graph.clone();
+  let params = params.into_inner();
+
+  if params.len() != 2 {
+    return Err(Error::msg("Invalid number of arguments"));
+  }
+
+  let secret_id = common::set_secret(graph, &params[0], &params[1])?;
+  Ok(secret_id)
+});
+
+host_fn!(pub get_secret_plaintext(user_data: State; params: Json<Vec<String>>) -> String {
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  let graph = state.graph.clone();
+  let params = params.into_inner();
+
+  if params.len() != 2 {
+    return Err(Error::msg("Invalid number of arguments"));
+  }
+
+  let secret = common::get_secret_plaintext(graph, &params[0], &params[1])?;
+  Ok(secret)
 });

@@ -19,7 +19,7 @@ pub fn pipeline(graph: Arc<Mutex<Graph>>, name: String) -> Result<Pipeline, Erro
         "".into(),
         vec![],
         Arc::new(Box::new(Runner::default())),
-    ));
+    ))?;
 
     let pipeline = Pipeline { id };
     Ok(pipeline)

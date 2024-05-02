@@ -23,7 +23,7 @@ pub fn envhub(graph: Arc<Mutex<Graph>>, reset: bool) -> Result<Envhub, Error> {
         "".into(),
         vec![],
         Arc::new(Box::new(EnvhubExt::default())),
-    ));
+    ))?;
 
     let envhub = Envhub { id };
     Ok(envhub)

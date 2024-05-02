@@ -31,7 +31,7 @@ pub fn http(graph: Arc<Mutex<Graph>>, url: String, reset: bool) -> Result<File, 
         url.clone(),
         vec![],
         Arc::new(Box::new(HttpExt::default())),
-    ));
+    ))?;
     graph.execute_vertex(&id)?;
 
     let id = Uuid::new_v4().to_string();
@@ -47,7 +47,7 @@ pub fn http(graph: Arc<Mutex<Graph>>, url: String, reset: bool) -> Result<File, 
         id,
         "file".into(),
         file.path.clone(),
-    ));
+    ))?;
 
     Ok(file)
 }

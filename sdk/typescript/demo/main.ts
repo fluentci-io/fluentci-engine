@@ -6,27 +6,35 @@ async function main() {
     Deno.env.set("FLUENTCI_SESSION_TOKEN", "token");
   }
 
-  const cacheId = await dag.cache("pixi").id();
+  const secret = dag.setSecret("DEMO", "12345");
 
-  console.log("cacheId: ", cacheId);
+  console.log(await secret.plaintext());
 
-  const ping = await dag
+  const secretDemo = await dag
+    .pipeline("secret-demo")
+    .withSecretVariable("DEMO", secret)
+    .withExec(["echo", "$DEMO"])
+    .stdout();
+
+  console.log("secretDemo: ", secretDemo);
+
+  const cache = dag.cache("pixi");
+
+  console.log("cacheId: ", await cache.id());
+
+  const ping = dag
     .pipeline("demo")
     .nix()
     .withWorkdir("nix-demo")
     .withExec(["ping", "fluentci.io"])
-    .asService("ping_fluentci")
-    .id();
-  console.log(ping);
+    .asService("ping_fluentci");
 
-  const pingGh = await dag
+  const pingGh = dag
     .pipeline("demo")
     .pkgx()
     .withPackages(["ping"])
     .withExec(["ping", "github.com"])
-    .asService("ping_gh")
-    .id();
-  console.log(pingGh);
+    .asService("ping_gh");
 
   const stdout = await dag
     .pipeline("demo")
@@ -61,7 +69,7 @@ async function main() {
     .pipeline("pixi-demo")
     .pixi()
     .withWorkdir("./pixi-demo")
-    .withCache("./.pixi", cacheId)
+    .withCache("./.pixi", cache)
     .withExec(["pixi", "--version"])
     .withExec(["which", "php"])
     .stdout();

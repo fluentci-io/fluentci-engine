@@ -23,7 +23,7 @@ pub fn mise(graph: Arc<Mutex<Graph>>, reset: bool) -> Result<Mise, Error> {
         "".into(),
         vec![],
         Arc::new(Box::new(MiseExt::default())),
-    ));
+    ))?;
 
     let mise = Mise { id };
     Ok(mise)

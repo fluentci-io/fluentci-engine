@@ -25,7 +25,7 @@ impl Devbox {
             graph.clone(),
             args,
             Arc::new(Box::new(DevboxExt::default())),
-        );
+        )?;
         Ok(self)
     }
 
@@ -49,10 +49,10 @@ impl Devbox {
         &self,
         ctx: &Context<'_>,
         path: String,
-        cache_id: ID,
+        cache: ID,
     ) -> Result<&Devbox, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        common::with_cache(graph.clone(), cache_id.into(), path)?;
+        common::with_cache(graph.clone(), cache.into(), path)?;
         Ok(self)
     }
 
@@ -104,6 +104,20 @@ impl Devbox {
     ) -> Result<&Devbox, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         common::wait_on(graph.clone(), port, timeout)?;
+        Ok(self)
+    }
+
+    async fn with_secret_variable(
+        &self,
+        ctx: &Context<'_>,
+        name: String,
+        secret: ID,
+    ) -> Result<&Devbox, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let g = graph.lock().unwrap();
+        let secret_name = g.secret_names.get(secret.as_str()).unwrap().clone();
+        drop(g);
+        common::with_secret_variable(graph.clone(), &name, secret.as_str(), &secret_name)?;
         Ok(self)
     }
 }

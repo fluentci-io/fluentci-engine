@@ -32,6 +32,7 @@ extern "ExtismHost" {
     fn with_service(service_id: String);
     fn set_envs(envs: Json<Vec<(String, String)>>);
     fn wait_on(args: Json<Vec<u32>>);
+    fn with_secret_variable(params: Json<Vec<String>>);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -196,6 +197,16 @@ impl Directory {
     pub fn wait_on(&self, port: u32, timeout: Option<u32>) -> Result<Directory, Error> {
         unsafe {
             wait_on(Json(vec![port, timeout.unwrap_or(60)]))?;
+        }
+        Ok(Directory {
+            id: self.id.clone(),
+            path: self.path.clone(),
+        })
+    }
+
+    pub fn with_secret_variable(&self, name: &str, secret_id: &str) -> Result<Directory, Error> {
+        unsafe {
+            with_secret_variable(Json(vec![name.into(), secret_id.into()]))?;
         }
         Ok(Directory {
             id: self.id.clone(),

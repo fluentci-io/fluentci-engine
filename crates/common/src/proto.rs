@@ -23,7 +23,7 @@ pub fn proto(graph: Arc<Mutex<Graph>>, reset: bool) -> Result<Proto, Error> {
         "".into(),
         vec![],
         Arc::new(Box::new(ProtoExt::default())),
-    ));
+    ))?;
 
     let proto = Proto { id };
     Ok(proto)

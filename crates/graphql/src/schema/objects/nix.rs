@@ -41,7 +41,7 @@ impl Nix {
             graph.clone(),
             args,
             Arc::new(Box::new(NixExt::new(nix_args))),
-        );
+        )?;
         Ok(self)
     }
 
@@ -51,20 +51,15 @@ impl Nix {
         Ok(self)
     }
 
-    async fn with_service(&self, ctx: &Context<'_>, service_id: ID) -> Result<&Nix, Error> {
+    async fn with_service(&self, ctx: &Context<'_>, service: ID) -> Result<&Nix, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        common::with_service(graph.clone(), service_id.into())?;
+        common::with_service(graph.clone(), service.into())?;
         Ok(self)
     }
 
-    async fn with_cache(
-        &self,
-        ctx: &Context<'_>,
-        path: String,
-        cache_id: ID,
-    ) -> Result<&Nix, Error> {
+    async fn with_cache(&self, ctx: &Context<'_>, path: String, cache: ID) -> Result<&Nix, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        common::with_cache(graph.clone(), cache_id.into(), path)?;
+        common::with_cache(graph.clone(), cache.into(), path)?;
         Ok(self)
     }
 
@@ -111,6 +106,20 @@ impl Nix {
     ) -> Result<&Nix, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         common::wait_on(graph.clone(), port, timeout)?;
+        Ok(self)
+    }
+
+    async fn with_secret_variable(
+        &self,
+        ctx: &Context<'_>,
+        name: String,
+        secret: ID,
+    ) -> Result<&Nix, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let g = graph.lock().unwrap();
+        let secret_name = g.secret_names.get(secret.as_str()).unwrap().clone();
+        drop(g);
+        common::with_secret_variable(graph.clone(), &name, secret.as_str(), &secret_name)?;
         Ok(self)
     }
 }

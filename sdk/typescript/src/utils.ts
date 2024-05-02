@@ -33,7 +33,6 @@ function buildArgs(args: any): string {
       if (key === "__metadata") {
         return acc;
       }
-
       if (value !== undefined && value !== null) {
         acc.push(`${key}: ${formatValue(key, value as string)}`);
       }

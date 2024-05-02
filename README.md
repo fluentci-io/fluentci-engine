@@ -30,6 +30,8 @@ FluentCI Engine is a programmable CI/CD engine that is designed to be simple, fl
 - [x] Flexible
 - [x] No containerization or virtualization
 - [x] Built-in support for Nix, Pkgx, Devbox, Flox, Devenv, Envhub, Mise and Pixi
+- [x] Built-in support for Secrets (backends: Google Secret Manager, AWS Secrets Manager, Azure Key Vault and HashiCorp Vault)
+- [x] Built-in support for Services
 - [x] Cache support (backends: local, S3, GCS, R2)
 - [x] SDK for writing pipelines in TypeScript, see [@fluentci/sdk](./sdk/typescript)
 - [x] GraphQL API, see [API Documentation](./docs/api.md)

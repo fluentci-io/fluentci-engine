@@ -15,6 +15,7 @@ pub mod pixi;
 pub mod pkgx;
 pub mod process_compose;
 pub mod proto;
+pub mod secret;
 pub mod service;
 
 #[derive(Debug, PartialEq, Eq, Clone)]

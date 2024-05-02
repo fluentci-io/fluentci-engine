@@ -30,13 +30,13 @@ pub fn cache(graph: Arc<Mutex<Graph>>, key: &str) -> Result<Cache, Error> {
         key.into(),
         vec![],
         Arc::new(Box::new(CacheExt::default())),
-    ));
+    ))?;
 
     graph.execute(GraphCommand::AddVolume(
         id.clone(),
         "cache".into(),
         key.into(),
-    ));
+    ))?;
 
     let cache = Cache {
         id,
