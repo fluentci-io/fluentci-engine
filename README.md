@@ -1,5 +1,5 @@
 
-![Cover](./.github/assets/api.png)
+![Cover](./.github/assets/ui.png)
 
 # FluentCI Engine
 
@@ -23,6 +23,8 @@ FluentCI Engine is a programmable CI/CD engine that is designed to be simple, fl
 > This project is still in the early stages of development, 
 > and it is not yet ready for production use. 
 > It is not feature-complete, and it is not yet stable. Use at your own risk.
+
+![Cover](./.github/assets/api.png)
 
 ## ✨ Features
 
