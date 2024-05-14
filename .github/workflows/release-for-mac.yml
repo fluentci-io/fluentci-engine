@@ -22,6 +22,7 @@ jobs:
         uses: fluentci-io/setup-fluentci@v5
         with:
           wasm: true
+          engine-version: 0.4.0
           pipeline: rust
           args: |
             target_add aarch64-apple-darwin
