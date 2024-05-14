@@ -2133,7 +2133,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-engine"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2145,6 +2145,7 @@ dependencies = [
  "get-port",
  "md5",
  "regex",
+ "sha256",
  "tokio",
 ]
 

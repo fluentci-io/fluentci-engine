@@ -1,8 +1,13 @@
-use std::sync::{mpsc, Arc, Mutex};
+use std::{
+    fs,
+    process::{Command, Stdio},
+    sync::{mpsc, Arc, Mutex},
+};
 
+use anyhow::Error;
 use extism::{Manifest, PluginBuilder, UserData, Wasm, PTR};
 use fluentci_core::deps::Graph;
-use fluentci_ext::runner::Runner;
+use fluentci_ext::{pkgx::Pkgx, runner::Runner, Extension};
 use fluentci_shared::{
     cache::*,
     devbox::*,
@@ -23,7 +28,7 @@ use fluentci_shared::{
     state::State,
 };
 
-pub fn call(module: &str, command: &str) {
+pub fn call(module: &str, command: &str) -> Result<(), Error> {
     match fluentci_core::init_tracer() {
         Ok(_) => {}
         Err(e) => {
@@ -48,7 +53,7 @@ pub fn call(module: &str, command: &str) {
     });
 
     let module = match module.starts_with("http") {
-        true => Wasm::url(module),
+        true => download_module(module)?,
         false => Wasm::file(module),
     };
 
@@ -134,5 +139,32 @@ pub fn call(module: &str, command: &str) {
             println!("{}", err);
             std::process::exit(1);
         }
+    };
+    Ok(())
+}
+
+pub fn download_module(url: &str) -> Result<Wasm, Error> {
+    let filename = format!("{}.wasm", sha256::digest(url).to_string());
+    let work_dir = format!("{}/.fluentci/cache", std::env::var("HOME").unwrap());
+
+    if fs::metadata(format!("{}/{}", work_dir, filename)).is_ok() {
+        return Ok(Wasm::file(format!("{}/{}", work_dir, filename)));
     }
+
+    Pkgx::default().setup()?;
+
+    let cmd = format!("pkgx curl -s {} -o {}", url, filename);
+    fs::create_dir_all(&work_dir)?;
+
+    let mut child = Command::new("bash")
+        .arg("-c")
+        .arg(cmd)
+        .current_dir(&work_dir)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()?;
+
+    child.wait()?;
+
+    Ok(Wasm::file(format!("{}/{}", work_dir, filename)))
 }
