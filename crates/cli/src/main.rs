@@ -68,7 +68,7 @@ async fn main() -> Result<(), Error> {
             let module = args.value_of("module").unwrap();
             let command = args.values_of("command").unwrap();
             let command = command.collect::<Vec<_>>().join(" ");
-            call(module, &command);
+            call(module, &command)?;
         }
         _ => cli().print_help()?,
     };
