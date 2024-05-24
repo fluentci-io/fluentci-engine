@@ -38,6 +38,17 @@ jobs:
           tar czvf ../../../fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz fluentci-engine
           shasum -a 256 ../../../fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz > ../../../fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
           cd ../../../ && rm -rf target
+      - name: Upload assets to Cloudflare R2
+        run: |
+          mkdir -p r2/fluentci-engine/${{ env.RELEASE_VERSION }}
+          cp fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz r2/fluentci-engine/${{ env.RELEASE_VERSION }}
+          cp fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256 r2/fluentci-engine/${{ env.RELEASE_VERSION }}
+          cd r2 && fluentci run --wasm r2-sync upload --endpoint-url https://$ACCOUNT_ID.r2.cloudflarestorage.com s3://assets
+        env:
+          TAG: ${{ env.RELEASE_VERSION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_AWS_SECRET_ACCESS_KEY }}
+          ACCOUNT_ID: fe5b1e2ce9f94f4c0415ab94ce402012
       - name: Upload release assets
         run: |
           for ext in tar.gz tar.gz.sha256; do
