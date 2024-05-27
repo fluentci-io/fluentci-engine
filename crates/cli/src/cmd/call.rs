@@ -153,7 +153,10 @@ pub fn download_module(url: &str) -> Result<Wasm, Error> {
 
     Pkgx::default().setup()?;
 
-    let cmd = format!("pkgx curl -s {} -o {}", url, filename);
+    let cmd = format!(
+        "pkgx +rockdaboot.github.io/libpsl +curl.se curl -s {} -o {}",
+        url, filename
+    );
     fs::create_dir_all(&work_dir)?;
 
     let mut child = Command::new("bash")
