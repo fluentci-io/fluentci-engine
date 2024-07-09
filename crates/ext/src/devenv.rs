@@ -68,6 +68,7 @@ impl Extension for Devenv {
                 "echo \"trusted-users = root $USER\" | {} tee -a /etc/nix/nix.conf",
                 sudo
             ))
+            .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .spawn()?
@@ -81,6 +82,7 @@ impl Extension for Devenv {
                 "{} nix profile install --accept-flake-config github:cachix/cachix",
                 sudo,
             ))
+            .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .spawn()?
@@ -94,7 +96,8 @@ impl Extension for Devenv {
 
         Command::new("sh")
             .arg("-c")
-            .arg(&format!("{} nix profile install --accept-flake-config tarball+https://install.devenv.sh/latest",sudo ))
+            .arg(&format!("{} nix profile install --accept-flake-config tarball+https://install.devenv.sh/latest", sudo))
+            .stdin(Stdio::inherit())
             .spawn()?
             .wait()?;
 
