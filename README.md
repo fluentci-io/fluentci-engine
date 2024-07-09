@@ -1,5 +1,5 @@
 
-![Cover](./.github/assets/ui.png)
+![Cover](https://github.com/fluentci-io/fluentci-engine/raw/HEAD/.github/assets/ui.png)
 
 # FluentCI Engine
 
@@ -24,7 +24,7 @@ FluentCI Engine is a programmable CI/CD engine (used by [FluentCI](https://githu
 > and it is not yet ready for production use. 
 > It is not feature-complete, and it is not yet stable. Use at your own risk.
 
-![Cover](./.github/assets/api.png)
+![Cover](https://github.com/fluentci-io/fluentci-engine/raw/HEAD/.github/assets/api.png)
 
 ## ✨ Features
 
@@ -398,12 +398,12 @@ FluentCI Engine supports caching. To enable it, set the following environment va
 
 FluentCI Engine supports OpenTelemetry tracing. To enable it, set the `OTEL_EXPORTER_OTLP_ENDPOINT` or `OTEL_EXPORTER_ZIPKIN_ENDPOINT` (if you want to use Zipkin) environment variable to the desired endpoint.
 
-![jaeger](./.github/assets/jaeger.png)
-![zipkin](./.github/assets/zipkin.png)
-![honeycomb](./.github/assets/honeycomb.png)
+![jaeger](https://github.com/fluentci-io/fluentci-engine/raw/HEAD/.github/assets/jaeger.png)
+![zipkin](https://github.com/fluentci-io/fluentci-engine/raw/HEAD/.github/assets/zipkin.png)
+![honeycomb](https://github.com/fluentci-io/fluentci-engine/raw/HEAD/.github/assets/honeycomb.png)
 
 ## 📑 Logging
 
 FluentCI Engine supports sending logs to [Baselime](https://baselime.io). To enable it, set the `BASELIME_API_KEY` environment variable to the desired API key.
 
-![baselime](./.github/assets/baselime.png)
+![baselime](https://github.com/fluentci-io/fluentci-engine/raw/HEAD/.github/assets/baselime.png)
