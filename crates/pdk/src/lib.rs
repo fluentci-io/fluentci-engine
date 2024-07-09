@@ -5,8 +5,8 @@ use secret::Secret;
 use secret_manager::SecretManager;
 
 use self::{
-    cache::Cache, devbox::Devbox, directory::Directory, envhub::Envhub, file::File, flox::Flox,
-    git::Git, mise::Mise, nix::Nix, pipeline::Pipeline, pixi::Pixi, pkgx::Pkgx,
+    cache::Cache, devbox::Devbox, devenv::Devenv, directory::Directory, envhub::Envhub, file::File,
+    flox::Flox, git::Git, mise::Mise, nix::Nix, pipeline::Pipeline, pixi::Pixi, pkgx::Pkgx,
 };
 
 pub mod cache;
@@ -30,6 +30,7 @@ pub mod secret_manager;
 extern "ExtismHost" {
     fn cache(key: String) -> Json<Cache>;
     fn devbox() -> Json<Devbox>;
+    fn devenv() -> Json<Devenv>;
     fn directory(path: String) -> Json<Directory>;
     fn envhub() -> Json<Envhub>;
     fn file(path: String) -> Json<File>;
@@ -66,6 +67,10 @@ impl Client {
 
     pub fn devbox(&self) -> Result<Devbox, Error> {
         unsafe { devbox() }.map(|devbox| devbox.into_inner())
+    }
+
+    pub fn devenv(&self) -> Result<Devenv, Error> {
+        unsafe { devenv() }.map(|devenv| devenv.into_inner())
     }
 
     pub fn directory(&self, path: &str) -> Result<Directory, Error> {

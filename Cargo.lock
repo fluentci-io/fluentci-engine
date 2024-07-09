@@ -356,7 +356,7 @@ name = "archive"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
 ]
 
 [[package]]
@@ -1290,7 +1290,7 @@ name = "chmod"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
 ]
 
 [[package]]
@@ -1727,7 +1727,7 @@ name = "devbox"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
 ]
 
 [[package]]
@@ -1886,7 +1886,7 @@ name = "env"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
 ]
 
 [[package]]
@@ -2088,7 +2088,7 @@ name = "flox"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
 ]
 
 [[package]]
@@ -2215,7 +2215,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-pdk"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "extism-pdk",
  "fluentci-types 0.1.7",
@@ -2504,7 +2504,7 @@ name = "git"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
 ]
 
 [[package]]
@@ -2582,7 +2582,7 @@ name = "hash"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
 ]
 
 [[package]]
@@ -2661,7 +2661,7 @@ name = "http"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
 ]
 
 [[package]]
@@ -3324,7 +3324,7 @@ name = "mise"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
 ]
 
 [[package]]
@@ -3360,7 +3360,7 @@ name = "nix"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
  "fluentci-types 0.1.7",
 ]
 
@@ -3801,7 +3801,7 @@ name = "pixi"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
 ]
 
 [[package]]
@@ -3825,7 +3825,7 @@ name = "pkgx"
 version = "0.1.3"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
 ]
 
 [[package]]
@@ -3907,7 +3907,7 @@ name = "proto"
 version = "0.1.0"
 dependencies = [
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
 ]
 
 [[package]]
@@ -5523,7 +5523,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "extism-pdk",
- "fluentci-pdk 0.2.0",
+ "fluentci-pdk 0.2.1",
 ]
 
 [[package]]
