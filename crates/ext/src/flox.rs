@@ -1,4 +1,5 @@
 use std::{
+    env::consts::OS,
     process::{Command, ExitStatus, Stdio},
     sync::mpsc::Sender,
 };
@@ -65,23 +66,32 @@ impl Extension for Flox {
                 "echo \"trusted-users = root $USER\" | {} tee -a /etc/nix/nix.conf",
                 sudo
             ))
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
             .spawn()?
             .wait()?;
+
+        let sudo = if OS == "macos" { "sudo" } else { "" };
 
         Command::new("sh")
             .arg("-c")
             .arg(&format!("echo 'extra-trusted-substituters = https://cache.floxdev.com' | {} tee -a /etc/nix/nix.conf && echo 'extra-trusted-public-keys = flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs=' | {} tee -a /etc/nix/nix.conf", sudo, sudo))
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
             .spawn()?
             .wait()?;
 
         Command::new("sh")
             .arg("-c")
-            .arg(
-                "nix profile install --impure \
+            .arg(&format!(
+                "{} nix profile install --impure \
                 --experimental-features 'nix-command flakes' \
                 --accept-flake-config \
                 github:flox/flox",
-            )
+                sudo
+            ))
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
             .spawn()?
             .wait()?;
 
