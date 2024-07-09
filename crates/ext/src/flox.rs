@@ -1,4 +1,5 @@
 use std::{
+    env::consts::OS,
     process::{Command, ExitStatus, Stdio},
     sync::mpsc::Sender,
 };
@@ -80,14 +81,18 @@ impl Extension for Flox {
             .spawn()?
             .wait()?;
 
+        let sudo = if OS == "macos" { "sudo" } else { "" };
+
         Command::new("sh")
             .arg("-c")
-            .arg(
-                "nix profile install --impure \
+            .arg(&format!(
+                "{} nix profile install --impure \
                 --experimental-features 'nix-command flakes' \
                 --accept-flake-config \
                 github:flox/flox",
-            )
+                sudo
+            ))
+            .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .spawn()?
