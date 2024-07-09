@@ -1,4 +1,5 @@
 use std::{
+    env::consts::OS,
     process::{Command, ExitStatus, Stdio},
     sync::mpsc::Sender,
 };
@@ -67,12 +68,21 @@ impl Extension for Devenv {
                 "echo \"trusted-users = root $USER\" | {} tee -a /etc/nix/nix.conf",
                 sudo
             ))
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
             .spawn()?
             .wait()?;
 
+        let sudo = if OS == "macos" { "sudo" } else { "" };
+
         Command::new("sh")
             .arg("-c")
-            .arg("nix profile install --accept-flake-config github:cachix/cachix")
+            .arg(&format!(
+                "{} nix profile install --accept-flake-config github:cachix/cachix",
+                sudo,
+            ))
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
             .spawn()?
             .wait()?;
 
@@ -84,7 +94,7 @@ impl Extension for Devenv {
 
         Command::new("sh")
             .arg("-c")
-            .arg("nix profile install --accept-flake-config tarball+https://install.devenv.sh/latest")
+            .arg(&format!("{} nix profile install --accept-flake-config tarball+https://install.devenv.sh/latest",sudo ))
             .spawn()?
             .wait()?;
 
