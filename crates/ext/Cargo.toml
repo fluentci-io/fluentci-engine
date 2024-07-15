@@ -7,7 +7,7 @@ keywords = ["nix", "environment", "ci", "wasm", "devops"]
 license = "MPL-2.0"
 name = "fluentci-ext"
 repository = "https://github.com/fluentci-io/fluentci-engine"
-version = "0.2.3"
+version = "0.2.4"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
