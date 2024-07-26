@@ -111,7 +111,7 @@ pub fn init_tracer() -> Result<(), TraceError> {
 pub fn set_git_repo_metadata() -> Result<(), Error> {
     let child = Command::new("sh")
         .arg("-c")
-        .arg("git log -1 --pretty=%s")
+        .arg("git log -1 --pretty=%s 2> /dev/null")
         .stdout(std::process::Stdio::piped())
         .spawn()?;
     let output = child.wait_with_output()?;
@@ -119,7 +119,7 @@ pub fn set_git_repo_metadata() -> Result<(), Error> {
 
     let child = Command::new("sh")
         .arg("-c")
-        .arg("git rev-parse --abbrev-ref HEAD")
+        .arg("git rev-parse --abbrev-ref HEAD 2> /dev/null")
         .stdout(std::process::Stdio::piped())
         .spawn()?;
     let output = child.wait_with_output()?;
@@ -127,7 +127,7 @@ pub fn set_git_repo_metadata() -> Result<(), Error> {
 
     let child = Command::new("sh")
         .arg("-c")
-        .arg("git log -1 --pretty=%h")
+        .arg("git log -1 --pretty=%h 2> /dev/null")
         .stdout(std::process::Stdio::piped())
         .spawn()?;
     let output = child.wait_with_output()?;
@@ -135,7 +135,7 @@ pub fn set_git_repo_metadata() -> Result<(), Error> {
 
     let child = Command::new("sh")
         .arg("-c")
-        .arg("git remote get-url origin")
+        .arg("git remote get-url origin 2> /dev/null")
         .stdout(std::process::Stdio::piped())
         .spawn()?;
     let output = child.wait_with_output()?;
@@ -143,7 +143,7 @@ pub fn set_git_repo_metadata() -> Result<(), Error> {
 
     let child = Command::new("sh")
         .arg("-c")
-        .arg("git log -1 --pretty=%an")
+        .arg("git log -1 --pretty=%an 2> /dev/null")
         .stdout(std::process::Stdio::piped())
         .spawn()?;
     let output = child.wait_with_output()?;
