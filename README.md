@@ -57,6 +57,11 @@ cargo run -p fluentci-engine -- serve
 > [!TIP]
 > Quickly setup Nix on your machine with [DeterminateSystems Nix installer](https://github.com/DeterminateSystems/nix-installer)
 
+## 📦 Downloads
+
+- `Mac`: arm64: [fluentci-engine_v0.4.7_aarch64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.4.7/fluentci-engine_v0.4.7_aarch64-apple-darwin.tar.gz) intel: [fluentci-engine_v0.4.7_x86_64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.4.7/fluentci-engine_v0.4.7_x86_64-apple-darwin.tar.gz)
+- `Linux`: intel: [fluentci-engine_v0.4.7_x86_64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.4.7/fluentci-engine_v0.4.7_x86_64-unknown-linux-gnu.tar.gz) arm64: [fluentci-engine_v0.4.7_aarch64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.4.7/fluentci-engine_v0.4.7_aarch64-unknown-linux-gnu.tar.gz)
+
 ## 📚 Documentation
 
 - [API Documentation](./docs/api.md)
