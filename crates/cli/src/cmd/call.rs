@@ -1,4 +1,5 @@
 use std::{
+    env::consts::{ARCH, OS},
     fs,
     process::{Command, Stdio},
     sync::{mpsc, Arc, Mutex},
@@ -52,7 +53,11 @@ pub fn call(module: &str, command: &str) -> Result<(), Error> {
         runner: "default".into(),
     });
 
-    let module = match module.starts_with("http") {
+    let module = match module.starts_with("http")
+        || module.starts_with("azurecr.io/")
+        || module.starts_with("ghcr.io/")
+        || module.starts_with("gcr.io/")
+    {
         true => download_module(module)?,
         false => Wasm::file(module),
     };
@@ -153,6 +158,23 @@ pub fn download_module(url: &str) -> Result<Wasm, Error> {
 
     Pkgx::default().setup()?;
 
+    if url.starts_with("azurecr.io/") || url.starts_with("ghcr.io/") || url.starts_with("gcr.io/") {
+        fs::create_dir_all(&work_dir)?;
+        setup_wasm_to_oci()?;
+
+        let mut child = Command::new("bash")
+            .arg("-c")
+            .arg(format!("wasm-to-oci pull {} --out {}", url, filename))
+            .current_dir(&work_dir)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()?;
+
+        child.wait()?;
+
+        return Ok(Wasm::file(format!("{}/{}", work_dir, filename)));
+    }
+
     let cmd = format!(
         "pkgx +rockdaboot.github.io/libpsl +curl.se curl -s {} -o {}",
         url, filename
@@ -170,4 +192,42 @@ pub fn download_module(url: &str) -> Result<Wasm, Error> {
     child.wait()?;
 
     Ok(Wasm::file(format!("{}/{}", work_dir, filename)))
+}
+
+pub fn setup_wasm_to_oci() -> Result<(), Error> {
+    let os = match OS {
+        "macos" => "darwin",
+        _ => OS,
+    };
+    let arch = match ARCH {
+        "x86_64" => "amd64",
+        "aarch64" => "arm64",
+        _ => ARCH,
+    };
+
+    std::env::set_var("OS", os);
+    std::env::set_var("ARCH", arch);
+
+    let path = std::env::var("PATH").unwrap();
+    let home = std::env::var("HOME").unwrap();
+    let path = format!("{}/.local/bin:{}", home, path);
+    std::env::set_var("PATH", path);
+
+    fs::create_dir_all(format!("{}/.local/bin", home))?;
+
+    let mut child = Command::new("bash")
+        .arg("-c")
+        .arg("type wasm-to-oci > /dev/null 2> /dev/null || pkgx wget https://github.com/fluentci-io/wasm-to-oci/releases/download/v0.1.2/wasm-to-oci_${OS}-${ARCH}.tar.gz ; \
+            type wasm-to-oci > /dev/null 2> /dev/null || pkgx tar xvf wasm-to-oci_${OS}-${ARCH}.tar.gz ; \
+            type wasm-to-oci > /dev/null 2> /dev/null || cp wasm-to-oci ${HOME}/.local/bin ; \
+            [ -f wasm-to-oci ] && rm wasm-to-oci || true ; \
+            [ -f wasm-to-oci_${OS}-${ARCH}.tar.gz ] && rm wasm-to-oci_${OS}-${ARCH}.tar.gz || true \
+        ")
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()?;
+
+    child.wait()?;
+
+    Ok(())
 }
