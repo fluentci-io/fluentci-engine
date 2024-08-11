@@ -5,3 +5,4 @@ sdk/rescript/lib
 sdk/rescript/node_modules
 sdk/rescript/demo/lib
 sdk/rescript/demo/node_modules
+sdk/gleam/*/build
