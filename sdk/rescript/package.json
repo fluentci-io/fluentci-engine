@@ -12,6 +12,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@fluentci/sdk": "npm:@jsr/fluentci__sdk",
     "@rescript/core": "1.5.2",
     "rescript": "11.1.3"
   }

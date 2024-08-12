@@ -76,6 +76,7 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@jsr/fluentci__sdk",
         "npm:@rescript/core@1.5.2",
         "npm:rescript@11.1.3"
       ]
