@@ -1,8 +1,14 @@
 name = "demo"
 version = "1.0.0"
 
+target = "javascript"
+
 [javascript]
 runtime = "deno"
+typescript_declarations = true
+
+[javascript.deno]
+allow_all = true
 
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.
@@ -17,6 +23,7 @@ runtime = "deno"
 
 [dependencies]
 gleam_stdlib = ">= 0.34.0 and < 2.0.0"
+gleam_javascript = ">= 0.11.0 and < 1.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
