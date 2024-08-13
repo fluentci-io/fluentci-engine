@@ -51,11 +51,124 @@ export function azureKeyvault(c) {
     };
   };
 }
+
 export function cache(c) {
   return function (key) {
     return function () {
       return c.cache(key);
     };
+  };
+}
+
+export function devbox(c) {
+  return function () {
+    return c.devbox();
+  };
+}
+
+export function devenv(c) {
+  return function () {
+    return c.devenv();
+  };
+}
+
+export function directory(c) {
+  return function (path) {
+    return function () {
+      return c.directory(path);
+    };
+  };
+}
+
+export function file(c) {
+  return function (path) {
+    return function () {
+      return c.file(path);
+    };
+  };
+}
+
+export function flox(c) {
+  return function () {
+    return c.flox();
+  };
+}
+
+export function git(c) {
+  return function (url) {
+    return function () {
+      return c.git(url);
+    };
+  };
+}
+
+export function googleCloudSecretManager(c) {
+  return function (client) {
+    return function (project) {
+      return function (googleCredentialsFile) {
+        return function () {
+          return c.googleCloudSecretManager({
+            client,
+            project,
+            googleCredentialsFile,
+          });
+        };
+      };
+    };
+  };
+}
+
+export function hashicorpVault(c) {
+  return function (address) {
+    return function (token) {
+      return function (cacerts) {
+        return function () {
+          return c.hashicorpVault(address, token, cacerts);
+        };
+      };
+    };
+  };
+}
+
+export function http(c) {
+  return function (url) {
+    return function () {
+      return c.http(url);
+    };
+  };
+}
+
+export function mise(c) {
+  return function () {
+    return c.mise();
+  };
+}
+
+export function nix(c) {
+  return function (args) {
+    return function () {
+      return c.nix(args);
+    };
+  };
+}
+
+export function pipeline(c) {
+  return function (name) {
+    return function () {
+      return c.pipeline(name);
+    };
+  };
+}
+
+export function pixi(c) {
+  return function () {
+    return c.pixi();
+  };
+}
+
+export function pkgx(c) {
+  return function () {
+    return c.pkgx();
   };
 }
 
