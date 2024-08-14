@@ -3,8 +3,11 @@
   "packages": {
     "specifiers": {
       "jsr:@tsirysndr/env-js@0.1.2": "jsr:@tsirysndr/env-js@0.1.2",
+      "npm:@types/node": "npm:@types/node@18.16.19",
       "npm:graphql-request@6.1.0": "npm:graphql-request@6.1.0_graphql@16.8.1",
-      "npm:lodash@4.17.21": "npm:lodash@4.17.21"
+      "npm:graphql@16.8.1": "npm:graphql@16.8.1",
+      "npm:lodash@4.17.21": "npm:lodash@4.17.21",
+      "npm:node-color-log@11.0.2": "npm:node-color-log@11.0.2"
     },
     "jsr": {
       "@tsirysndr/env-js@0.1.2": {
@@ -17,6 +20,10 @@
         "dependencies": {
           "graphql": "graphql@16.8.1"
         }
+      },
+      "@types/node@18.16.19": {
+        "integrity": "sha512-IXl7o+R9iti9eBW4Wg2hx1xQDig183jj7YLn8F7udNceyfkbn1ZxmzZXuak20gR40D7pIkIY1kYGx5VIGbaHKA==",
+        "dependencies": {}
       },
       "cross-fetch@3.1.8": {
         "integrity": "sha512-cvA+JwZoU0Xq+h6WkMvAUqPEYy92Obet6UdKLfW60qn99ftItKjB5T+BkyWOFWe2pUyfQ+IJHmpOTznqk1M6Kg==",
@@ -38,6 +45,10 @@
       },
       "lodash@4.17.21": {
         "integrity": "sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==",
+        "dependencies": {}
+      },
+      "node-color-log@11.0.2": {
+        "integrity": "sha512-+gD5pQpVpEkEA3He9STku4VL1EO9SaOW3HElumCd3xWorulnfr2053NCSVwPCXrkwI5ihPYucQxSCSOuS1q+Eg==",
         "dependencies": {}
       },
       "node-fetch@2.7.0": {
@@ -63,8 +74,5 @@
       }
     }
   },
-  "remote": {
-    "https://cdn.skypack.dev/-/lodash@v4.17.21-K6GEbP02mWFnLA45zAmi/dist=es2019,mode=imports/optimized/lodash.js": "10c4df47937ffc78548d136dd535a021df5f57182a653260d715c0690dd22978",
-    "https://cdn.skypack.dev/lodash": "8280de0b3efd87f06ea0eb330d15b8de32c059556023b8c6524e9eb9e4844dc0"
-  }
+  "remote": {}
 }
