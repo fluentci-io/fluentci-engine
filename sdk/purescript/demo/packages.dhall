@@ -103,3 +103,16 @@ let upstream =
         sha256:557dc416167543923d0f944fdc0c7bc3e0466b9467a8fc2fba0460f8d5425725
 
 in  upstream
+  with fluentci =
+    { dependencies =
+       [ "aff"
+       , "console"
+       , "effect"
+       , "prelude"
+       ]
+    , repo =
+        "https://github.com/fluentci-io/purescript-fluentci.git"
+    , version =
+        "d0d904915b1eade1f1e72ab541708ad4b43ccd5e"
+    }
+

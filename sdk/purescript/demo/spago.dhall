@@ -10,8 +10,8 @@ When creating a new Spago project, you can use
 `spago init --no-comments` or `spago init -C`
 to generate this file without the comments in this block.
 -}
-{ name = "fluentci"
-, dependencies = [ "aff", "console", "effect", "prelude" ]
+{ name = "demo"
+, dependencies = [ "aff", "console", "effect", "prelude", "fluentci" ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
 }
