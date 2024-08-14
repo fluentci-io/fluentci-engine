@@ -17,7 +17,7 @@ foreign import _stderr :: Pixi -> EffectFnAff String
 
 foreign import _stdout :: Pixi -> EffectFnAff String
 
-foreign import asService :: Pixi -> Effect Service
+foreign import asService :: Pixi -> String -> Effect Service
 
 
 id :: Pixi -> Aff String

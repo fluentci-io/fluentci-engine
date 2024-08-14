@@ -68,90 +68,74 @@ export function directory(d) {
   };
 }
 
-export function _stderr() {
+export function _stderr(d) {
   return function (onError, onSuccess) {
-    return function (d) {
-      d.stderr().then(onSuccess).catch(onError);
-      return function (cancelError, onCancelerError, onCancelerSuccess) {
-        onCancelerSuccess();
-      };
+    d.stderr().then(onSuccess).catch(onError);
+    return function (cancelError, onCancelerError, onCancelerSuccess) {
+      onCancelerSuccess();
     };
   };
 }
 
-export function _stdout() {
+export function _stdout(d) {
   return function (onError, onSuccess) {
-    return function (d) {
-      d.stdout().then(onSuccess).catch(onError);
-      return function (cancelError, onCancelerError, onCancelerSuccess) {
-        onCancelerSuccess();
-      };
+    d.stdout().then(onSuccess).catch(onError);
+    return function (cancelError, onCancelerError, onCancelerSuccess) {
+      onCancelerSuccess();
     };
   };
 }
 
-export function waitOn() {
+export function waitOn(d) {
   return function (port) {
     return function (timeout) {
       return function () {
-        return function (d) {
-          return d.waitOn(port, timeout);
-        };
+        return d.waitOn(port, timeout);
       };
     };
   };
 }
 
-export function withCache() {
+export function withCache(d) {
   return function (cache) {
     return function () {
-      return function (d) {
-        return d.withCache(cache);
-      };
+      return d.withCache(cache);
     };
   };
 }
 
-export function withEnvVariable() {
+export function withEnvVariable(d) {
   return function (name) {
     return function (value) {
       return function () {
-        return function (d) {
-          return d.withEnvVariable(name, value);
-        };
+        return d.withEnvVariable(name, value);
       };
     };
   };
 }
 
-export function withExec() {
+export function withExec(d) {
   return function (command) {
     return function () {
-      return function (d) {
-        return d.withExec(command);
-      };
+      return d.withExec(command);
     };
   };
 }
 
-export function withSecretVariable() {
+export function withSecretVariable(d) {
   return function (name) {
     return function (secret) {
       return function () {
-        return function (d) {
-          return d.withSecretVariable(name, secret);
-        };
+        return d.withSecretVariable(name, secret);
       };
     };
   };
 }
 
-export function withService() {
+export function withService(d) {
   return function (service) {
     return function () {
-      return function (d) {
-        return d.withService(service);
-      };
+      return d.withService(service);
     };
   };
 }

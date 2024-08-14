@@ -2,6 +2,7 @@ module FluentCI.Directory where
 
 import Prelude
 
+import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import FluentCI.Cache (Cache)
@@ -9,7 +10,7 @@ import FluentCI.Devbox (Devbox)
 import FluentCI.Devenv (Devenv)
 import FluentCI.Flox (Flox)
 import FluentCI.Mise (Mise)
-import FluentCI.Nix (Nix)
+import FluentCI.Nix (Nix, NixArgs)
 import FluentCI.Pixi (Pixi)
 import FluentCI.Pkgx (Pkgx)
 import FluentCI.Secret (Secret)
@@ -40,19 +41,19 @@ stdout dir = fromEffectFnAff $ _stdout dir
 entries :: Directory -> Aff (Array String)
 entries dir = fromEffectFnAff $ _entries dir
 
-foreign import devbox :: Directory -> Aff Devbox
+foreign import devbox :: Directory -> Effect Devbox
 
-foreign import devenv :: Directory -> Aff Devenv
+foreign import devenv :: Directory -> Effect Devenv
 
-foreign import flox :: Directory -> Aff Flox
+foreign import flox :: Directory -> Effect Flox
 
-foreign import mise :: Directory -> Aff Mise
+foreign import mise :: Directory -> Effect Mise
 
-foreign import nix :: Directory -> Aff Nix
+foreign import nix :: Directory -> NixArgs -> Effect Nix
 
-foreign import pixi :: Directory -> Aff Pixi
+foreign import pixi :: Directory -> Effect Pixi
 
-foreign import pkgx :: Directory -> Aff Pkgx
+foreign import pkgx :: Directory -> Effect Pkgx
 
 foreign import directory :: Directory -> String -> Aff Directory
 
@@ -64,7 +65,7 @@ foreign import withCache :: Directory -> Cache -> Aff Directory
 
 foreign import withEnvVariable :: Directory -> String -> String -> Aff Directory
 
-foreign import withExec :: Directory -> Array String -> Aff Directory
+foreign import withExec :: Directory -> Array String -> Effect Directory
 
 foreign import withFile :: Directory -> String -> Aff Directory
 

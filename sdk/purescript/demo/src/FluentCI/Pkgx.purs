@@ -17,7 +17,7 @@ foreign import _stderr :: Pkgx -> EffectFnAff String
 
 foreign import _stdout :: Pkgx -> EffectFnAff String
 
-foreign import asService :: Pkgx -> Effect Service
+foreign import asService :: Pkgx -> String -> Effect Service
 
 
 id :: Pkgx -> Aff String

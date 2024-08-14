@@ -1,6 +1,8 @@
-export function asService(s) {
-  return function () {
-    return s.asService();
+export function asService(d) {
+  return function (name) {
+    return function () {
+      return d.asService(name);
+    };
   };
 }
 
@@ -38,8 +40,10 @@ export function mise(s) {
 }
 
 export function nix(s) {
-  return function () {
-    return s.nix();
+  return function (args) {
+    return function () {
+      return s.nix();
+    };
   };
 }
 

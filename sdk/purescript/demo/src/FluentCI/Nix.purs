@@ -9,7 +9,7 @@ import FluentCI.Cache (Cache)
 import FluentCI.Secret (Secret)
 import FluentCI.Service (Service)
 
-data NixArgs = NixArgs { impure :: Boolean } 
+type NixArgs = { impure :: Boolean } 
   
 data Nix
 
@@ -19,7 +19,7 @@ foreign import _stderr :: Nix -> EffectFnAff String
 
 foreign import _stdout :: Nix -> EffectFnAff String
 
-foreign import asService :: Nix -> Effect Service
+foreign import asService :: Nix -> String -> Effect Service
 
 
 id :: Nix -> Aff String

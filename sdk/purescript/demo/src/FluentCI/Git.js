@@ -10,7 +10,7 @@ export function _id(s) {
 export function branch(s) {
   return function (name) {
     return function () {
-      return s.branch();
+      return s.branch(name);
     };
   };
 }

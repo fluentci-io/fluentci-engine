@@ -2,6 +2,7 @@ module FluentCI.Envhub where
 
 import Prelude
 
+import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import FluentCI.Cache (Cache)
@@ -28,7 +29,7 @@ stdout envhub = fromEffectFnAff $ _stdout envhub
 
 foreign import use :: Envhub -> String -> Aff Envhub
 
-foreign import asService :: Envhub -> Aff Service
+foreign import asService :: Envhub -> String-> Effect Service
 
 foreign import waitOn :: Envhub -> Int -> Int -> Aff Envhub
 

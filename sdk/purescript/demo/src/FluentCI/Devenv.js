@@ -1,6 +1,8 @@
 export function asService(d) {
-  return function () {
-    return d.asService();
+  return function (name) {
+    return function () {
+      return d.asService(name);
+    };
   };
 }
 

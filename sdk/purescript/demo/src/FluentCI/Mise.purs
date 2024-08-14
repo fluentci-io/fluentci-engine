@@ -17,7 +17,7 @@ foreign import _stderr :: Mise -> EffectFnAff String
 
 foreign import _stdout :: Mise -> EffectFnAff String
 
-foreign import asService :: Mise -> Effect Service
+foreign import asService :: Mise -> String -> Effect Service
 
 
 id :: Mise -> Aff String

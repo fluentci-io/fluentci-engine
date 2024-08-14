@@ -7,9 +7,11 @@ export function _id(e) {
   };
 }
 
-export function asService(e) {
-  return function () {
-    return e.asService();
+export function asService(d) {
+  return function (name) {
+    return function () {
+      return d.asService(name);
+    };
   };
 }
 

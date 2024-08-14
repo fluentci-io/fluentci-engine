@@ -10,7 +10,7 @@ import FluentCI.Devbox (Devbox)
 import FluentCI.Devenv (Devenv)
 import FluentCI.Envhub (Envhub)
 import FluentCI.Mise (Mise)
-import FluentCI.Nix (Nix)
+import FluentCI.Nix (Nix, NixArgs)
 import FluentCI.Pixi (Pixi)
 import FluentCI.Pkgx (Pkgx)
 import FluentCI.Secret (Secret)
@@ -33,7 +33,7 @@ stderr pipeline = fromEffectFnAff $ _stderr pipeline
 stdout :: Pipeline -> Aff String
 stdout pipeline = fromEffectFnAff $ _stdout pipeline
 
-foreign import asService :: Pipeline -> Effect Service
+foreign import asService :: Pipeline -> String -> Effect Service
 
 foreign import waitOn :: Pipeline -> Int -> Int -> Effect Pipeline
 
@@ -45,7 +45,7 @@ foreign import envhub :: Pipeline -> Effect Envhub
 
 foreign import mise :: Pipeline -> Effect Mise
 
-foreign import nix :: Pipeline -> Effect Nix
+foreign import nix :: Pipeline -> NixArgs -> Effect Nix
 
 foreign import pixi :: Pipeline -> Effect Pixi
 

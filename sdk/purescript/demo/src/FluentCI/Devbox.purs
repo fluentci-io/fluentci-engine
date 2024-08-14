@@ -18,7 +18,7 @@ foreign import _stderr :: Devbox -> EffectFnAff String
 
 foreign import _stdout :: Devbox -> EffectFnAff String
 
-foreign import asService :: Devbox -> Effect Service
+foreign import asService :: Devbox -> String -> Effect Service
 
 
 id :: Devbox -> Aff String

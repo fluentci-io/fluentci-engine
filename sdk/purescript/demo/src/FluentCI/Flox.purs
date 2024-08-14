@@ -17,7 +17,7 @@ foreign import _stderr :: Flox -> EffectFnAff String
 
 foreign import _stdout :: Flox -> EffectFnAff String
 
-foreign import asService :: Flox -> Effect Service
+foreign import asService :: Flox -> String -> Effect Service
 
 
 id :: Flox -> Aff String

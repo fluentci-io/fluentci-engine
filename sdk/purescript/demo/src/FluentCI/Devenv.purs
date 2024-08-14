@@ -18,7 +18,7 @@ foreign import _stderr :: Devenv -> EffectFnAff String
 
 foreign import _stdout :: Devenv -> EffectFnAff String
 
-foreign import asService :: Devenv -> Effect Service
+foreign import asService :: Devenv -> String -> Effect Service
 
 foreign import waitOn :: Devenv -> Int -> Int -> Effect Devenv
 
