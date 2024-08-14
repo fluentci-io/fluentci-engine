@@ -19,46 +19,27 @@ import FluentCI.Service (Service)
 main :: Effect Unit
 main = launchAff_ do
   secret <- liftEffect $ setSecret dag "GITHUB" "my-github-token"
-  value <- plaintext secret
+  plaintext secret >>= Console.log
   p <- liftEffect $ secretDemo secret
-  output <- stdout p
+  stdout p >>= Console.log
 
   m <- liftEffect $ miseDemo
-  miseOutput <- stdout m
+  stdout m >>= Console.log
 
   c <- liftEffect $ cache dag "pixi"
-  cacheId <- id c
+  id c >>= Console.log
 
   pingService <- liftEffect $ ping
   pingGhService <- liftEffect $ pingGh
 
   pingDemoPipeline <- liftEffect $ pingDemo pingService pingGhService
-  pingOutput <- stdout pingDemoPipeline
+  stdout pingDemoPipeline >>= Console.log
 
   git <- liftEffect $ gitDemo
-  gitOutput <- stdout git
+  stdout git >>= Console.log
 
   gitEntries <- liftEffect $ gitEntriesDemo
-  gitEntriesOutput <- entries gitEntries
-
-  Console.log value
-  Console.log "Secret demo:"
-  Console.log output
-
-  Console.log "Mise: "
-  Console.log miseOutput
-
-  Console.log "CacheId: "
-  Console.log cacheId
-
-  Console.log "pingOutput: "
-  Console.log pingOutput
-
-  Console.log "GitOutput: "
-  Console.log gitOutput
-
-  Console.log "GitEntriesOutput: "
-  Console.debugShow gitEntriesOutput
+  entries gitEntries >>= Console.debugShow
 
 ping :: Effect Service
 ping = do
