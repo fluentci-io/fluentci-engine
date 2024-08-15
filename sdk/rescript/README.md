@@ -1,23 +1,31 @@
-# ReScript Project Template
+# FluentCI Rescript SDK
 
-- [Installation](../../README.md)
-
-Official ReScript starter template.
+This is the official FluentCI SDK for Rescript. It allows you to write CI/CD pipelines in Rescript.
 
 ## Installation
 
 ```sh
-npm install
+bun add rescript-fluentci
 ```
 
-## Build
+## Quick Start
 
-- Build: `npm run res:build`
-- Clean: `npm run res:clean`
-- Build & watch: `npm run res:dev`
+```rescript
+open FluentCI
+open FluentCI.Deno
 
-## Run
+let ouput =
+  await dag
+  ->Client.pipeline(~name="demo")
+  ->Pipeline.withExec(["echo", "Hello World!"])
+  ->Pipeline.stdout
+
+Console.log(output)
+```
+
+Run the following command to execute the pipeline:
 
 ```sh
-node src/Demo.res.js
+bun run res:build
+fluentci-engine run -- src/Demo.res.js  
 ```
