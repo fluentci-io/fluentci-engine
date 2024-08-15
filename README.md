@@ -35,7 +35,7 @@ FluentCI Engine is a programmable CI/CD engine (used by [FluentCI](https://githu
 - [x] Built-in support for Secrets (backends: [Google Secret Manager](https://cloud.google.com/secret-manager), [AWS Secrets Manager](https://aws.amazon.com/fr/secrets-manager/), [Azure Key Vault](https://azure.microsoft.com/fr-fr/products/key-vault) and [HashiCorp Vault](https://www.vaultproject.io/))
 - [x] Built-in support for Services
 - [x] Cache support (backends: local, S3, GCS, R2)
-- [x] SDK for writing pipelines in TypeScript, Gleam and Purescript, see [@fluentci/sdk](./sdk)
+- [x] SDK for writing pipelines in TypeScript, Gleam, Rescript and Purescript, see [@fluentci/sdk](./sdk)
 - [x] GraphQL API, see [API Documentation](./docs/api.md)
 - [x] [OpenTelemetry](https://opentelemetry.io/) tracing
 - [x] Plugin system in WebAssembly, see [examples](./examples)
