@@ -2,6 +2,7 @@ import fluentci/dagger/cache_volume.{type CacheVolume}
 import fluentci/dagger/container.{type Container}
 import fluentci/dagger/directory.{type Directory}
 import fluentci/dagger/file.{type File}
+import fluentci/dagger/git.{type GitRepository}
 import fluentci/dagger/host.{type Host}
 
 pub type Client
@@ -22,7 +23,7 @@ pub fn cache_volume(client: Client, key: String) -> CacheVolume
 pub fn directory(client: Client) -> Directory
 
 @external(javascript, "../../dagger_ffi.mjs", "git")
-pub fn git(client: Client, url: String) -> Directory
+pub fn git(client: Client, url: String) -> GitRepository
 
 @external(javascript, "../../dagger_ffi.mjs", "host")
 pub fn host(client: Client) -> Host
