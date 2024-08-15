@@ -1,6 +1,6 @@
 # FluentCI Rescript SDK
 
-This is the official FluentCI SDK for Rescript. It allows you to write CI/CD pipelines in Rescript.
+This is the official [FluentCI](https://fluentci.io) SDK for Rescript. It allows you to write CI/CD pipelines in Rescript.
 
 ## Installation
 
@@ -29,3 +29,5 @@ Run the following command to execute the pipeline:
 bun run res:build
 fluentci-engine run -- src/Demo.res.js  
 ```
+
+See [fluentci-engine](https://github.com/fluentc-io/fluentci-engine) and [fluentci](https://github.com/fluentci-io/fluentci) for more information.
