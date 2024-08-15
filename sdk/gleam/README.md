@@ -61,6 +61,6 @@ Run the pipeline with the following command:
 fluentci-engine run -- gleam run
 ```
 
-See [fluentci-engine](https://github.com/fluentci-io/fluentci-engine) and [fluentci](https://github.com/fluentci-io/fluenti) for more information.
+See [fluentci-engine](https://github.com/fluentci-io/fluentci-engine) and [fluentci](https://github.com/fluentci-io/fluentci) for more information.
 
 Further documentation can be found at <https://hexdocs.pm/fluentci>.
