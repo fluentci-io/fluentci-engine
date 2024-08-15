@@ -1,3 +1,7 @@
 /target
 fluentci-*.json
 process-compose*
+sdk/rescript/lib
+sdk/rescript/node_modules
+sdk/rescript/demo/lib
+sdk/rescript/demo/node_modules
