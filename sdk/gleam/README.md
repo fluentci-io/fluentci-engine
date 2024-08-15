@@ -1,3 +1,19 @@
+# FluentCI Gleam SDK
+
+[![Package Version](https://img.shields.io/hexpm/v/fluentci)](https://hex.pm/packages/fluentci)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/fluentci/)
+
+The FluentCI Gleam SDK provides a set of APIs to interact with FluentCI in Gleam, it allows you to write CI/CD pipelines in Gleam.
+
+## 🚚 Installation
+
+```sh
+gleam add fluentci
+```
+
+## 🚀 Quick Start
+
+```gleam
 import fluentci.{dag, pipeline, set_secret}
 import fluentci/pipeline.{stdout, with_exec, with_secret_variable}
 import fluentci/secret.{plaintext}
@@ -36,3 +52,15 @@ pub fn main() {
     resolve(value)
   })
 }
+
+```
+
+Run the pipeline with the following command:
+
+```sh
+fluentci-engine run -- gleam run
+```
+
+See [fluentci-engine](https://github.com/fluentci-io/fluentci-engine) and [fluentci](https://github.com/fluentci-io/fluenti) for more information.
+
+Further documentation can be found at <https://hexdocs.pm/fluentci>.

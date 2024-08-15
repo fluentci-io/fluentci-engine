@@ -18,10 +18,10 @@ pub type NixArgs {
   NixArgs(impure: Bool)
 }
 
-@external(javascript, "../fluentci.mjs", "client")
+@external(javascript, "./fluentci_ffi.mjs", "client")
 pub fn dag() -> Client
 
-@external(javascript, "../fluentci.mjs", "azureSecretsManager")
+@external(javascript, "./fluentci_ffi.mjs", "azureSecretsManager")
 pub fn azure_secrets_manager(
   client: Client,
   region: String,
@@ -29,7 +29,7 @@ pub fn azure_secrets_manager(
   secret_access_key: String,
 ) -> SecretManager
 
-@external(javascript, "../fluentci.mjs", "azureKeyvault")
+@external(javascript, "./fluentci_ffi.mjs", "azureKeyvault")
 pub fn azure_keyvault(
   client: Client,
   client_id: String,
@@ -39,35 +39,35 @@ pub fn azure_keyvault(
   keyvault_url: String,
 ) -> SecretManager
 
-@external(javascript, "../fluentci.mjs", "cache")
+@external(javascript, "./fluentci_ffi.mjs", "cache")
 pub fn cache(client: Client, key: String) -> Cache
 
-@external(javascript, "../fluentci.mjs", "devbox")
+@external(javascript, "./fluentci_ffi.mjs", "devbox")
 pub fn devbox(client: Client) -> Devbox
 
-@external(javascript, "../fluentci.mjs", "devenv")
+@external(javascript, "./fluentci_ffi.mjs", "devenv")
 pub fn devenv(client: Client) -> Devenv
 
-@external(javascript, "../fluentci.mjs", "directory")
+@external(javascript, "./fluentci_ffi.mjs", "directory")
 pub fn directory(client: Client, path: String) -> Directory
 
-@external(javascript, "../fluentci.mjs", "file")
+@external(javascript, "./fluentci_ffi.mjs", "file")
 pub fn file(client: Client, path: String) -> File
 
-@external(javascript, "../fluentci.mjs", "flox")
+@external(javascript, "./fluentci_ffi.mjs", "flox")
 pub fn flox(client: Client) -> Flox
 
-@external(javascript, "../fluentci.mjs", "git")
+@external(javascript, "./fluentci_ffi.mjs", "git")
 pub fn git(client: Client, url: String) -> Git
 
-@external(javascript, "../fluentci.mjs", "googleCloudSecretManager")
+@external(javascript, "./fluentci_ffi.mjs", "googleCloudSecretManager")
 pub fn google_cloud_secret_manager(
   client: Client,
   project: String,
   google_credentials_file: String,
 ) -> SecretManager
 
-@external(javascript, "../fluentci.mjs", "hashicorpVault")
+@external(javascript, "./fluentci_ffi.mjs", "hashicorpVault")
 pub fn hashicorp_vault(
   client: Client,
   address: String,
@@ -75,23 +75,23 @@ pub fn hashicorp_vault(
   cacerts: String,
 ) -> SecretManager
 
-@external(javascript, "../fluentci.mjs", "http")
+@external(javascript, "./fluentci_ffi.mjs", "http")
 pub fn http(client: Client, url: String) -> File
 
-@external(javascript, "../fluentci.mjs", "mise")
+@external(javascript, "./fluentci_ffi.mjs", "mise")
 pub fn mise(client: Client) -> Mise
 
-@external(javascript, "../fluentci.mjs", "nix")
+@external(javascript, "./fluentci_ffi.mjs", "nix")
 pub fn nix(client: Client, args: NixArgs) -> Nix
 
-@external(javascript, "../fluentci.mjs", "pipeline")
+@external(javascript, "./fluentci_ffi.mjs", "pipeline")
 pub fn pipeline(client: Client, name: String) -> Pipeline
 
-@external(javascript, "../fluentci.mjs", "pixi")
+@external(javascript, "./fluentci_ffi.mjs", "pixi")
 pub fn pixi(client: Client) -> Pixi
 
-@external(javascript, "../fluentci.mjs", "pkgx")
+@external(javascript, "./fluentci_ffi.mjs", "pkgx")
 pub fn pkgx(client: Client) -> Pkgx
 
-@external(javascript, "../fluentci.mjs", "setSecret")
+@external(javascript, "./fluentci_ffi.mjs", "setSecret")
 pub fn set_secret(client: Client, name: String, value: String) -> Secret
