@@ -42,7 +42,7 @@ module Devbox = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external asService: t => Service.t = "asService"
+  external asService: (t, ~name: string) => Service.t = "asService"
 
   @send
   external stderr: t => Promise.t<string> = "stderr"
@@ -69,7 +69,7 @@ module Devbox = {
   external withSecretVariable: (t, ~name: string, ~secret: Secret.t) => t = "withSecretVariable"
 
   @send
-  external withService: (t, ~service: Service.t) => t = "withService"
+  external withService: (t, Service.t) => t = "withService"
 
   @send
   external withWorkdir: (t, ~path: string) => t = "withWorkdir"
@@ -82,7 +82,7 @@ module Devenv = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external asService: t => Service.t = "asService"
+  external asService: (t, ~name: string) => Service.t = "asService"
 
   @send
   external stderr: t => Promise.t<string> = "stderr"
@@ -109,7 +109,7 @@ module Devenv = {
   external withSecretVariable: (t, ~name: string, ~secret: Secret.t) => t = "withSecretVariable"
 
   @send
-  external withService: (t, ~service: Service.t) => t = "withService"
+  external withService: (t, Service.t) => t = "withService"
 
   @send
   external withWorkdir: (t, ~path: string) => t = "withWorkdir"
@@ -122,13 +122,16 @@ module Envhub = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external asService: t => Service.t = "asService"
+  external asService: (t, ~name: string) => Service.t = "asService"
 
   @send
   external stderr: t => Promise.t<string> = "stderr"
 
   @send
   external stdout: t => Promise.t<string> = "stdout"
+
+  @send
+  external use: (t, ~environment: string) => t = "use"
 
   @send
   external waitOn: (t, ~port: int, ~timeout: int=?) => t = "waitOn"
@@ -149,7 +152,7 @@ module Envhub = {
   external withSecretVariable: (t, ~name: string, ~secret: Secret.t) => t = "withSecretVariable"
 
   @send
-  external withService: (t, ~service: Service.t) => t = "withService"
+  external withService: (t, Service.t) => t = "withService"
 
   @send
   external withWorkdir: (t, ~path: string) => t = "withWorkdir"
@@ -162,7 +165,7 @@ module Flox = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external asService: t => Service.t = "asService"
+  external asService: (t, ~name: string) => Service.t = "asService"
 
   @send
   external stderr: t => Promise.t<string> = "stderr"
@@ -189,7 +192,7 @@ module Flox = {
   external withSecretVariable: (t, ~name: string, ~secret: Secret.t) => t = "withSecretVariable"
 
   @send
-  external withService: (t, ~service: Service.t) => t = "withService"
+  external withService: (t, Service.t) => t = "withService"
 
   @send
   external withWorkdir: (t, ~path: string) => t = "withWorkdir"
@@ -202,7 +205,7 @@ module Mise = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external asService: t => Service.t = "asService"
+  external asService: (t, ~name: string) => Service.t = "asService"
 
   @send
   external stderr: t => Promise.t<string> = "stderr"
@@ -229,7 +232,7 @@ module Mise = {
   external withSecretVariable: (t, ~name: string, ~secret: Secret.t) => t = "withSecretVariable"
 
   @send
-  external withService: (t, ~service: Service.t) => t = "withService"
+  external withService: (t, Service.t) => t = "withService"
 
   @send
   external withWorkdir: (t, ~path: string) => t = "withWorkdir"
@@ -242,7 +245,7 @@ module Nix = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external asService: t => Service.t = "asService"
+  external asService: (t, ~name: string) => Service.t = "asService"
 
   @send
   external stderr: t => Promise.t<string> = "stderr"
@@ -269,7 +272,7 @@ module Nix = {
   external withSecretVariable: (t, ~name: string, ~secret: Secret.t) => t = "withSecretVariable"
 
   @send
-  external withService: (t, ~service: Service.t) => t = "withService"
+  external withService: (t, Service.t) => t = "withService"
 
   @send
   external withWorkdir: (t, ~path: string) => t = "withWorkdir"
@@ -282,7 +285,7 @@ module Pixi = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external asService: t => Service.t = "asService"
+  external asService: (t, ~name: string) => Service.t = "asService"
 
   @send
   external stderr: t => Promise.t<string> = "stderr"
@@ -309,7 +312,7 @@ module Pixi = {
   external withSecretVariable: (t, ~name: string, ~secret: Secret.t) => t = "withSecretVariable"
 
   @send
-  external withService: (t, ~service: Service.t) => t = "withService"
+  external withService: (t, Service.t) => t = "withService"
 
   @send
   external withWorkdir: (t, ~path: string) => t = "withWorkdir"
@@ -322,7 +325,7 @@ module Pkgx = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external asService: t => Service.t = "asService"
+  external asService: (t, ~name: string) => Service.t = "asService"
 
   @send
   external stderr: t => Promise.t<string> = "stderr"
@@ -352,7 +355,7 @@ module Pkgx = {
   external withSecretVariable: (t, ~name: string, ~secret: Secret.t) => t = "withSecretVariable"
 
   @send
-  external withService: (t, ~service: Service.t) => t = "withService"
+  external withService: (t, Service.t) => t = "withService"
 
   @send
   external withWorkdir: (t, ~path: string) => t = "withWorkdir"
@@ -425,7 +428,7 @@ module File = {
     external withSecretVariable: (d, ~name: string, ~secret: Secret.t) => d = "withSecretVariable"
 
     @send
-    external withService: (t, ~service: Service.t) => t = "withService"
+    external withService: (t, Service.t) => t = "withService"
 
     @send
     external withWorkdir: (d, ~path: string) => d = "withWorkdir"
@@ -526,7 +529,7 @@ module Directory = {
   external withSecretVariable: (t, ~name: string, ~secret: Secret.t) => t = "withSecretVariable"
 
   @send
-  external withService: (t, ~service: Service.t) => t = "withService"
+  external withService: (t, Service.t) => t = "withService"
 
   @send
   external withWorkdir: (t, ~path: string) => t = "withWorkdir"
@@ -542,7 +545,7 @@ module Git = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external branch: t => Promise.t<string> = "branch"
+  external branch: (t, string) => t = "branch"
 
   @send
   external commit: t => Promise.t<string> = "commit"
@@ -558,7 +561,7 @@ module Pipeline = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external asService: t => Service.t = "asService"
+  external asService: (t, ~name: string) => Service.t = "asService"
 
   @send
   external devbox: t => Devbox.t = "devbox"
@@ -615,7 +618,7 @@ module Pipeline = {
   external withSecretVariable: (t, ~name: string, ~secret: Secret.t) => t = "withSecretVariable"
 
   @send
-  external withService: (t, ~service: Service.t) => t = "withService"
+  external withService: (t, Service.t) => t = "withService"
 
   @send
   external withWorkdir: (t, ~path: string) => t = "withWorkdir"
@@ -698,8 +701,6 @@ module Client = {
   @send
   external setSecret: (t, ~name: string, ~value: string) => Secret.t = "setSecret"
 }
-
-@module("jsr:@fluentci/sdk") @val external dag: Client.t = "dag"
 
 module Node = {
   @module("@fluentci/sdk") @val external dag: Client.t = "dag"

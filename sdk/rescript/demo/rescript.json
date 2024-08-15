@@ -10,7 +10,8 @@
   },
   "suffix": ".res.mjs",
   "bs-dependencies": [
-    "@rescript/core"
+    "@rescript/core",
+    "rescript-fluentci"
   ],
   "bsc-flags": [
     "-open RescriptCore"
