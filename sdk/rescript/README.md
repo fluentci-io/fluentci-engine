@@ -27,7 +27,7 @@ Run the following command to execute the pipeline:
 
 ```sh
 bun run res:build
-fluentci-engine run -- src/Demo.res.js  
+fluentci-engine run -- src/Demo.res.mjs  
 ```
 
 See [fluentci-engine](https://github.com/fluentc-io/fluentci-engine) and [fluentci](https://github.com/fluentci-io/fluentci) for more information.
