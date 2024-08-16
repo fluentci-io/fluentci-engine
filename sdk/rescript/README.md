@@ -14,7 +14,7 @@ bun add rescript-fluentci
 open FluentCI
 open FluentCI.Deno
 
-let ouput =
+let output =
   await dag
   ->Client.pipeline(~name="demo")
   ->Pipeline.withExec(["echo", "Hello World!"])
