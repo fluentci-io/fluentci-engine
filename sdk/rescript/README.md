@@ -30,4 +30,4 @@ bun run res:build
 fluentci-engine run -- deno run -A src/Demo.res.mjs  
 ```
 
-See [fluentci-engine](https://github.com/fluentc-io/fluentci-engine) and [fluentci](https://github.com/fluentci-io/fluentci) for more information.
+See [fluentci-engine](https://github.com/fluentci-io/fluentci-engine) and [fluentci](https://github.com/fluentci-io/fluentci) for more information.
