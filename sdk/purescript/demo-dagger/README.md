@@ -9,6 +9,7 @@ bun install
 To run:
 
 ```bash
+spago build
 dagger run bun run index.ts
 ```
 
