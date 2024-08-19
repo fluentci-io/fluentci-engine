@@ -7,6 +7,7 @@ const plugins = [
   "flox",
   "git",
   "hash",
+  "hermit",
   "http",
   "mise",
   "nix",
@@ -94,6 +95,13 @@ await dag
     "-m",
     "../target/wasm32-unknown-unknown/release/pkgx.wasm",
     "exec which deno",
+  ])
+  .withExec([
+    "fluentci-engine",
+    "call",
+    "-m",
+    "../target/wasm32-unknown-unknown/release/hermit.wasm",
+    "exec which jq",
   ])
   .withExec([
     "fluentci-engine",

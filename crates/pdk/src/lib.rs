@@ -6,7 +6,8 @@ use secret_manager::SecretManager;
 
 use self::{
     cache::Cache, devbox::Devbox, devenv::Devenv, directory::Directory, envhub::Envhub, file::File,
-    flox::Flox, git::Git, mise::Mise, nix::Nix, pipeline::Pipeline, pixi::Pixi, pkgx::Pkgx,
+    flox::Flox, git::Git, hermit::Hermit, mise::Mise, nix::Nix, pipeline::Pipeline, pixi::Pixi,
+    pkgx::Pkgx,
 };
 
 pub mod cache;
@@ -17,6 +18,7 @@ pub mod envhub;
 pub mod file;
 pub mod flox;
 pub mod git;
+pub mod hermit;
 pub mod mise;
 pub mod nix;
 pub mod pipeline;
@@ -37,6 +39,7 @@ extern "ExtismHost" {
     fn flox() -> Json<Flox>;
     fn git(url: String) -> Json<Git>;
     fn http(url: String) -> Json<File>;
+    fn hermit() -> Json<Hermit>;
     fn mise() -> Json<Mise>;
     fn nix(args: Json<NixArgs>) -> Json<Nix>;
     fn pipeline(name: String) -> Json<Pipeline>;
@@ -99,6 +102,10 @@ impl Client {
 
     pub fn mise(&self) -> Result<Mise, Error> {
         unsafe { mise() }.map(|mise| mise.into_inner())
+    }
+
+    pub fn hermit(&self) -> Result<Hermit, Error> {
+        unsafe { hermit() }.map(|hermit| hermit.into_inner())
     }
 
     pub fn nix(&self, args: NixArgs) -> Result<Nix, Error> {

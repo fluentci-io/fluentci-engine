@@ -34,7 +34,7 @@ jobs:
           wasm: true
           pipeline: rust
           args: build --release
-          engine-version: 0.4.0
+          engine-version: 0.4.7
       - name: Run Build and e2e tests
         run: |
           export PATH=${HOME}/.cargo/bin:${PATH}

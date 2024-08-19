@@ -11,6 +11,7 @@ use fluentci_ext::devenv::Devenv as DevenvExt;
 use fluentci_ext::envhub::Envhub as EnvhubExt;
 use fluentci_ext::flox::Flox as FloxExt;
 use fluentci_ext::git::Git as GitExt;
+use fluentci_ext::hermit::Hermit as HermitExt;
 use fluentci_ext::http::Http as HttpExt;
 use fluentci_ext::mise::Mise as MiseExt;
 use fluentci_ext::nix::Nix as NixExt;
@@ -27,8 +28,8 @@ use crate::{
 };
 
 use super::{
-    devbox::Devbox, devenv::Devenv, envhub::Envhub, flox::Flox, nix::Nix, pixi::Pixi, pkgx::Pkgx,
-    proto::Proto, service::Service,
+    devbox::Devbox, devenv::Devenv, envhub::Envhub, flox::Flox, hermit::Hermit, nix::Nix,
+    pixi::Pixi, pkgx::Pkgx, proto::Proto, service::Service,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -360,6 +361,37 @@ impl Pipeline {
 
         let proto = Proto { id: ID(id) };
         Ok(proto)
+    }
+
+    async fn hermit(&self, ctx: &Context<'_>) -> Result<Hermit, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let mut graph = graph.lock().unwrap();
+        graph.runner = Arc::new(Box::new(HermitExt::default()));
+        graph.runner.setup()?;
+
+        let id = Uuid::new_v4().to_string();
+
+        let dep_id = graph.vertices[graph.size() - 1].id.clone();
+        let deps = match graph.size() {
+            1 => vec![],
+            _ => vec![dep_id],
+        };
+        graph.execute(GraphCommand::AddVertex(
+            id.clone(),
+            "hermit".into(),
+            "".into(),
+            deps,
+            Arc::new(Box::new(HermitExt::default())),
+        ))?;
+
+        if graph.size() > 2 {
+            let x = graph.size() - 2;
+            let y = graph.size() - 1;
+            graph.execute(GraphCommand::AddEdge(x, y))?;
+        }
+
+        let hermit = Hermit { id: ID(id) };
+        Ok(hermit)
     }
 
     async fn mise(&self, ctx: &Context<'_>) -> Result<Mise, Error> {

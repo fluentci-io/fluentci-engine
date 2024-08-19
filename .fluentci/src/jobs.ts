@@ -3,8 +3,8 @@
  * @description This module provides a set of functions to build, test, and run clippy on a Rust project 🦀
  */
 
-import { dag, env, Directory, DirectoryID, File } from "../../deps.ts";
-import { buildRustFlags } from "./lib.ts";
+import { dag, env, Directory, type DirectoryID, type File } from "../deps.ts";
+import { buildRustFlags } from "./helpers.ts";
 
 export enum Job {
   clippy = "clippy",
@@ -336,13 +336,14 @@ export async function e2e(
   src: string | Directory | undefined = ".",
   _options: string[] = []
 ): Promise<string> {
-  let plugins = [
+  const plugins = [
     "archive",
     "chmod",
     "devbox",
     "flox",
     "git",
     "hash",
+    "hermit",
     "http",
     "mise",
     "nix",
@@ -444,6 +445,13 @@ export async function e2e(
       "fluentci-engine",
       "call",
       "-m",
+      "../target/wasm32-unknown-unknown/release/hermit.wasm",
+      "exec which jq",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
       "../target/wasm32-unknown-unknown/release/chmod.wasm",
       "chmod a+x hello.sh",
     ])
@@ -532,6 +540,7 @@ export async function e2e(
     "git",
     "directory",
     "envhub",
+    "hermit",
     "mise",
     "pixi",
     "pkgx",

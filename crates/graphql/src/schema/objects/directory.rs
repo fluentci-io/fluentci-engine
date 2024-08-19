@@ -9,6 +9,7 @@ use fluentci_common::devenv::devenv as common_devenv;
 use fluentci_common::directory::entries;
 use fluentci_common::envhub::envhub as common_envhub;
 use fluentci_common::flox::flox as common_flox;
+use fluentci_common::hermit::hermit as common_hermit;
 use fluentci_common::mise::mise as common_mise;
 use fluentci_common::nix::nix as common_nix;
 use fluentci_common::pixi::pixi as common_pixi;
@@ -24,6 +25,7 @@ use super::{
     devbox::Devbox,
     devenv::Devenv,
     flox::Flox,
+    hermit::Hermit,
     nix::{Nix, NixArgs},
     pixi::Pixi,
     pkgx::Pkgx,
@@ -74,6 +76,12 @@ impl Directory {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let flox = common_flox(graph.clone(), false)?;
         Ok(Flox::from(flox))
+    }
+
+    async fn hermit(&self, ctx: &Context<'_>) -> Result<Hermit, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        let hermit = common_hermit(graph.clone(), false)?;
+        Ok(Hermit::from(hermit))
     }
 
     async fn nix(&self, ctx: &Context<'_>, args: Option<NixArgs>) -> Result<Nix, Error> {

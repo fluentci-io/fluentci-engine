@@ -1,5 +1,5 @@
 import pipeline from "./pipeline.ts";
-import { parse, camelCase, snakeCase } from "../../deps.ts";
+import { parse, camelCase, snakeCase } from "../deps.ts";
 
 const args = parse(Deno.args.map((x) => x.split(" ")).flat());
 

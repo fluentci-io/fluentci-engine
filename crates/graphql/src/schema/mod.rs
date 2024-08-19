@@ -1,4 +1,5 @@
 use async_graphql::MergedObject;
+use hermit::HermitQuery;
 
 use self::{
     cache::CacheQuery, devbox::DevboxQuery, devenv::DevenvQuery, directory::DirectoryQuery,
@@ -15,6 +16,7 @@ pub mod envhub;
 pub mod file;
 pub mod flox;
 pub mod git;
+pub mod hermit;
 pub mod http;
 pub mod mise;
 pub mod nix;
@@ -42,4 +44,5 @@ pub struct Query(
     PixiQuery,
     ProtoQuery,
     SecretsQuery,
+    HermitQuery,
 );

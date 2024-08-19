@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
-import { GraphQLClient, gql, _ } from "../deps.ts";
-import { Metadata, QueryTree } from "./client.gen.ts";
+import { type GraphQLClient, gql, _ } from "../deps.ts";
+import type { Metadata, QueryTree } from "./client.gen.ts";
 
 /**
  * Format argument into GraphQL query format.

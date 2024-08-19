@@ -1,0 +1,14 @@
+query Hermit {
+  pipeline(name: "Demo") {
+    hermit {
+      withWorkdir(path: "./hermit-demo") {
+        install {
+          withExec(args: ["which", "jq"]) {
+            id
+            stdout
+          }
+        }
+      }
+    }
+  }
+}
