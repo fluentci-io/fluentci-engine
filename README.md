@@ -14,7 +14,7 @@
 
 _If you love FluentCI, please ★ star this repository to show your support 💚. Looking for support? Join our [Discord](https://discord.gg/V4U6dPskKc)._
 
-FluentCI Engine is a programmable CI/CD engine (used by [FluentCI](https://github.com/fluentci-io/fluentci)) that is designed to be simple, flexible, and easy to use. It is supposed to run on the host machine without containerization or virtualization, and it is designed to be used with [Nix](https://nixos.org), [Pkgx](https://pkgx.sh), [Devbox](https://www.jetpack.io/devbox/), [Flox](https://flox.dev), [Devenv](https://devenv.sh), [EnvHub](https://github.com/tsirysndr/envhub), [Pixi](https://pixi.sh/) and [Mise](https://mise.jdx.dev/).
+FluentCI Engine is a programmable CI/CD engine (used by [FluentCI](https://github.com/fluentci-io/fluentci)) that is designed to be simple, flexible, and easy to use. It is supposed to run on the host machine without containerization or virtualization, and it is designed to be used with [Nix](https://nixos.org), [Pkgx](https://pkgx.sh), [Devbox](https://www.jetpack.io/devbox/), [Flox](https://flox.dev), [Devenv](https://devenv.sh), [Hermit](https://github.com/cashapp/hermit), [EnvHub](https://github.com/tsirysndr/envhub), [Pixi](https://pixi.sh/) and [Mise](https://mise.jdx.dev/).
 
 ![Made with VHS](https://vhs.charm.sh/vhs-o1fkvlKvsyAPUbKUXTyyS.gif)
 
@@ -31,7 +31,7 @@ FluentCI Engine is a programmable CI/CD engine (used by [FluentCI](https://githu
 - [x] Simple and easy to use
 - [x] Flexible
 - [x] No containerization or virtualization
-- [x] Built-in support for Nix, Pkgx, Devbox, Flox, Devenv, Envhub, Mise and Pixi
+- [x] Built-in support for Nix, Hermit, Pkgx, Devbox, Flox, Devenv, Envhub, Mise and Pixi
 - [x] Built-in support for Secrets (backends: [Google Secret Manager](https://cloud.google.com/secret-manager), [AWS Secrets Manager](https://aws.amazon.com/fr/secrets-manager/), [Azure Key Vault](https://azure.microsoft.com/fr-fr/products/key-vault) and [HashiCorp Vault](https://www.vaultproject.io/))
 - [x] Built-in support for Services
 - [x] Cache support (backends: local, S3, GCS, R2)
