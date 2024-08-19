@@ -113,6 +113,6 @@ in  upstream
     , repo =
         "https://github.com/fluentci-io/purescript-fluentci.git"
     , version =
-        "d0d904915b1eade1f1e72ab541708ad4b43ccd5e"
+        "c0e9c1f6a0f769e3deec66eaf2e5a0c078ef8bb8"
     }
 

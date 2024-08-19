@@ -6,11 +6,12 @@ import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import FluentCI.Class (asService, id, mise, nix, pkgx, stdout, withExec, withSecretVariable, withService, withWorkdir)
+import FluentCI.Class (asService, id, mise, nix, pkgx, stdout, withExec, withSecretVariable, withService, withWorkdir, hermit)
 import FluentCI.Client (cache, dag, git, pipeline, setSecret)
 import FluentCI.Directory (Directory, entries)
 import FluentCI.Git (branch, tree)
-import FluentCI.Mise (Mise)
+import FluentCI.Hermit (Hermit)
+import FluentCI.Mise (Mise, trust)
 import FluentCI.Pipeline (Pipeline)
 import FluentCI.Pkgx (withPackages)
 import FluentCI.Secret (Secret, plaintext)
@@ -41,6 +42,9 @@ main = launchAff_ do
   gitEntries <- liftEffect $ gitEntriesDemo
   entries gitEntries >>= Console.debugShow
 
+  h <- liftEffect $ hermitDemo
+  stdout h >>= Console.log
+
 ping :: Effect Service
 ping = do
   p <- pipeline dag "demo"
@@ -69,8 +73,15 @@ miseDemo = do
   p <- pipeline dag "mise-demo"
   m <- mise p
   m1 <- withWorkdir m "./mise-demo"
-  m2 <- withExec m1 ["mise", "--version"]
-  withExec m2 ["which", "bun"]
+  m2 <- trust m1
+  m3 <- withExec m2 ["mise", "--version"]
+  withExec m3 ["which", "bun"]
+
+hermitDemo :: Effect Hermit
+hermitDemo = do
+  h <- hermit dag
+  h1 <- withWorkdir h "./hermit-demo"
+  withExec h1 ["which", "jq"]
 
 pingDemo :: Service -> Service -> Effect Pipeline
 pingDemo svc1 svc2 = do

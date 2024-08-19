@@ -9,6 +9,6 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@fluentci/sdk": "npm:@jsr/fluentci__sdk"
+    "@fluentci/sdk": "npm:@jsr/fluentci__sdk@0.4.3"
   }
 }
