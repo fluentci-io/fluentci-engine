@@ -68,6 +68,15 @@ console.log("Directory entries at '.': ");
 
 console.log(dir);
 
+var hermit = await Sdk.dag.hermit().withWorkdir("./hermit-demo").withExec([
+        "which",
+        "jq"
+      ]).stdout();
+
+console.log("Hermit: ");
+
+console.log(hermit);
+
 export {
   secret ,
   secretDemo ,
@@ -79,5 +88,6 @@ export {
   git ,
   gitEntries ,
   dir ,
+  hermit ,
 }
 /* secret Not a pure module */

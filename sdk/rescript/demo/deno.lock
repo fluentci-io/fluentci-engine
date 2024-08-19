@@ -97,9 +97,9 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
-        "npm:@jsr/fluentci__sdk@0.4.1",
+        "npm:@jsr/fluentci__sdk@0.4.3",
         "npm:@rescript/core@1.5.2",
-        "npm:rescript-fluentci@^0.1.2",
+        "npm:rescript-fluentci@0.1.4",
         "npm:rescript@11.1.3"
       ]
     }

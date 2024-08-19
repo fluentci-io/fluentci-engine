@@ -52,8 +52,8 @@ Console.log("Stdout: " ++ stdout)
 
 let mise =
   await dag
-  ->Client.pipeline(~name="mise-demo")
-  ->Pipeline.mise
+  // ->Client.pipeline(~name="mise-demo")
+  ->Client.mise
   ->Mise.withWorkdir(~path="./mise-demo")
   ->Mise.trust
   ->Mise.withExec(["mise", "--version"])
@@ -93,3 +93,6 @@ let hermit =
   ->Hermit.withWorkdir(~path="./hermit-demo")
   ->Hermit.withExec(["which", "jq"])
   ->Hermit.stdout
+
+Console.log("Hermit: ")
+Console.log(hermit)

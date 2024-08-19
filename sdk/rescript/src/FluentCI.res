@@ -805,6 +805,9 @@ module Client = {
   external hermit: t => Hermit.t = "hermit"
 
   @send
+  external mise: t => Mise.t = "mise"
+
+  @send
   external setSecret: (t, ~name: string, ~value: string) => Secret.t = "setSecret"
 }
 
