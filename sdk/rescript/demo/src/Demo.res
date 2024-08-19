@@ -52,8 +52,8 @@ Console.log("Stdout: " ++ stdout)
 
 let mise =
   await dag
-  // ->Client.pipeline(~name="mise-demo")
-  ->Client.mise
+  ->Client.pipeline(~name="mise-demo")
+  ->Pipeline.mise
   ->Mise.withWorkdir(~path="./mise-demo")
   ->Mise.trust
   ->Mise.withExec(["mise", "--version"])

@@ -4,6 +4,7 @@
     "specifiers": {
       "jsr:@fluentci/sdk": "jsr:@fluentci/sdk@0.4.0",
       "jsr:@fluentci/sdk@0.4.1": "jsr:@fluentci/sdk@0.4.1",
+      "jsr:@fluentci/sdk@0.4.3": "jsr:@fluentci/sdk@0.4.3",
       "jsr:@tsirysndr/env-js@0.1.2": "jsr:@tsirysndr/env-js@0.1.2",
       "npm:graphql-request@6.1.0": "npm:graphql-request@6.1.0_graphql@16.9.0",
       "npm:graphql@16.8.1": "npm:graphql@16.8.1",
@@ -21,6 +22,16 @@
       },
       "@fluentci/sdk@0.4.1": {
         "integrity": "36c96535af8020c312d7d69ce053130b145306747a76e3db5e277a5475d9a33b",
+        "dependencies": [
+          "jsr:@tsirysndr/env-js@0.1.2",
+          "npm:graphql-request@6.1.0",
+          "npm:graphql@16.8.1",
+          "npm:lodash@4.17.21",
+          "npm:node-color-log@11.0.2"
+        ]
+      },
+      "@fluentci/sdk@0.4.3": {
+        "integrity": "65ee7a46d7af2feffc996adacfbeb8667b38a5a5fbcbfb4c64a52d70fb398b47",
         "dependencies": [
           "jsr:@tsirysndr/env-js@0.1.2",
           "npm:graphql-request@6.1.0",
@@ -99,7 +110,7 @@
       "dependencies": [
         "npm:@jsr/fluentci__sdk@0.4.3",
         "npm:@rescript/core@1.5.2",
-        "npm:rescript-fluentci@0.1.4",
+        "npm:rescript-fluentci@0.1.5",
         "npm:rescript@11.1.3"
       ]
     }
