@@ -18,8 +18,8 @@ clap = "3.2.20"
 extism = "1.2.0"
 fluentci-core = {path = "../core", version = "0.3.6"}
 fluentci-ext = {path = "../ext", version = "0.2.5"}
-fluentci-server = {path = "../server", version = "0.3.6"}
-fluentci-shared = {path = "../shared", version = "0.2.6"}
+fluentci-server = {path = "../server", version = "0.3.7"}
+fluentci-shared = {path = "../shared", version = "0.2.7"}
 get-port = "4.0.0"
 md5 = "0.7.0"
 regex = "1.10.3"

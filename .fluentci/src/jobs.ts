@@ -336,13 +336,14 @@ export async function e2e(
   src: string | Directory | undefined = ".",
   _options: string[] = []
 ): Promise<string> {
-  let plugins = [
+  const plugins = [
     "archive",
     "chmod",
     "devbox",
     "flox",
     "git",
     "hash",
+    "hermit",
     "http",
     "mise",
     "nix",
@@ -532,6 +533,7 @@ export async function e2e(
     "git",
     "directory",
     "envhub",
+    "hermit",
     "mise",
     "pixi",
     "pkgx",

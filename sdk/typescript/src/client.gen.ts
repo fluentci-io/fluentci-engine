@@ -3001,6 +3001,18 @@ export class Hermit extends BaseClient {
     });
   };
 
+  install = (): Hermit => {
+    return new Hermit({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "install",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   stdout = async (): Promise<string> => {
     const response: Awaited<string> = await computeQuery(
       [

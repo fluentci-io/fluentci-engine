@@ -22,6 +22,7 @@ declare const Host: {
     envhub: () => I64;
     proto: () => I64;
     hermit: () => I64;
+    install: () => void;
     trust: (ptr: I64) => void;
     tar_czvf: (ptr: I64) => I64;
     zip: (ptr: I64) => I64;
@@ -78,6 +79,7 @@ export const mise: () => I64 = fn.mise;
 export const envhub: () => I64 = fn.envhub;
 export const proto: () => I64 = fn.proto;
 export const hermit: () => I64 = fn.hermit;
+export const install: () => void = fn.install;
 export const tar_czvf: (ptr: I64) => I64 = fn.tar_czvf;
 export const zip: (ptr: I64) => I64 = fn.zip;
 export const trust: (ptr: I64) => void = fn.trust;
@@ -3328,6 +3330,11 @@ export class Hermit extends BaseClient {
   withPackages = (packages: string[]): Hermit => {
     const mem = Memory.fromJsonObject(packages);
     with_packages(mem.offset);
+    return this;
+  };
+
+  install = (): Hermit => {
+    install();
     return this;
   };
 

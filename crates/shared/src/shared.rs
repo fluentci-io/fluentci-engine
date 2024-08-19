@@ -240,6 +240,7 @@ host_fn!(pub call(user_data: State; opts: Json<Module>) -> String {
         .with_function("with_secret_variable", [PTR], [], user_data.clone(), with_secret_variable)
         .with_function("get_secret_plaintext", [PTR], [PTR], user_data.clone(), get_secret_plaintext)
         .with_function("hermit", [], [PTR], user_data.clone(), hermit)
+        .with_function("install", [], [], user_data.clone(), install)
         .build()
         .unwrap();
 

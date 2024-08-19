@@ -76,6 +76,12 @@ impl Hermit {
         Ok(self)
     }
 
+    async fn install(&self, ctx: &Context<'_>) -> Result<&Hermit, Error> {
+        let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
+        common_hermit::install(graph.clone())?;
+        Ok(self)
+    }
+
     async fn stdout(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let rx = ctx.data::<Arc<Mutex<Receiver<(String, usize)>>>>().unwrap();

@@ -10,6 +10,7 @@ extern "ExtismHost" {
     fn with_cache(cache: Json<Cache>);
     fn with_file(file: Json<File>);
     fn with_packages(packages: Json<Vec<String>>);
+    fn install();
     fn stdout() -> String;
     fn stderr() -> String;
     fn as_service(name: String) -> Json<Service>;
@@ -86,6 +87,13 @@ impl Hermit {
                     .collect::<Vec<String>>(),
             ))
         }?;
+        Ok(Hermit {
+            id: self.id.clone(),
+        })
+    }
+
+    pub fn install(&self) -> Result<Hermit, Error> {
+        unsafe { install() }?;
         Ok(Hermit {
             id: self.id.clone(),
         })

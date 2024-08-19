@@ -89,6 +89,7 @@ pub fn call(module: &str, command: &str) -> Result<(), Error> {
         .with_function("mise", [], [PTR], user_data.clone(), mise)
         .with_function("trust", [], [], user_data.clone(), trust)
         .with_function("hermit", [], [PTR], user_data.clone(), hermit)
+        .with_function("install", [], [], user_data.clone(), install)
         .with_function("with_exec", [PTR], [], user_data.clone(), with_exec)
         .with_function("with_workdir", [PTR], [], user_data.clone(), with_workdir)
         .with_function("with_cache", [PTR], [], user_data.clone(), with_cache)
