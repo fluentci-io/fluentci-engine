@@ -3,8 +3,8 @@ use fluentci_types::{cache::Cache, nix::NixArgs, pipeline as types, service::Ser
 use serde::{Deserialize, Serialize};
 
 use super::{
-    devbox::Devbox, devenv::Devenv, envhub::Envhub, file::File, flox::Flox, git::Git, mise::Mise,
-    nix::Nix, pixi::Pixi, pkgx::Pkgx,
+    devbox::Devbox, devenv::Devenv, envhub::Envhub, file::File, flox::Flox, git::Git,
+    hermit::Hermit, mise::Mise, nix::Nix, pixi::Pixi, pkgx::Pkgx,
 };
 
 #[host_fn]
@@ -16,6 +16,7 @@ extern "ExtismHost" {
     fn nix(args: Json<NixArgs>) -> Json<Nix>;
     fn pkgx() -> Json<Pkgx>;
     fn pixi() -> Json<Pixi>;
+    fn hermit() -> Json<Hermit>;
     fn git(url: String) -> Json<Git>;
     fn http(url: String) -> Json<File>;
     fn mise() -> Json<Mise>;
@@ -79,6 +80,12 @@ impl Pipeline {
         unsafe { set_runner("pixi".into()) }?;
         let pixi = unsafe { pixi() }?;
         Ok(pixi.into_inner())
+    }
+
+    pub fn hermit(&self) -> Result<Hermit, Error> {
+        unsafe { set_runner("hermit".into()) }?;
+        let hermit = unsafe { hermit() }?;
+        Ok(hermit.into_inner())
     }
 
     pub fn git(&self, url: &str) -> Result<Git, Error> {

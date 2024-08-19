@@ -18,6 +18,7 @@ pub mod git;
 pub mod git_checkout;
 pub mod git_last_commit;
 pub mod hash;
+pub mod hermit;
 pub mod http;
 pub mod mise;
 pub mod nix;

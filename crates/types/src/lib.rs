@@ -8,6 +8,7 @@ pub mod envhub;
 pub mod file;
 pub mod flox;
 pub mod git;
+pub mod hermit;
 pub mod mise;
 pub mod nix;
 pub mod pipeline;

@@ -215,6 +215,7 @@ impl Graph {
             "chmod",
             "withFile",
             "asService",
+            "trust",
         ];
 
         for (i, vertex) in self.vertices.iter().enumerate() {
@@ -420,6 +421,7 @@ impl Graph {
             "chmod",
             "withFile",
             "asService",
+            "trust",
         ];
         let mut visited = vec![false; self.vertices.len()];
         let mut stack = Vec::new();

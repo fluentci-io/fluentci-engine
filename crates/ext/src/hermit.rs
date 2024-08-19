@@ -9,15 +9,26 @@ use anyhow::Error;
 use fluentci_types::Output;
 
 #[derive(Default)]
-pub struct Mise {}
+pub struct Hermit {}
 
-impl Mise {
-    pub fn trust(&self, args: &str) -> Result<ExitStatus, Error> {
+impl Hermit {
+    pub fn install(&self, pkgs: Vec<&str>) -> Result<ExitStatus, Error> {
         self.setup()?;
+
+        Command::new("bash")
+            .arg("-c")
+            .arg("[ -f ./bin/activate-hermit ] || hermit init")
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()?
+            .wait()?;
 
         let mut child = Command::new("bash")
             .arg("-c")
-            .arg(format!("mise trust {}", args))
+            .arg(format!(
+                ". ./bin/activate-hermit && hermit install {}",
+                pkgs.join(" ")
+            ))
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
@@ -26,7 +37,7 @@ impl Mise {
     }
 }
 
-impl Extension for Mise {
+impl Extension for Hermit {
     fn exec(
         &mut self,
         cmd: &str,
@@ -41,20 +52,16 @@ impl Extension for Mise {
             return Ok(ExitStatus::default());
         }
 
-        let mut child = Command::new("bash")
+        Command::new("bash")
             .arg("-c")
-            .arg("mise install")
+            .arg("[ -f ./bin/activate-hermit ] || hermit init")
             .current_dir(work_dir)
-            .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
-            .spawn()?;
-        child.wait()?;
+            .spawn()?
+            .wait()?;
 
-        let cmd = format!(
-            "eval \"$(~/.local/bin/mise activate bash)\" && mise x -- {}",
-            cmd
-        );
+        let cmd = format!(". ./bin/activate-hermit && {}", cmd);
         exec(&cmd, tx, out, last_cmd, work_dir)
     }
 
@@ -62,25 +69,28 @@ impl Extension for Mise {
         let path = format!(
             "{}:{}",
             env::var("PATH")?,
-            format!("{}/.local/bin", env::var("HOME")?)
+            format!("{}/bin", env::var("HOME")?)
         );
         env::set_var("PATH", &path);
-        let mut child = Command::new("sh")
+
+        let status = Command::new("sh")
             .arg("-c")
-            .arg("type mise > /dev/null || curl https://mise.run | sh")
+            .arg("type hermit > /dev/null")
+            .spawn()?
+            .wait()?;
+
+        if status.success() {
+            return Ok(());
+        }
+
+        Command::new("sh")
+            .arg("-c")
+            .arg("curl -fsSL https://github.com/cashapp/hermit/releases/download/stable/install.sh | /bin/bash")
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
-            .spawn()?;
-        child.wait()?;
-
+            .spawn()?
+            .wait()?;
         Ok(())
-    }
-
-    fn format_command(&self, cmd: &str) -> String {
-        format!(
-            "mise install ; eval \"$(~/.local/bin/mise activate bash)\" && mise x -- {}",
-            cmd
-        )
     }
 }

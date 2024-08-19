@@ -213,6 +213,30 @@ export class Client extends BaseClient {
     });
   };
 
+  hermit = (): Hermit => {
+    return new Hermit({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "hermit",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  proto = (): Proto => {
+    return new Proto({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "proto",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   setSecret = (name: string, value: string): Secret => {
     return new Secret({
       queryTree: [
@@ -917,6 +941,30 @@ export class Directory extends BaseClient {
         ...this._queryTree,
         {
           operation: "envhub",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  hermit = (): Hermit => {
+    return new Hermit({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "hermit",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  proto = (): Proto => {
+    return new Proto({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "proto",
         },
       ],
       ctx: this._ctx,
@@ -1773,6 +1821,30 @@ export class Pipeline extends BaseClient {
     });
   };
 
+  hermit = (): Hermit => {
+    return new Hermit({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "hermit",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  proto = (): Proto => {
+    return new Proto({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "proto",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   withExec = (args: string[]): Pipeline => {
     return new Pipeline({
       queryTree: [
@@ -2287,6 +2359,19 @@ export class Mise extends BaseClient {
     return response;
   };
 
+  trust = (path: string): Mise => {
+    return new Mise({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "trust",
+          args: { path },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   withExec = (args: string[]): Mise => {
     return new Mise({
       queryTree: [
@@ -2599,6 +2684,353 @@ export class Envhub extends BaseClient {
 
   waitOn = (port: number, timeout?: number): Envhub => {
     return new Envhub({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "waitOn",
+          args: { port, timeout },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+}
+
+/**
+ * A Proto environment.
+ */
+export class Proto extends BaseClient {
+  private readonly _id?: string = undefined;
+
+  constructor(parent?: { queryTree?: QueryTree[]; ctx: Context }) {
+    super(parent);
+  }
+
+  id = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this._queryTree,
+        {
+          operation: "id",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  withExec = (args: string[]): Proto => {
+    return new Proto({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withExec",
+          args: { args },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withWorkdir = (path: string): Proto => {
+    return new Proto({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withWorkdir",
+          args: { path },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withService = (service: Service): Proto => {
+    return new Proto({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withService",
+          args: { service },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withSecretVariable = (name: string, secret: Secret): Proto => {
+    return new Proto({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withSecretVariable",
+          args: { name, secret },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: string, value: string): Proto => {
+    return new Proto({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withEnvVariable",
+          args: { name, value },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withCache = (path: string, cache: Cache): Proto => {
+    return new Proto({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withCache",
+          args: { path, cache },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withFile = (path: string, fileId: string): Proto => {
+    return new Proto({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withFile",
+          args: { path, fileId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  stdout = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this._queryTree,
+        {
+          operation: "stdout",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  stderr = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this._queryTree,
+        {
+          operation: "stderr",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  asService = (name: string): Service => {
+    return new Service({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "asService",
+          args: { name },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  waitOn = (port: number, timeout?: number): Proto => {
+    return new Proto({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "waitOn",
+          args: { port, timeout },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+}
+
+/**
+ * A Hermit environment.
+ */
+export class Hermit extends BaseClient {
+  private readonly _id?: string = undefined;
+
+  constructor(parent?: { queryTree?: QueryTree[]; ctx: Context }) {
+    super(parent);
+  }
+
+  id = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this._queryTree,
+        {
+          operation: "id",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  withExec = (args: string[]): Hermit => {
+    return new Hermit({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withExec",
+          args: { args },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withWorkdir = (path: string): Hermit => {
+    return new Hermit({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withWorkdir",
+          args: { path },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withService = (service: Service): Hermit => {
+    return new Hermit({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withService",
+          args: { service },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withSecretVariable = (name: string, secret: Secret): Hermit => {
+    return new Hermit({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withSecretVariable",
+          args: { name, secret },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withEnvVariable = (name: string, value: string): Hermit => {
+    return new Hermit({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withEnvVariable",
+          args: { name, value },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withCache = (path: string, cache: Cache): Hermit => {
+    return new Hermit({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withCache",
+          args: { path, cache },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withFile = (path: string, fileId: string): Hermit => {
+    return new Hermit({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withFile",
+          args: { path, fileId },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  withPackages = (packages: string[]): Hermit => {
+    return new Hermit({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "withPackages",
+          args: { packages },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  stdout = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this._queryTree,
+        {
+          operation: "stdout",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  stderr = async (): Promise<string> => {
+    const response: Awaited<string> = await computeQuery(
+      [
+        ...this._queryTree,
+        {
+          operation: "stderr",
+        },
+      ],
+      await this._ctx.connection()
+    );
+    return response;
+  };
+
+  asService = (name: string): Service => {
+    return new Service({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "asService",
+          args: { name },
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
+  waitOn = (port: number, timeout?: number): Hermit => {
+    return new Hermit({
       queryTree: [
         ...this._queryTree,
         {

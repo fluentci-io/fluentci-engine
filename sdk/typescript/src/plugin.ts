@@ -1,5 +1,7 @@
 // @ts-nocheck
 
+import { Hermit } from "./client.gen.ts";
+
 declare type I64 = {
   offset: I64;
 };
@@ -18,6 +20,9 @@ declare const Host: {
     pipeline: (ptr: I64) => I64;
     mise: () => I64;
     envhub: () => I64;
+    proto: () => I64;
+    hermit: () => I64;
+    trust: (ptr: I64) => void;
     tar_czvf: (ptr: I64) => I64;
     zip: (ptr: I64) => I64;
     with_exec: (ptr: I64) => void;
@@ -71,8 +76,11 @@ export const pipeline: (ptr: I64) => I64 = fn.pipeline;
 export const pixi: () => I64 = fn.pixi;
 export const mise: () => I64 = fn.mise;
 export const envhub: () => I64 = fn.envhub;
+export const proto: () => I64 = fn.proto;
+export const hermit: () => I64 = fn.hermit;
 export const tar_czvf: (ptr: I64) => I64 = fn.tar_czvf;
 export const zip: (ptr: I64) => I64 = fn.zip;
+export const trust: (ptr: I64) => void = fn.trust;
 export const with_exec: (ptr: I64) => void = fn.with_exec;
 export const with_workdir: (ptr: I64) => void = fn.with_workdir;
 export const with_cache: (ptr: I64) => I64 = fn.with_cache;
@@ -127,9 +135,9 @@ export class Client extends BaseClient {
    */
   pipeline = (name: string): Pipeline => {
     let mem = Memory.fromString(name);
-    let offset = pipeline(mem.offset);
+    const offset = pipeline(mem.offset);
 
-    let response = Memory.find(offset).readJsonObject();
+    const response = Memory.find(offset).readJsonObject();
 
     return new Pipeline({
       id: response.id,
@@ -148,9 +156,9 @@ export class Client extends BaseClient {
    */
   cache = (key: string): Cache => {
     let mem = Memory.fromString(key);
-    let offset = cache(mem.offset);
+    const offset = cache(mem.offset);
 
-    let response = Memory.find(offset).readJsonObject();
+    const response = Memory.find(offset).readJsonObject();
     return new Cache({
       id: response.id,
       key: response.key,
@@ -167,8 +175,8 @@ export class Client extends BaseClient {
    * @returns {Devbox}
    */
   devbox = (): Devbox => {
-    let offset = devbox();
-    let response = Memory.find(offset).readJsonObject();
+    const offset = devbox();
+    const response = Memory.find(offset).readJsonObject();
     return new Devbox({
       id: response.id,
     });
@@ -186,8 +194,8 @@ export class Client extends BaseClient {
    */
   directory = (path: string): Directory => {
     let mem = Memory.fromString(path);
-    let offset = directory(mem.offset);
-    let response = Memory.find(offset).readJsonObject();
+    const offset = directory(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
     return new Directory({
       id: response.id,
       path: response.path,
@@ -203,8 +211,8 @@ export class Client extends BaseClient {
    * @returns
    */
   envhub = (): Envhub => {
-    let offset = envhub();
-    let response = Memory.find(offset).readJsonObject();
+    const offset = envhub();
+    const response = Memory.find(offset).readJsonObject();
     return new Envhub({
       id: response.id,
     });
@@ -220,8 +228,8 @@ export class Client extends BaseClient {
    * @returns
    */
   flox = (): Flox => {
-    let offset = flox();
-    let response = Memory.find(offset).readJsonObject();
+    const offset = flox();
+    const response = Memory.find(offset).readJsonObject();
     return new Flox({
       id: response.id,
     });
@@ -237,8 +245,8 @@ export class Client extends BaseClient {
    */
   git = (url: string): Git => {
     let mem = Memory.fromString(url);
-    let offset = git(mem.offset);
-    let response = Memory.find(offset).readJsonObject();
+    const offset = git(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
     return new Git({
       id: response.id,
     });
@@ -254,8 +262,8 @@ export class Client extends BaseClient {
    */
   file = (path: string): File => {
     let mem = Memory.fromString(path);
-    let offset = file(mem.offset);
-    let response = Memory.find(offset).readJsonObject();
+    const offset = file(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
     return new File({
       id: response.id,
       path: response.path,
@@ -288,8 +296,8 @@ export class Client extends BaseClient {
    */
   http = (url: string): File => {
     let mem = Memory.fromString(url);
-    let offset = http(mem.offset);
-    let response = Memory.find(offset).readJsonObject();
+    const offset = http(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
     return new File({
       id: response.id,
       path: response.path,
@@ -304,8 +312,8 @@ export class Client extends BaseClient {
    * @returns
    */
   mise = (): Mise => {
-    let offset = mise();
-    let response = Memory.find(offset).readJsonObject();
+    const offset = mise();
+    const response = Memory.find(offset).readJsonObject();
     return new Mise({
       id: response.id,
     });
@@ -319,9 +327,9 @@ export class Client extends BaseClient {
    * @returns
    */
   pixi = (): Pixi => {
-    let offset = pixi();
+    const offset = pixi();
 
-    let response = Memory.find(offset).readJsonObject();
+    const response = Memory.find(offset).readJsonObject();
     return new Pixi({
       id: response.id,
     });
@@ -335,9 +343,39 @@ export class Client extends BaseClient {
    * @returns
    */
   pkgx = (): Pkgx => {
-    let offset = pkgx();
-    let response = Memory.find(offset).readJsonObject();
+    const offset = pkgx();
+    const response = Memory.find(offset).readJsonObject();
     return new Pkgx({
+      id: response.id,
+    });
+  };
+
+  /**
+   * Setup a new proto environment
+   * ```ts
+   * dag.proto().withExec(["echo", "hello world"]).stdout();
+   * ```
+   * @returns
+   */
+  proto = (): Proto => {
+    const offset = proto();
+    const response = Memory.find(offset).readJsonObject();
+    return new Proto({
+      id: response.id,
+    });
+  };
+
+  /**
+   * Setup a new hermit environment
+   * ```ts
+   * dag.hermit().withExec(["echo", "hello world"]).stdout();
+   * ```
+   * @returns
+   */
+  hermit = (): Hermit => {
+    const offset = hermit();
+    const response = Memory.find(offset).readJsonObject();
+    return new Hermit({
       id: response.id,
     });
   };
@@ -739,7 +777,7 @@ export class Devbox extends BaseClient {
    * @returns {string}
    */
   stdout = (): string => {
-    let offset = stdout();
+    const offset = stdout();
 
     return Memory.find(offset).readString();
   };
@@ -913,7 +951,7 @@ export class Devenv extends BaseClient {
    * @returns {string}
    */
   stdout = (): string => {
-    let offset = stdout();
+    const offset = stdout();
 
     return Memory.find(offset).readString();
   };
@@ -926,7 +964,7 @@ export class Devenv extends BaseClient {
    * @returns {string}
    */
   stderr = (): string => {
-    let offset = stderr();
+    const offset = stderr();
 
     return Memory.find(offset).readString();
   };
@@ -977,9 +1015,9 @@ export class Directory extends BaseClient {
    */
   directory = (path: string): Directory => {
     let mem = Memory.fromString(path);
-    let offset = directory(mem.offset);
+    const offset = directory(mem.offset);
 
-    let response = Memory.find(offset).readJsonObject();
+    const response = Memory.find(offset).readJsonObject();
     return new Directory({
       id: response.id,
       path: response.path,
@@ -1103,6 +1141,38 @@ export class Directory extends BaseClient {
     const offset = mise();
     const response = Memory.find(offset).readJsonObject();
     return new Mise({
+      id: response.id,
+    });
+  };
+
+  /**
+   * Setup a proto environment
+   *
+   * ```ts
+   * dag.directory("/path/to/dir").proto().withExec(["echo", "hello world"]).stdout();
+   * ```
+   * @returns {Proto}
+   */
+  proto = (): Proto => {
+    const offset = proto();
+    const response = Memory.find(offset).readJsonObject();
+    return new Proto({
+      id: response.id,
+    });
+  };
+
+  /**
+   * Setup a hermit environment
+   *
+   * ```ts
+   * dag.directory("/path/to/dir").hermit().withExec(["echo", "hello world"]).stdout();
+   * ```
+   * @returns {Hermit}
+   */
+  hermit = (): Hermit => {
+    const offset = hermit();
+    const response = Memory.find(offset).readJsonObject();
+    return new Hermit({
       id: response.id,
     });
   };
@@ -1609,7 +1679,7 @@ export class Flox extends BaseClient {
    * @returns {string}
    */
   stdout = (): string => {
-    let offset = stdout();
+    const offset = stdout();
     return Memory.find(offset).readString();
   };
 
@@ -1621,7 +1691,7 @@ export class Flox extends BaseClient {
    * @returns {string}
    */
   stderr = (): string => {
-    let offset = stderr();
+    const offset = stderr();
     return Memory.find(offset).readString();
   };
 }
@@ -1670,7 +1740,7 @@ export class Git extends BaseClient {
    * @returns {string}
    */
   commit = (): string => {
-    let offset = commit();
+    const offset = commit();
 
     return Memory.find(offset).readString();
   };
@@ -1683,9 +1753,9 @@ export class Git extends BaseClient {
    * @returns {Directory}
    */
   tree = (): Directory => {
-    let offset = tree();
+    const offset = tree();
 
-    let response = Memory.find(offset).readJsonObject();
+    const response = Memory.find(offset).readJsonObject();
     return new Directory({
       id: response.id,
       path: response.path,
@@ -1863,7 +1933,7 @@ export class Nix extends BaseClient {
    * @returns {string}
    */
   stdout = (): string => {
-    let offset = stdout();
+    const offset = stdout();
     return Memory.find(offset).readString();
   };
 
@@ -1875,7 +1945,7 @@ export class Nix extends BaseClient {
    * @returns {string}
    */
   stderr = (): string => {
-    let offset = stderr();
+    const offset = stderr();
     return Memory.find(offset).readString();
   };
 }
@@ -1910,8 +1980,8 @@ export class Pipeline extends BaseClient {
    * @returns {Devbox}
    */
   devbox = (): Devbox => {
-    let offset = devbox();
-    let response = Memory.find(offset).readJsonObject();
+    const offset = devbox();
+    const response = Memory.find(offset).readJsonObject();
     return new Devbox({
       id: response.id,
     });
@@ -1925,8 +1995,8 @@ export class Pipeline extends BaseClient {
    * @returns {Devenv}
    */
   devenv = (): Devenv => {
-    let offset = devenv();
-    let response = Memory.find(offset).readJsonObject();
+    const offset = devenv();
+    const response = Memory.find(offset).readJsonObject();
     return new Devenv({
       id: response.id,
     });
@@ -1940,8 +2010,8 @@ export class Pipeline extends BaseClient {
    * @returns {Flox}
    */
   flox = (): Flox => {
-    let offset = flox();
-    let response = Memory.find(offset).readJsonObject();
+    const offset = flox();
+    const response = Memory.find(offset).readJsonObject();
     return new Flox({
       id: response.id,
     });
@@ -1971,8 +2041,8 @@ export class Pipeline extends BaseClient {
    * @returns {Pkgx}
    */
   pkgx = (): Pkgx => {
-    let offset = pkgx();
-    let response = Memory.find(offset).readJsonObject();
+    const offset = pkgx();
+    const response = Memory.find(offset).readJsonObject();
     return new Pkgx({
       id: response.id,
     });
@@ -1986,8 +2056,8 @@ export class Pipeline extends BaseClient {
    * @returns {Pixi}
    */
   pixi = (): Pixi => {
-    let offset = pixi();
-    let response = Memory.find(offset).readJsonObject();
+    const offset = pixi();
+    const response = Memory.find(offset).readJsonObject();
     return new Pixi({
       id: response.id,
     });
@@ -2001,9 +2071,9 @@ export class Pipeline extends BaseClient {
    * @returns {Mise}
    */
   mise = (): Mise => {
-    let offset = mise();
+    const offset = mise();
 
-    let response = Memory.find(offset).readJsonObject();
+    const response = Memory.find(offset).readJsonObject();
     return new Mise({
       id: response.id,
     });
@@ -2017,9 +2087,39 @@ export class Pipeline extends BaseClient {
    * @returns {Envhub}
    */
   envhub = (): Envhub => {
-    let offset = envhub();
-    let response = Memory.find(offset).readJsonObject();
+    const offset = envhub();
+    const response = Memory.find(offset).readJsonObject();
     return new Envhub({
+      id: response.id,
+    });
+  };
+
+  /**
+   * Setup a new proto environment
+   * ```ts
+   * dag.pipeline("my-pipeline").proto().withExec(["echo", "hello world"]).stdout();
+   * ```
+   * @returns {Proto}
+   */
+  proto = (): Proto => {
+    const offset = proto();
+    const response = Memory.find(offset).readJsonObject();
+    return new Proto({
+      id: response.id,
+    });
+  };
+
+  /**
+   * Setup a new hermit environment
+   * ```ts
+   * dag.pipeline("my-pipeline").envhub().withExec(["echo", "hello world"]).stdout();
+   * ```
+   * @returns {Hermit}
+   */
+  hermit = (): Hermit => {
+    const offset = hermit();
+    const response = Memory.find(offset).readJsonObject();
+    return new Hermit({
       id: response.id,
     });
   };
@@ -2154,7 +2254,7 @@ export class Pipeline extends BaseClient {
    * @returns {string}
    */
   stdout = (): string => {
-    let offset = stdout();
+    const offset = stdout();
     return Memory.find(offset).readString();
   };
 
@@ -2166,7 +2266,7 @@ export class Pipeline extends BaseClient {
    * @returns {string}
    */
   stderr = (): string => {
-    let offset = stderr();
+    const offset = stderr();
     return Memory.find(offset).readString();
   };
 }
@@ -2345,7 +2445,7 @@ export class Pkgx extends BaseClient {
    * @returns {string}
    */
   stdout = (): string => {
-    let offset = stdout();
+    const offset = stdout();
     return Memory.find(offset).readString();
   };
 
@@ -2357,7 +2457,7 @@ export class Pkgx extends BaseClient {
    * @returns {string}
    */
   stderr = (): string => {
-    let offset = stderr();
+    const offset = stderr();
     return Memory.find(offset).readString();
   };
 }
@@ -2514,7 +2614,7 @@ export class Pixi extends BaseClient {
    * @returns {string}
    */
   stdout = (): string => {
-    let offset = stdout();
+    const offset = stdout();
     return Memory.find(offset).readString();
   };
 
@@ -2526,7 +2626,7 @@ export class Pixi extends BaseClient {
    * @returns {string}
    */
   stderr = (): string => {
-    let offset = stderr();
+    const offset = stderr();
     return Memory.find(offset).readString();
   };
 }
@@ -2683,7 +2783,7 @@ export class Mise extends BaseClient {
    * @returns {string}
    */
   stdout = (): string => {
-    let offset = stdout();
+    const offset = stdout();
     return Memory.find(offset).readString();
   };
 
@@ -2695,7 +2795,7 @@ export class Mise extends BaseClient {
    * @returns {string}
    */
   stderr = (): string => {
-    let offset = stderr();
+    const offset = stderr();
     return Memory.find(offset).readString();
   };
 }
@@ -2855,7 +2955,7 @@ export class Envhub extends BaseClient {
    * @returns {Envhub}
    */
   withFile = (path: string, fileId: string): Envhub => {
-    let mem = Memory.fromJsonObject({
+    const mem = Memory.fromJsonObject({
       path,
       id: fileId,
     });
@@ -2871,7 +2971,7 @@ export class Envhub extends BaseClient {
    * @returns {string}
    */
   stdout = (): string => {
-    let offset = stdout();
+    const offset = stdout();
     return Memory.find(offset).readString();
   };
 
@@ -2883,7 +2983,375 @@ export class Envhub extends BaseClient {
    * @returns {string}
    */
   stderr = (): string => {
-    let offset = stderr();
+    const offset = stderr();
+    return Memory.find(offset).readString();
+  };
+}
+
+/**
+ * Represents a Proto environment
+ */
+export class Proto extends BaseClient {
+  private _id?: string;
+
+  constructor({ id }: { id: string }) {
+    super();
+    this._id = id;
+  }
+
+  /**
+   * Returns the Proto id
+   * ```ts
+   * dag.proto().id();
+   * ```
+   * @returns {string}
+   */
+  id = (): string => {
+    return this._id!;
+  };
+
+  /**
+   * Execute a command in the Proto environment
+   * ```ts
+   * dag.proto().withExec(["echo", "hello world"]).stdout();
+   * ```
+   * @param {string[]} args
+   * @returns {Proto}
+   */
+  withExec = (args: string[]): Proto => {
+    let mem = Memory.fromString("proto");
+    set_runner(mem.offset);
+    mem = Memory.fromJsonObject(args);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
+   * Wait for a service to be available
+   * ```ts
+   * dag.proto().waitOn(8080, 60).withExec(["curl", "http://localhost:8080"]).stdout();
+   * ```
+   * @param {port} number
+   * @param {timeout} number
+   * @returns {Proto}
+   */
+  waitOn = (port: number, timeout = 60): Proto => {
+    let mem = Memory.fromString("proto");
+    set_runner(mem.offset);
+    mem = Memory.fromJsonObject([port, timeout]);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
+   * Change the working directory
+   * ```ts
+   * dag.proto().withWorkdir("/path/to/dir");
+   * ```
+   * @param {string} path Path to the new working directory
+   * @returns {Proto}
+   */
+  withWorkdir = (path: string): Proto => {
+    const mem = Memory.fromString(path);
+    with_workdir(mem.offset);
+    return this;
+  };
+
+  /**
+   * Setup a new cache
+   * ```ts
+   * dag.proto().withCache("/path/to/dir", "cache-id");
+   * ```
+   * @param {string} path Path to the cache
+   * @param {String} cacheId Unique cache identifier
+   * @returns {Proto}
+   */
+  withCache = (path: string, cacheId: string): Proto => {
+    const mem = Memory.fromJsonObject({
+      path,
+      id: cacheId,
+    });
+    with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Setup a service
+   * ```ts
+   * dag.proto().withExec(["ping", "google.com"]).asService("ping");
+   * ```
+   * @param {string} name
+   * @returns {string}
+   */
+  asService = (name: string): string => {
+    const mem = Memory.fromString(name);
+    const offset = as_service(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response.id;
+  };
+
+  /**
+   * Add a service
+   * ```ts
+   * dag.proto().withService("service-id");
+   * ```
+   * @param {string} serviceId
+   * @returns {Pkgx}
+   */
+  withService = (serviceId: string): Proto => {
+    const mem = Memory.fromString(serviceId);
+    with_service(mem.offset);
+    return this;
+  };
+
+  withEnvVariable = (name: string, value: string): Proto => {
+    const mem = Memory.fromJsonObject({
+      [name]: value,
+    });
+    set_envs(mem.offset);
+    return this;
+  };
+
+  withSecretVariable = (
+    name: string,
+    secretId: string,
+    secretName: string
+  ): Proto => {
+    const mem = Memory.fromJsonObject([name, secretId, secretName]);
+    with_secret_variable(mem.offset);
+    return this;
+  };
+
+  /**
+   * Create file at the given path
+   * ```ts
+   * dag.proto().withFile("/path/to/file", "file-id");
+   * ```
+   * @param {string} path Path to the file
+   * @param {String} fileId Unique file identifier
+   * @returns {Proto}
+   */
+  withFile = (path: string, fileId: string): Proto => {
+    const mem = Memory.fromJsonObject({
+      path,
+      id: fileId,
+    });
+    with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Returns the stdout of the last executed command
+   * ```ts
+   * dag.proto().withExec(["echo", "hello world"]).stdout();
+   * ```
+   * @returns {string}
+   */
+  stdout = (): string => {
+    const offset = stdout();
+    return Memory.find(offset).readString();
+  };
+
+  /**
+   * Returns the stderr of the last executed command
+   * ```ts
+   * dag.proto().withExec(["echo", "hello world"]).stderr();
+   * ```
+   * @returns {string}
+   */
+  stderr = (): string => {
+    const offset = stderr();
+    return Memory.find(offset).readString();
+  };
+}
+
+/**
+ * Represents a Hermit environment
+ */
+export class Hermit extends BaseClient {
+  private _id?: string;
+
+  constructor({ id }: { id: string }) {
+    super();
+    this._id = id;
+  }
+
+  /**
+   * Returns the Hermit id
+   * ```ts
+   * dag.hermit().id();
+   * ```
+   * @returns {string}
+   */
+  id = (): string => {
+    return this._id!;
+  };
+
+  /**
+   * Execute a command in the Hermit environment
+   * ```ts
+   * dag.hermit().withExec(["echo", "hello world"]).stdout();
+   * ```
+   * @param {string[]} args
+   * @returns {Hermit}
+   */
+  withExec = (args: string[]): Hermit => {
+    let mem = Memory.fromString("hermit");
+    set_runner(mem.offset);
+    mem = Memory.fromJsonObject(args);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
+   * Wait for a service to be available
+   * ```ts
+   * dag.hermit().waitOn(8080, 60).withExec(["curl", "http://localhost:8080"]).stdout();
+   * ```
+   * @param {port} number
+   * @param {timeout} number
+   * @returns {Hermit}
+   */
+  waitOn = (port: number, timeout = 60): Hermit => {
+    let mem = Memory.fromString("hermit");
+    set_runner(mem.offset);
+    mem = Memory.fromJsonObject([port, timeout]);
+    with_exec(mem.offset);
+    return this;
+  };
+
+  /**
+   * Change the working directory
+   * ```ts
+   * dag.hermit().withWorkdir("/path/to/dir");
+   * ```
+   * @param {string} path Path to the new working directory
+   * @returns {Hermit}
+   */
+  withWorkdir = (path: string): Hermit => {
+    const mem = Memory.fromString(path);
+    with_workdir(mem.offset);
+    return this;
+  };
+
+  /**
+   * Setup a new cache
+   * ```ts
+   * dag.pkgx().withCache("/path/to/dir", "cache-id");
+   * ```
+   * @param {string} path Path to the cache
+   * @param {String} cacheId Unique cache identifier
+   * @returns {Hermit}
+   */
+  withCache = (path: string, cacheId: string): Hermit => {
+    const mem = Memory.fromJsonObject({
+      path,
+      id: cacheId,
+    });
+    with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Setup a service
+   * ```ts
+   * dag.hermit().withExec(["ping", "google.com"]).asService("ping");
+   * ```
+   * @param {string} name
+   * @returns {string}
+   */
+  asService = (name: string): string => {
+    const mem = Memory.fromString(name);
+    const offset = as_service(mem.offset);
+    const response = Memory.find(offset).readJsonObject();
+    return response.id;
+  };
+
+  /**
+   * Add a service
+   * ```ts
+   * dag.hermit().withService("service-id");
+   * ```
+   * @param {string} serviceId
+   * @returns {Hermit}
+   */
+  withService = (serviceId: string): Hermit => {
+    const mem = Memory.fromString(serviceId);
+    with_service(mem.offset);
+    return this;
+  };
+
+  withEnvVariable = (name: string, value: string): Hermit => {
+    const mem = Memory.fromJsonObject({
+      [name]: value,
+    });
+    set_envs(mem.offset);
+    return this;
+  };
+
+  withSecretVariable = (
+    name: string,
+    secretId: string,
+    secretName: string
+  ): Hermit => {
+    const mem = Memory.fromJsonObject([name, secretId, secretName]);
+    with_secret_variable(mem.offset);
+    return this;
+  };
+
+  /**
+   * Create file at the given path
+   * ```ts
+   * dag.hermit().withFile("/path/to/file", "file-id");
+   * ```
+   * @param {string} path Path to the file
+   * @param {String} fileId Unique file identifier
+   * @returns {Hermit}
+   */
+  withFile = (path: string, fileId: string): Hermit => {
+    const mem = Memory.fromJsonObject({
+      path,
+      id: fileId,
+    });
+    with_cache(mem.offset);
+    return this;
+  };
+
+  /**
+   * Install packages
+   * ```ts
+   * dag.hermit().withPackages(["jq", "gh"]);
+   * ```
+   * @param {string[]} packages List of packages to install
+   * @returns {Hermit}
+   */
+  withPackages = (packages: string[]): Hermit => {
+    const mem = Memory.fromJsonObject(packages);
+    with_packages(mem.offset);
+    return this;
+  };
+
+  /**
+   * Returns the stdout of the last executed command
+   * ```ts
+   * dag.hermit().withExec(["echo", "hello world"]).stdout();
+   * ```
+   * @returns {string}
+   */
+  stdout = (): string => {
+    const offset = stdout();
+    return Memory.find(offset).readString();
+  };
+
+  /**
+   * Returns the stderr of the last executed command
+   * ```ts
+   * dag.hermit().withExec(["echo", "hello world"]).stderr();
+   * ```
+   * @returns {string}
+   */
+  stderr = (): string => {
+    const offset = stderr();
     return Memory.find(offset).readString();
   };
 }
