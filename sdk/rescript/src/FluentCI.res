@@ -205,6 +205,9 @@ module Mise = {
   external id: t => Promise.t<string> = "id"
 
   @send
+  external trust: t => t = "trust"
+
+  @send
   external asService: (t, ~name: string) => Service.t = "asService"
 
   @send
@@ -361,6 +364,91 @@ module Pkgx = {
   external withWorkdir: (t, ~path: string) => t = "withWorkdir"
 }
 
+module Proto = {
+  type t
+
+  @send
+  external id: t => Promise.t<string> = "id"
+
+  @send
+  external asService: (t, ~name: string) => Service.t = "asService"
+
+  @send
+  external stderr: t => Promise.t<string> = "stderr"
+
+  @send
+  external stdout: t => Promise.t<string> = "stdout"
+
+  @send
+  external waitOn: (t, ~port: int, ~timeout: int=?) => t = "waitOn"
+
+  @send
+  external withCache: (t, ~path: string, ~cache: Cache.t) => t = "withCache"
+
+  @send
+  external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
+
+  @send
+  external withExec: (t, Belt.Array.t<string>) => t = "withExec"
+
+  @send
+  external withFile: (t, ~path: string, ~fileID: string) => t = "withFile"
+
+  @send
+  external withSecretVariable: (t, ~name: string, ~secret: Secret.t) => t = "withSecretVariable"
+
+  @send
+  external withService: (t, Service.t) => t = "withService"
+
+  @send
+  external withWorkdir: (t, ~path: string) => t = "withWorkdir"
+}
+
+module Hermit = {
+  type t
+
+  @send
+  external id: t => Promise.t<string> = "id"
+
+  @send
+  external install: t => t = "install"
+
+  @send
+  external asService: (t, ~name: string) => Service.t = "asService"
+
+  @send
+  external stderr: t => Promise.t<string> = "stderr"
+
+  @send
+  external stdout: t => Promise.t<string> = "stdout"
+
+  @send
+  external waitOn: (t, ~port: int, ~timeout: int=?) => t = "waitOn"
+
+  @send
+  external withCache: (t, ~path: string, ~cache: Cache.t) => t = "withCache"
+
+  @send
+  external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
+
+  @send
+  external withExec: (t, Belt.Array.t<string>) => t = "withExec"
+
+  @send
+  external withFile: (t, ~path: string, ~fileID: string) => t = "withFile"
+
+  @send
+  external withPackages: (t, Belt.Array.t<string>) => t = "withPackages"
+
+  @send
+  external withSecretVariable: (t, ~name: string, ~secret: Secret.t) => t = "withSecretVariable"
+
+  @send
+  external withService: (t, Service.t) => t = "withService"
+
+  @send
+  external withWorkdir: (t, ~path: string) => t = "withWorkdir"
+}
 module File = {
   type t
 
@@ -502,6 +590,12 @@ module Directory = {
   external pkgx: t => Pkgx.t = "pkgx"
 
   @send
+  external proto: t => Pkgx.t = "proto"
+
+  @send
+  external hermit: t => Pkgx.t = "hermit"
+
+  @send
   external stderr: t => Promise.t<string> = "stderr"
 
   @send
@@ -592,6 +686,12 @@ module Pipeline = {
 
   @send
   external pkgx: t => Pkgx.t = "pkgx"
+
+  @send
+  external proto: t => Pkgx.t = "proto"
+
+  @send
+  external hermit: t => Pkgx.t = "hermit"
 
   @send
   external stderr: t => Promise.t<string> = "stderr"
@@ -697,6 +797,12 @@ module Client = {
 
   @send
   external pkgx: t => Pkgx.t = "pkgx"
+
+  @send
+  external proto: t => Pkgx.t = "proto"
+
+  @send
+  external hermit: t => Pkgx.t = "hermit"
 
   @send
   external setSecret: (t, ~name: string, ~value: string) => Secret.t = "setSecret"

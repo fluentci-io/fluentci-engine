@@ -89,6 +89,14 @@ export function pkgx(c) {
   return c.pkgx();
 }
 
+export function proto(c) {
+  return c.proto();
+}
+
+export function hermit(c) {
+  return c.hermit();
+}
+
 export function setSecret(c, name, value) {
   return c.setSecret(name, value);
 }
@@ -207,4 +215,12 @@ export function tree(c) {
 
 export function getSecret(c, name) {
   return c.getSecret(name);
+}
+
+export function trust(c) {
+  return c.trust();
+}
+
+export function install(c) {
+  return c.install();
 }

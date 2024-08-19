@@ -1,6 +1,6 @@
 {
   "name": "rescript-fluentci",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "FluentCI SDK for Rescript",
   "scripts": {
     "res:build": "rescript",
@@ -13,7 +13,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@fluentci/sdk": "npm:@jsr/fluentci__sdk@0.4.1",
+    "@fluentci/sdk": "npm:@jsr/fluentci__sdk@0.4.3",
     "@rescript/core": "1.5.2",
     "rescript": "11.1.3"
   }

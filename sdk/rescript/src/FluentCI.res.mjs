@@ -25,6 +25,10 @@ var Pixi = {};
 
 var Pkgx = {};
 
+var Proto = {};
+
+var Hermit = {};
+
 var Directory = {};
 
 var $$File = {
@@ -60,6 +64,8 @@ export {
   Nix ,
   Pixi ,
   Pkgx ,
+  Proto ,
+  Hermit ,
   $$File ,
   Directory$1 as Directory,
   Git ,

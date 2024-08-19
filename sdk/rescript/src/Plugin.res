@@ -171,6 +171,9 @@ module Mise = {
   external id: t => string = "id"
 
   @send
+  external trust: t => t = "trust"
+
+  @send
   external asService: (t, ~name: string) => string = "asService"
 
   @send
@@ -283,6 +286,85 @@ module Pkgx = {
 
   @send
   external id: t => string = "id"
+
+  @send
+  external asService: (t, ~name: string) => string = "asService"
+
+  @send
+  external stderr: t => string = "stderr"
+
+  @send
+  external stdout: t => string = "stdout"
+
+  @send
+  external waitOn: (t, ~port: int, ~timeout: int=?) => t = "waitOn"
+
+  @send
+  external withCache: (t, ~path: string, ~cacheID: string) => t = "withCache"
+
+  @send
+  external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
+
+  @send
+  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+
+  @send
+  external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
+    "withSecretVariable"
+
+  @send
+  external withService: (t, ~serviceId: string) => t = "withService"
+
+  @send
+  external withWorkdir: (t, ~path: string) => t = "withWorkdir"
+}
+
+module Proto = {
+  type t
+
+  @send
+  external id: t => string = "id"
+
+  @send
+  external asService: (t, ~name: string) => string = "asService"
+
+  @send
+  external stderr: t => string = "stderr"
+
+  @send
+  external stdout: t => string = "stdout"
+
+  @send
+  external waitOn: (t, ~port: int, ~timeout: int=?) => t = "waitOn"
+
+  @send
+  external withCache: (t, ~path: string, ~cacheID: string) => t = "withCache"
+
+  @send
+  external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
+
+  @send
+  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+
+  @send
+  external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
+    "withSecretVariable"
+
+  @send
+  external withService: (t, ~serviceId: string) => t = "withService"
+
+  @send
+  external withWorkdir: (t, ~path: string) => t = "withWorkdir"
+}
+
+module Hermite = {
+  type t
+
+  @send
+  external id: t => string = "id"
+
+  @send
+  external install: t => t = "install"
 
   @send
   external asService: (t, ~name: string) => string = "asService"

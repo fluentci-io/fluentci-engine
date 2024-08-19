@@ -1,13 +1,13 @@
 description = "Write CI/CD pipelines in Gleam"
 licences = ["MIT"]
 links = [
-  { title = "Website", href = "https://fluentci.io" },
-  { title = "Sponsor", href = "https://github.com/sponsors/fluentci-io" },
+  {title = "Website", href = "https://fluentci.io"},
+  {title = "Sponsor", href = "https://github.com/sponsors/fluentci-io"},
 ]
 name = "fluentci"
-repository = { type = "github", user = "fluentci-io", repo = "fluentci-engine" }
+repository = {type = "github", user = "fluentci-io", repo = "fluentci-engine"}
 target = "javascript"
-version = "1.0.0"
+version = "1.1.0"
 
 [javascript]
 runtime = "deno"

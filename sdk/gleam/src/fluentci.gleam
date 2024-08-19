@@ -4,11 +4,13 @@ import fluentci/devenv.{type Devenv}
 import fluentci/directory.{type Directory, type File}
 import fluentci/flox.{type Flox}
 import fluentci/git.{type Git}
+import fluentci/hermit.{type Hermit}
 import fluentci/mise.{type Mise}
 import fluentci/nix.{type Nix}
 import fluentci/pipeline.{type Pipeline}
 import fluentci/pixi.{type Pixi}
 import fluentci/pkgx.{type Pkgx}
+import fluentci/proto.{type Proto}
 import fluentci/secret.{type Secret}
 import fluentci/secret_manager.{type SecretManager}
 
@@ -92,6 +94,12 @@ pub fn pixi(client: Client) -> Pixi
 
 @external(javascript, "./fluentci_ffi.mjs", "pkgx")
 pub fn pkgx(client: Client) -> Pkgx
+
+@external(javascript, "./fluentci_ffi.mjs", "proto")
+pub fn proto(client: Client) -> Proto
+
+@external(javascript, "./fluentci_ffi.mjs", "hermit")
+pub fn hermit(client: Client) -> Hermit
 
 @external(javascript, "./fluentci_ffi.mjs", "setSecret")
 pub fn set_secret(client: Client, name: String, value: String) -> Secret

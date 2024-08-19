@@ -2,10 +2,12 @@ import fluentci/cache.{type Cache}
 import fluentci/devbox.{type Devbox}
 import fluentci/devenv.{type Devenv}
 import fluentci/flox.{type Flox}
+import fluentci/hermit.{type Hermit}
 import fluentci/mise.{type Mise}
 import fluentci/nix.{type Nix}
 import fluentci/pixi.{type Pixi}
 import fluentci/pkgx.{type Pkgx}
+import fluentci/proto.{type Proto}
 import fluentci/secret.{type Secret}
 import fluentci/service.{type Service}
 import gleam/javascript/array.{type Array}
@@ -36,6 +38,12 @@ pub fn pixi(d: Directory) -> Pixi
 
 @external(javascript, "../fluentci_ffi.mjs", "pkgx")
 pub fn pkgx(d: Directory) -> Pkgx
+
+@external(javascript, "../fluentci_ffi.mjs", "proto")
+pub fn proto(d: Directory) -> Proto
+
+@external(javascript, "../fluentci_ffi.mjs", "hermit")
+pub fn hermit(d: Directory) -> Hermit
 
 @external(javascript, "../fluentci_ffi.mjs", "directory")
 pub fn directory(d: Directory, path: String) -> Directory

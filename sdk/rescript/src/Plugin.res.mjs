@@ -21,6 +21,10 @@ var Pixi = {};
 
 var Pkgx = {};
 
+var Proto = {};
+
+var Hermite = {};
+
 var Secret = {};
 
 var SecretManager = {};
@@ -58,6 +62,8 @@ export {
   Nix ,
   Pixi ,
   Pkgx ,
+  Proto ,
+  Hermite ,
   Secret ,
   SecretManager ,
   Service ,
