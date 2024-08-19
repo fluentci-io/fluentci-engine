@@ -1,6 +1,6 @@
 {
   "name": "@fluentci/sdk",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "exports": {
     ".": "./src/client.gen.ts",
     "./plugin": "./src/plugin.ts",
