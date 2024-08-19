@@ -445,6 +445,13 @@ export async function e2e(
       "fluentci-engine",
       "call",
       "-m",
+      "../target/wasm32-unknown-unknown/release/hermit.wasm",
+      "exec which jq",
+    ])
+    .withExec([
+      "fluentci-engine",
+      "call",
+      "-m",
       "../target/wasm32-unknown-unknown/release/chmod.wasm",
       "chmod a+x hello.sh",
     ])
