@@ -1,4 +1,4 @@
-import { env } from "../../deps.ts";
+import { env } from "../deps.ts";
 
 export function buildRustFlags(): string {
   let rustflags = "";

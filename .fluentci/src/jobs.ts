@@ -3,8 +3,8 @@
  * @description This module provides a set of functions to build, test, and run clippy on a Rust project 🦀
  */
 
-import { dag, env, Directory, DirectoryID, File } from "../../deps.ts";
-import { buildRustFlags } from "./lib.ts";
+import { dag, env, Directory, type DirectoryID, type File } from "../deps.ts";
+import { buildRustFlags } from "./helpers.ts";
 
 export enum Job {
   clippy = "clippy",
