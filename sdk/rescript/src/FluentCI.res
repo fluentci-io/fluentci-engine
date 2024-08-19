@@ -688,10 +688,10 @@ module Pipeline = {
   external pkgx: t => Pkgx.t = "pkgx"
 
   @send
-  external proto: t => Pkgx.t = "proto"
+  external proto: t => Proto.t = "proto"
 
   @send
-  external hermit: t => Pkgx.t = "hermit"
+  external hermit: t => Hermit.t = "hermit"
 
   @send
   external stderr: t => Promise.t<string> = "stderr"
@@ -799,10 +799,10 @@ module Client = {
   external pkgx: t => Pkgx.t = "pkgx"
 
   @send
-  external proto: t => Pkgx.t = "proto"
+  external proto: t => Proto.t = "proto"
 
   @send
-  external hermit: t => Pkgx.t = "hermit"
+  external hermit: t => Hermit.t = "hermit"
 
   @send
   external setSecret: (t, ~name: string, ~value: string) => Secret.t = "setSecret"

@@ -1,4 +1,6 @@
-import fluentci.{dag, pipeline, set_secret}
+import fluentci.{dag, hermit, mise, pipeline, set_secret}
+import fluentci/hermit
+import fluentci/mise.{trust, with_workdir}
 import fluentci/pipeline.{stdout, with_exec, with_secret_variable}
 import fluentci/secret.{plaintext}
 import gleam/io
@@ -32,6 +34,29 @@ pub fn main() {
   |> stdout
   |> await(fn(value) {
     io.print("Secret demo: ")
+    io.println(value)
+    resolve(value)
+  })
+
+  dag()
+  |> mise()
+  |> with_workdir("./mise-demo")
+  |> trust()
+  |> mise.with_exec(from_list(["which", "bun"]))
+  |> mise.stdout
+  |> await(fn(value) {
+    io.print("Mise demo: ")
+    io.println(value)
+    resolve(value)
+  })
+
+  dag()
+  |> hermit()
+  |> hermit.with_workdir("./hermit-demo")
+  |> hermit.with_exec(from_list(["which", "jq"]))
+  |> hermit.stdout
+  |> await(fn(value) {
+    io.print("Hermit demo: ")
     io.println(value)
     resolve(value)
   })

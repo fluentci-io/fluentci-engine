@@ -42,7 +42,7 @@ var stdout = await Sdk.dag.pipeline("demo").pkgx().withPackages(["ping"]).withSe
 
 console.log("Stdout: " + stdout);
 
-var mise = await Sdk.dag.pipeline("mise-demo").mise().withWorkdir("./mise-demo").withExec([
+var mise = await Sdk.dag.pipeline("mise-demo").mise().withWorkdir("./mise-demo").trust().withExec([
           "mise",
           "--version"
         ]).withExec([

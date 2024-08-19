@@ -55,6 +55,7 @@ let mise =
   ->Client.pipeline(~name="mise-demo")
   ->Pipeline.mise
   ->Mise.withWorkdir(~path="./mise-demo")
+  ->Mise.trust
   ->Mise.withExec(["mise", "--version"])
   ->Mise.withExec(["which", "bun"])
   ->Mise.stdout
@@ -85,3 +86,10 @@ let dir = await dag->Client.directory(~path=".")->Directory.entries
 
 Console.log("Directory entries at '.': ")
 Console.log(dir)
+
+let hermit =
+  await dag
+  ->Client.hermit
+  ->Hermit.withWorkdir(~path="./hermit-demo")
+  ->Hermit.withExec(["which", "jq"])
+  ->Hermit.stdout
