@@ -12,12 +12,12 @@ use fluentci_types::Output;
 pub struct Mise {}
 
 impl Mise {
-    pub fn trust(&self, args: &str) -> Result<ExitStatus, Error> {
+    pub fn trust(&self) -> Result<ExitStatus, Error> {
         self.setup()?;
 
         let mut child = Command::new("bash")
             .arg("-c")
-            .arg(format!("mise trust {}", args))
+            .arg("mise trust")
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())

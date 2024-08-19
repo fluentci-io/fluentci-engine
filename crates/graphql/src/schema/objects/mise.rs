@@ -19,9 +19,9 @@ impl Mise {
         &self.id
     }
 
-    async fn trust(&self, ctx: &Context<'_>, path: String) -> Result<&Mise, Error> {
+    async fn trust(&self, ctx: &Context<'_>) -> Result<&Mise, Error> {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
-        common_mise::trust(graph.clone(), path)?;
+        common_mise::trust(graph.clone())?;
         Ok(self)
     }
 

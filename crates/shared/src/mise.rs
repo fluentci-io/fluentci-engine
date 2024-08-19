@@ -11,10 +11,10 @@ host_fn!(pub mise(user_data: State;) -> Json<Mise> {
     Ok(Json(mise))
 });
 
-host_fn!(pub trust(user_data: State; path: String) {
+host_fn!(pub trust(user_data: State;) {
     let state = user_data.get()?;
     let state = state.lock().unwrap();
     let graph = state.graph.clone();
-    common_mise::trust(graph, path)?;
+    common_mise::trust(graph)?;
     Ok(())
 });

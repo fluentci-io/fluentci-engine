@@ -55,6 +55,15 @@ async function main() {
 
   console.log(demo);
 
+  const hermit = await dag
+    .hermit()
+    .withWorkdir("./hermit-demo")
+    .withPackages(["jq"])
+    .withExec(["which", "jq"])
+    .stdout();
+
+  console.log(hermit);
+
   const envhub = await dag
     .pipeline("envhub-demo")
     .envhub()

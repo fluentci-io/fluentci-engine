@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[host_fn]
 extern "ExtismHost" {
     fn set_runner(runner: String);
-    fn trust(args: String);
+    fn trust();
     fn with_exec(args: Json<Vec<String>>);
     fn with_workdir(path: String);
     fn with_cache(cache: Json<Cache>);
@@ -31,8 +31,8 @@ impl From<types::Mise> for Mise {
 }
 
 impl Mise {
-    pub fn trust(&self, args: &str) -> Result<Mise, Error> {
-        unsafe { trust(args.into()) }?;
+    pub fn trust(&self) -> Result<Mise, Error> {
+        unsafe { trust() }?;
         Ok(Mise {
             id: self.id.clone(),
         })

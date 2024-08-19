@@ -237,6 +237,18 @@ export class Client extends BaseClient {
     });
   };
 
+  mise = (): Mise => {
+    return new Mise({
+      queryTree: [
+        ...this._queryTree,
+        {
+          operation: "mise",
+        },
+      ],
+      ctx: this._ctx,
+    });
+  };
+
   setSecret = (name: string, value: string): Secret => {
     return new Secret({
       queryTree: [
@@ -2359,13 +2371,12 @@ export class Mise extends BaseClient {
     return response;
   };
 
-  trust = (path: string): Mise => {
+  trust = (): Mise => {
     return new Mise({
       queryTree: [
         ...this._queryTree,
         {
           operation: "trust",
-          args: { path },
         },
       ],
       ctx: this._ctx,

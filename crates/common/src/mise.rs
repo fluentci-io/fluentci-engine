@@ -1,8 +1,4 @@
-use std::{
-    fs::canonicalize,
-    path::Path,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use anyhow::Error;
 use fluentci_core::deps::{Graph, GraphCommand};
@@ -33,19 +29,8 @@ pub fn mise(graph: Arc<Mutex<Graph>>, reset: bool) -> Result<Mise, Error> {
     Ok(mise)
 }
 
-pub fn trust(graph: Arc<Mutex<Graph>>, path: String) -> Result<(), Error> {
+pub fn trust(graph: Arc<Mutex<Graph>>) -> Result<(), Error> {
     let mut graph = graph.lock().unwrap();
-
-    if !Path::new(&path).exists() && !path.starts_with("/") {
-        let dir = canonicalize(".").unwrap();
-        let dir = dir.to_str().unwrap();
-        let dir = format!("{}/{}", dir, path);
-        return Err(Error::msg(format!("Path `{}` does not exist", dir)));
-    }
-
-    if !Path::new(&path).exists() {
-        return Err(Error::msg(format!("Path `{}` does not exist", path)));
-    }
 
     let id = Uuid::new_v4().to_string();
     let dep_id = graph.vertices[graph.size() - 1].id.clone();
@@ -56,7 +41,7 @@ pub fn trust(graph: Arc<Mutex<Graph>>, path: String) -> Result<(), Error> {
     graph.execute(GraphCommand::AddVertex(
         id.clone(),
         "trust".into(),
-        format!("mise trust {}", path),
+        "mise trust".into(),
         deps,
         Arc::new(Box::new(MiseExt::default())),
     ))?;

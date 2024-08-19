@@ -4,7 +4,9 @@
     "specifiers": {
       "jsr:@tsirysndr/env-js@0.1.2": "jsr:@tsirysndr/env-js@0.1.2",
       "npm:graphql-request@6.1.0": "npm:graphql-request@6.1.0_graphql@16.8.1",
-      "npm:lodash@4.17.21": "npm:lodash@4.17.21"
+      "npm:graphql@16.8.1": "npm:graphql@16.8.1",
+      "npm:lodash@4.17.21": "npm:lodash@4.17.21",
+      "npm:node-color-log@11.0.2": "npm:node-color-log@11.0.2"
     },
     "jsr": {
       "@tsirysndr/env-js@0.1.2": {
@@ -38,6 +40,10 @@
       },
       "lodash@4.17.21": {
         "integrity": "sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==",
+        "dependencies": {}
+      },
+      "node-color-log@11.0.2": {
+        "integrity": "sha512-+gD5pQpVpEkEA3He9STku4VL1EO9SaOW3HElumCd3xWorulnfr2053NCSVwPCXrkwI5ihPYucQxSCSOuS1q+Eg==",
         "dependencies": {}
       },
       "node-fetch@2.7.0": {
