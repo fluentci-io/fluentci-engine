@@ -143,7 +143,7 @@ pub fn call(module: &str, command: &str) -> Result<(), Error> {
     let args = command.split_whitespace().skip(1).collect::<Vec<&str>>();
     let args = args.join(" ");
     match plugin.call::<&str, &str>(func, &args) {
-        Ok(res) => println!("{}", res),
+        Ok(_) => {}
         Err(err) => {
             println!("{}", err);
             std::process::exit(1);
