@@ -7,15 +7,15 @@ keywords = ["nix", "environment", "ci", "wasm", "devops"]
 license = "MPL-2.0"
 name = "fluentci-common"
 repository = "https://github.com/fluentci-io/fluentci-engine"
-version = "0.2.7"
+version = "0.2.8"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1.0.81"
 dirs = "5.0.1"
-fluentci-core = {path = "../core", version = "0.3.6"}
-fluentci-ext = {path = "../ext", version = "0.2.5"}
+fluentci-core = {path = "../core", version = "0.3.7"}
+fluentci-ext = {path = "../ext", version = "0.2.6"}
 fluentci-secrets = {path = "../secrets", version = "0.1.0"}
 fluentci-types = {path = "../types", version = "0.1.8"}
 regex = "1.10.4"

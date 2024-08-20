@@ -150,7 +150,9 @@ pub fn exec(
             println!("{}", line);
             match fluentci_logging::info(&line, &namespace) {
                 Ok(_) => {}
-                Err(_) => {}
+                Err(e) => {
+                    println!("Error: {}", e);
+                }
             }
             stdout.push_str(&line);
             stdout.push_str("\n");
