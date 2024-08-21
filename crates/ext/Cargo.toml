@@ -7,7 +7,7 @@ keywords = ["nix", "environment", "ci", "wasm", "devops"]
 license = "MPL-2.0"
 name = "fluentci-ext"
 repository = "https://github.com/fluentci-io/fluentci-engine"
-version = "0.2.5"
+version = "0.2.6"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -27,5 +27,6 @@ owo-colors = "4.0.0"
 regex = "1.10.3"
 sha2 = "0.10.8"
 sha256 = "1.5.0"
+superconsole = "0.2.0"
 tokio = {version = "1.36.0", features = ["tokio-macros", "macros", "rt", "rt-multi-thread"]}
 users = "0.11.0"
