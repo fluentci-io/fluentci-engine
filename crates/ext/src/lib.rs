@@ -190,7 +190,10 @@ pub fn exec(
     thread::spawn(move || {
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
-            stdout_tx_clone.send(line.unwrap()).unwrap();
+            match stdout_tx_clone.send(line.unwrap()) {
+                Ok(_) => {}
+                Err(_) => {}
+            }
         }
     });
 
@@ -218,7 +221,7 @@ impl<'a> Component for Log<'a> {
                 let mut lines: Vec<Line> = self
                     .lines
                     .iter()
-                    .map(|l| vec![l.clone()].try_into().unwrap())
+                    .map(|l| vec![l.clone()].try_into().unwrap_or_default())
                     .collect();
                 lines.push(
                     vec![format!(
