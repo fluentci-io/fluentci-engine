@@ -7,7 +7,7 @@ keywords = ["nix", "environment", "ci", "wasm", "devops"]
 license = "MPL-2.0"
 name = "fluentci-core"
 repository = "https://github.com/fluentci-io/fluentci-engine"
-version = "0.3.7"
+version = "0.3.8"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,7 +15,7 @@ version = "0.3.7"
 anyhow = "1.0.81"
 chrono = "0.4.35"
 dirs = "5.0.1"
-fluentci-ext = {path = "../ext", version = "0.2.6"}
+fluentci-ext = {path = "../ext", version = "0.2.7"}
 fluentci-logging = {path = "../logging", version = "0.1.0"}
 fluentci-secrets = {path = "../secrets", version = "0.1.0"}
 fluentci-types = {path = "../types", version = "0.1.8"}
