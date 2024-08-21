@@ -106,7 +106,7 @@ pub fn exec(
             let mut lines = vec![];
             while let Ok(line) = stdout_rx.recv() {
                 lines.push(line.clone());
-                if lines.len() > 15 {
+                if lines.len() > 20 {
                     lines.remove(0);
                 }
 
@@ -215,7 +215,6 @@ impl<'a> Component for Log<'a> {
     fn draw_unchecked(&self, _dimensions: Dimensions, mode: DrawMode) -> anyhow::Result<Lines> {
         Ok(match mode {
             DrawMode::Normal => {
-                let elapsed = self.now.duration_since(self.created).as_millis();
                 let mut lines: Vec<Line> = self
                     .lines
                     .iter()
@@ -223,10 +222,9 @@ impl<'a> Component for Log<'a> {
                     .collect();
                 lines.push(
                     vec![format!(
-                        "Executing {} {}{}",
+                        "   {} {}",
+                        "Executing".bright_green().bold(),
                         self.command.bright_purple(),
-                        (elapsed as f64 / 1000.0).to_string().magenta(),
-                        "s".magenta()
                     )]
                     .try_into()
                     .unwrap(),
@@ -241,8 +239,8 @@ impl<'a> Component for Log<'a> {
                     self.command.bright_purple(),
                     (self.now.duration_since(self.created).as_millis() as f64 / 1000.0)
                         .to_string()
-                        .magenta(),
-                    "s".magenta()
+                        .bright_blue(),
+                    "s".bright_blue()
                 );
                 Lines(vec![Line::from_iter([
                     finished,
