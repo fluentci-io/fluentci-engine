@@ -1,8 +1,5 @@
 use std::{
-    env::{
-        self,
-        consts::{ARCH, OS},
-    },
+    env::consts::{ARCH, OS},
     fs,
     process::{Command, Stdio},
     sync::{mpsc, Arc, Mutex},
