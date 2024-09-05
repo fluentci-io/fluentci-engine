@@ -1,4 +1,5 @@
 /target
+/result
 fluentci-*.json
 process-compose*
 sdk/rescript/lib

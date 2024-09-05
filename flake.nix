@@ -40,7 +40,7 @@
           inherit src;
           
           pname = "fluentci-engine";
-          version = "0.4.8";
+          version = "0.4.11";
           cargoExtraArgs = "--package=fluentci-engine";
 
           buildInputs = [
