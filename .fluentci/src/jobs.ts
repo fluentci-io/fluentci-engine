@@ -54,7 +54,7 @@ export async function clippy(
   const ctr = dag
     .pipeline(Job.clippy)
     .container()
-    .from("rust:1.73-bookworm")
+    .from("rust:1.84-bookworm")
     .withExec(["apt-get", "update"])
     .withExec(["apt-get", "install", "-y", "build-essential", "pkg-config"])
     .withExec(["rustup", "component", "add", "clippy"])
@@ -94,7 +94,7 @@ export async function llvmCov(
   const ctr = dag
     .pipeline(Job.llvmCov)
     .container()
-    .from("rust:1.73-bookworm")
+    .from("rust:1.84-bookworm")
     .withExec(["apt-get", "update"])
     .withExec([
       "apt-get",
@@ -151,7 +151,7 @@ export async function test(
   const ctr = dag
     .pipeline(Job.test)
     .container()
-    .from("rust:latest")
+    .from("rust:1.84")
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
     .withMountedCache("/app/target", dag.cacheVolume("target"))
@@ -178,7 +178,7 @@ export const build = async (src = "."): Promise<string> => {
   const ctr = dag
     .pipeline(Job.build)
     .container()
-    .from("rust:1.76-bullseye")
+    .from("rust:1.84-bullseye")
     .withExec([
       "wget",
       "https://github.com/mozilla/sccache/releases/download/v0.7.7/sccache-v0.7.7-x86_64-unknown-linux-musl.tar.gz",
@@ -355,7 +355,7 @@ export async function e2e(
   await dag
     .pipeline("plugin-e2e")
     .container()
-    .from("rust:1.76-bookworm")
+    .from("rust:1.84-bookworm")
     .withExec(["rustup", "target", "add", "wasm32-unknown-unknown"])
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
