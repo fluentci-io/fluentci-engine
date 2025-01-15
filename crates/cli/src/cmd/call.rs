@@ -182,7 +182,7 @@ pub fn download_module(url: &str) -> Result<Wasm, Error> {
     }
 
     let cmd = format!(
-        "pkgx +rockdaboot.github.io/libpsl +curl.se curl -s {} -o {}",
+        "pkgx +rockdaboot.github.io/libpsl +curl.se@8.5.0 curl -s {} -o {}",
         url, filename
     );
     fs::create_dir_all(&work_dir)?;
