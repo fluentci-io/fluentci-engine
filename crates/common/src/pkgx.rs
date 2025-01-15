@@ -41,7 +41,7 @@ pub fn with_packages(graph: Arc<Mutex<Graph>>, packages: Vec<String>) -> Result<
     graph.execute(GraphCommand::AddVertex(
         id.clone(),
         "withPackages".into(),
-        format!("pkgx install {}", packages.join(" ")),
+        format!("pkgm install {}", packages.join(" ")),
         deps,
         Arc::new(Box::new(PkgxExt::default())),
     ))?;
