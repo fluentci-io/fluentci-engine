@@ -223,7 +223,7 @@ pub fn setup_wasm_to_oci() -> Result<(), Error> {
 
     let mut child = Command::new("bash")
         .arg("-c")
-        .arg("type wasm-to-oci > /dev/null 2> /dev/null || pkgx wget https://github.com/fluentci-io/wasm-to-oci/releases/download/v0.1.2/wasm-to-oci_${OS}-${ARCH}.tar.gz ; \
+        .arg("type wasm-to-oci > /dev/null 2> /dev/null || pkgx wget@1.21.4 https://github.com/fluentci-io/wasm-to-oci/releases/download/v0.1.2/wasm-to-oci_${OS}-${ARCH}.tar.gz ; \
             type wasm-to-oci > /dev/null 2> /dev/null || pkgx tar xvf wasm-to-oci_${OS}-${ARCH}.tar.gz ; \
             type wasm-to-oci > /dev/null 2> /dev/null || cp wasm-to-oci ${HOME}/.local/bin ; \
             [ -f wasm-to-oci ] && rm wasm-to-oci || true ; \
