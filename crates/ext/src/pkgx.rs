@@ -17,7 +17,7 @@ impl Pkgx {
 
         let mut child = Command::new("sh")
             .arg("-c")
-            .arg(format!("pkgx install {}", pkgs.join(" ")))
+            .arg(format!("pkgm install {}", pkgs.join(" ")))
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
