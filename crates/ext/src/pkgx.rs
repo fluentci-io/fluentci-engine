@@ -41,7 +41,7 @@ impl Extension for Pkgx {
             return Ok(ExitStatus::default());
         }
 
-        let cmd = format!("eval \"$(pkgx --shellcode)\"; {}", cmd);
+        let cmd = format!("eval \"$(pkgx --shellcode)\" && pkgx pkgx^1 deintegrate && pkgx dev integrate ; {}", cmd);
         exec(&cmd, tx, out, last_cmd, work_dir)
     }
 
@@ -65,6 +65,6 @@ impl Extension for Pkgx {
     }
 
     fn format_command(&self, cmd: &str) -> String {
-        format!("eval \"$(pkgx --shellcode)\"; {}", cmd)
+        format!("eval \"$(pkgx --shellcode)\" && pkgx pkgx^1 deintegrate && pkgx dev integrate ; {}", cmd)
     }
 }
