@@ -202,7 +202,7 @@ impl Extension for Cache {
     }
 
     fn setup(&self) -> Result<(), Error> {
-        Pkgx::default().install(vec!["tar", "wget"])?;
+        Pkgx::default().install(vec!["tar", "wget@1.21.4"])?;
         Ok(())
     }
 
