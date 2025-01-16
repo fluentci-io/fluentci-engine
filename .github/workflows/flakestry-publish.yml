@@ -12,7 +12,7 @@ on:
         required: true
 jobs:
   publish-flake:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       id-token: "write"
       contents: "read"
@@ -22,7 +22,7 @@ jobs:
         uses: fluentci-io/setup-fluentci@v5
         with:
           wasm: true
-          engine-version: 0.4.0
+          engine-version: 0.4.12
           pipeline: flakestry
           args: publish
         env:
