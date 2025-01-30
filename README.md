@@ -20,8 +20,8 @@ FluentCI Engine is a programmable CI/CD engine (used by [FluentCI](https://githu
 
 > [!NOTE]
 > **Project Status: 🐲 Unstable, alpha-ish quality.**
-> This project is still in the early stages of development, 
-> and it is not yet ready for production use. 
+> This project is still in the early stages of development,
+> and it is not yet ready for production use.
 > It is not feature-complete, and it is not yet stable. Use at your own risk.
 
 ![Cover](https://github.com/fluentci-io/fluentci-engine/raw/HEAD/.github/assets/api.png)
@@ -49,6 +49,7 @@ git clone https://github.com/fluentci-io/fluentci-engine.git
 cd fluentci-engine
 # Install dependencies
 nix develop
+cd ./fixtures
 cargo run -p fluentci-engine -- serve
 # Open the browser and go to http://localhost:6880/graphiql
 # See ./fixtures for some GraphQL queries examples
@@ -183,7 +184,7 @@ fluentci-engine call -m ./target/wasm32-unknown-unknown/release/nix.wasm -- exec
 - [terraform](https://github.com/fluent-ci-templates/terraform-pipeline/tree/main/plugin)
 - [zig](https://github.com/fluent-ci-templates/zig-pipeline/tree/main/plugin)
 - [wasmer](https://github.com/fluent-ci-templates/wasmer-pipeline/tree/main/plugin)
-  
+
 ### 🌈 Builtin functions
 
 FluentCI Plugin Development Kit ([fluentci_pdk](https://docs.rs/fluentci-pdk/latest/fluentci_pdk)) provides some builtin functions from that you can use in your plugins:
@@ -379,7 +380,7 @@ jobs:
         uses: fluentci-io/setup-fluentci@v5
         with:
           wasm: true # set to true so WebAssembly plugins can be used
-          plugin: base # Name of the Wasm Plugin to use without the .wasm extension, 
+          plugin: base # Name of the Wasm Plugin to use without the .wasm extension,
           # will be downloaded from the registry https://pkg.fluentci.io
 
           # Arguments to pass to the plugin: function_name args
