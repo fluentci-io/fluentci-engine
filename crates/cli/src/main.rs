@@ -7,18 +7,18 @@ use cmd::serve::serve;
 pub mod cmd;
 
 fn cli() -> Command<'static> {
-    const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
     Command::new("fluentci-engine")
         .version(VERSION)
         .about(
-            r#"  
-            
-       ________                 __  __________   ______            _          
-      / ____/ /_  _____  ____  / /_/ ____/  _/  / ____/___  ____ _(_)___  ___ 
+            r#"
+
+       ________                 __  __________   ______            _
+      / ____/ /_  _____  ____  / /_/ ____/  _/  / ____/___  ____ _(_)___  ___
      / /_  / / / / / _ \/ __ \/ __/ /    / /   / __/ / __ \/ __ `/ / __ \/ _ \
     / __/ / / /_/ /  __/ / / / /_/ /____/ /   / /___/ / / / /_/ / / / / /  __/
-   /_/   /_/\__,_/\___/_/ /_/\__/\____/___/  /_____/_/ /_/\__, /_/_/ /_/\___/ 
-                                                         /____/                  
+   /_/   /_/\__,_/\___/_/ /_/\__/\____/___/  /_____/_/ /_/\__, /_/_/ /_/\___/
+                                                         /____/
 
    A Programmable CI/CD engine without Containers, built on top of Nix ❄️
       "#,
@@ -36,7 +36,7 @@ fn cli() -> Command<'static> {
         )
         .subcommand(
             Command::new("call")
-                .arg(arg!(--module -m <PATH> "path or url to the module to call").required(true))
+                .arg(arg!(-m --module <PATH> "path or url to the module to call").required(true))
                 .arg(
                     Arg::new("command")
                         .multiple_occurrences(true)
