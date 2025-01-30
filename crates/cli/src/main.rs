@@ -7,7 +7,7 @@ use cmd::serve::serve;
 pub mod cmd;
 
 fn cli() -> Command<'static> {
-    const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
     Command::new("fluentci-engine")
         .version(VERSION)
         .about(
