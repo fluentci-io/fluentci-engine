@@ -209,7 +209,11 @@ pub(crate) fn validate_workspace(
             }
         }
     }
-    let mut ordered = std::collections::HashSet::new();
+    // One task's ancestors/descendants suffice for all its overlapping paths.
+    // Keep linear scratch space instead of a set of every ordered task pair.
+    let mut related = vec![false; tasks.len()];
+    let mut related_task = None;
+    let mut pending = Vec::new();
     for (path, accesses) in &paths {
         for ancestor in path.ancestors() {
             let Some(others) = paths.get(ancestor) else {
@@ -227,30 +231,28 @@ pub(crate) fn validate_workspace(
                     if a == b {
                         continue;
                     }
-                    let pair = (a.min(b), a.max(b));
-                    if ordered.contains(&pair) {
-                        continue;
-                    }
-                    let reaches = |from: usize, target: usize| {
-                        let mut pending = vec![from];
-                        let mut seen = std::collections::HashSet::new();
-                        while let Some(node) = pending.pop() {
-                            if node == target {
-                                return true;
-                            }
-                            if seen.insert(node) {
-                                pending.extend(graph.dependencies[node].iter().copied());
+                    if related_task != Some(a) {
+                        related.fill(false);
+                        related[a] = true;
+                        // Traverse each direction separately. Walking both kinds
+                        // of edges at each node would wrongly order siblings.
+                        for edges in [&graph.dependencies, &graph.successors] {
+                            pending.extend(edges[a].iter().copied());
+                            while let Some(node) = pending.pop() {
+                                if !related[node] {
+                                    related[node] = true;
+                                    pending.extend(edges[node].iter().copied());
+                                }
                             }
                         }
-                        false
-                    };
-                    if !reaches(a, b) && !reaches(b, a) {
+                        related_task = Some(a);
+                    }
+                    if !related[b] {
                         return Err(format!(
                             "unordered cache paths overlap between tasks {} and {} at {}; add a dependency or use separate output paths",
                             tasks[a].id, tasks[b].id, path.display()
                         ));
                     }
-                    ordered.insert(pair);
                 }
             }
         }

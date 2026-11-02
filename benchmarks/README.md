@@ -34,3 +34,19 @@ is the maximum observation; use more samples to study tails. No timing threshold
 are enforced in CI because host load varies. Large-DAG validation, cancellation
 latency, server throughput, service workloads, and competing engines still need
 separate measurements.
+
+## Shared-output validation workload
+
+```sh
+cargo test --release -p fluentci-executor --test cache large_ordered_workspace -- --nocapture
+```
+
+This regression builds 1,000 ordered tasks declaring the same output path, times
+validation only, and verifies rejection after removing the last writer's dependency.
+It launches no task processes and enforces no timing threshold. In one local release
+comparison, validation dropped from 8.65 s to 39.8 ms after replacing per-pair graph
+walks and the ordered-pair set with reusable per-task ancestor/descendant marks.
+This is a targeted workload, not a general pipeline speedup claim. Overlap candidate
+enumeration is still quadratic for a shared path with many writers; scratch graph
+reachability storage no longer grows with the number of compared pairs. Run on the
+same machine/toolchain to compare changes; filesystem validation remains included.

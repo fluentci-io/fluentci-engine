@@ -370,3 +370,81 @@ fn executable_permission_changes_during_execution_prevent_cache_publication() {
     let warm = run(&p, dir.path(), "warm");
     assert_eq!(warm.tasks[0].cache.outcome, "hit");
 }
+
+#[test]
+fn large_ordered_workspace_validates_without_recursive_graph_walks() {
+    let dir = TempDir::new().unwrap();
+    let mut p = plan(dir.path());
+    let prototype = p.tasks[0].clone();
+    p.tasks = (0..1000)
+        .map(|index| {
+            let mut task = prototype.clone();
+            task.id = format!("task-{index}");
+            task.needs = if index == 0 {
+                vec![]
+            } else {
+                vec![format!("task-{}", index - 1)]
+            };
+            task
+        })
+        .collect();
+    let started = std::time::Instant::now();
+    p.validate().unwrap();
+    eprintln!("1000 ordered writers: {:?}", started.elapsed());
+    // Keep the wide shared-path workload, but break the final writer's ordering.
+    p.tasks[999].needs.clear();
+    assert!(p.validate().unwrap_err().contains("unordered cache paths"));
+}
+
+#[test]
+fn overlap_validation_matches_four_node_forward_dags_in_both_plan_orders() {
+    let dir = TempDir::new().unwrap();
+    let mut p = plan(dir.path());
+    let prototype = p.tasks[0].clone();
+    let edges = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)];
+    for mask in 0..64 {
+        let mut reachable = [[false; 4]; 4];
+        let mut tasks: Vec<_> = (0..4)
+            .map(|index| {
+                let mut task = prototype.clone();
+                task.id = format!("node-{index}");
+                task.needs.clear();
+                task
+            })
+            .collect();
+        for (bit, &(from, to)) in edges.iter().enumerate() {
+            if mask & (1 << bit) != 0 {
+                tasks[to].needs.push(format!("node-{from}"));
+                reachable[from][to] = true;
+            }
+        }
+        // Independent transitive-closure oracle, including forks and joins.
+        for via in 0..4 {
+            for from in 0..4 {
+                for to in 0..4 {
+                    reachable[from][to] |= reachable[from][via] && reachable[via][to];
+                }
+            }
+        }
+        for &(a, b) in &edges {
+            for (index, task) in tasks.iter_mut().enumerate() {
+                task.cache.as_mut().unwrap().outputs = vec![if index == a || index == b {
+                    "shared".into()
+                } else {
+                    format!("unique-{index}").into()
+                }];
+            }
+            for reverse in [false, true] {
+                p.tasks = tasks.clone();
+                if reverse {
+                    p.tasks.reverse();
+                }
+                assert_eq!(
+                    p.validate().is_ok(),
+                    reachable[a][b],
+                    "mask={mask}, pair=({a},{b}), reverse={reverse}"
+                );
+            }
+        }
+    }
+}

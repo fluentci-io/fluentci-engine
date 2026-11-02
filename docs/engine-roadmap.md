@@ -58,7 +58,9 @@ milestones do not establish a claim of being the fastest engine.
    and integration jobs for MacPorts and macports-rs. Homebrew and BSD native
    package-plan installation tests are configured but await remote verification.
    BSD kernel/package-manager tests do not prove Wasmtime/legacy server portability.
-7. The release CLI benchmark in `benchmarks/host.py` now measures empty runs,
+7. Shared-path validation now reuses per-task graph reachability and avoids retaining
+   all ordered pairs; a 1,000-writer regression and four-node DAG model checks cover
+   scale and ordering correctness. The release CLI benchmark in `benchmarks/host.py` now measures empty runs,
    dependency chains, independent tasks, bounded parallelism, 1 MiB logs, and
    cold/warm artifact caching with outcome checks and machine-readable samples.
    Extend measurements to cancellation, large DAGs, services, server throughput,
