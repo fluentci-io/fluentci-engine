@@ -40,10 +40,11 @@ milestones do not establish a claim of being the fastest engine.
 2. The sibling PureScript SDK now provides pure immutable host plans, typed remote
    execution, and a direct Node adapter with Aff cancellation. Its end-to-end tests
    exercise this release engine. The Gleam JavaScript SDK now has pure pipe-friendly
-   host builders and release-CLI cache/workspace fixtures verified on Node and Deno.
+   host builders, typed direct local execution with cooperative cancellation, and
+   release-engine cache/workspace and process-cleanup fixtures verified on Node and Deno.
    The host CI matrix now includes these fixtures on both runtimes with required
-   release-engine execution (configured, not remotely verified). Add typed Gleam
-   execution adapters. Implement
+   release-engine execution (configured, not remotely verified). Add a typed Gleam
+   HTTP adapter. Implement
    equivalent TypeScript and Elixir builders/adapters, automate cross-repository
    compatibility tests, and complete
    the legacy SDK migration path.

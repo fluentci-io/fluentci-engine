@@ -57,9 +57,49 @@ cache contracts, platform support, and service/resource constraints. An explicit
 `with_cache` for path-dependent commands. Workspaces separate run files, not host
 permissions. Unused optional fields are omitted for older-engine compatibility.
 
-This module targets JavaScript and adds no dependencies. It is a plan compiler,
-not yet a typed HTTP or local execution adapter. The existing APIs below still use
-the legacy engine path. Verify host plans against a built release engine with:
+### Execute locally with typed results
+
+`fluentci/host/local` runs the engine directly on Node or Deno (with filesystem,
+environment and subprocess permissions). No additional dependencies are required:
+
+```gleam
+import fluentci/host
+import fluentci/host/local
+import gleam/javascript/promise
+
+pub fn main() {
+  let task = host.task("check", "/bin/sh", ".")
+    |> host.with_args(["-c", "printf hello"])
+  let config = local.Config(
+    binary: "/absolute/path/to/target/release/fluentci-engine",
+    run_root: "/tmp/fluentci-runs",
+    progress: local.Auto,
+  )
+  let assert Ok(execution) = local.start(host.plan([task]), config)
+  use completed <- promise.map(local.wait(execution))
+  let assert Ok(completed) = completed
+  completed.result
+}
+```
+
+`start` validates the plan synchronously, then prepares a unique private run
+wrapper and launches the engine. Relative workspace, task, cache and resource
+paths resolve against the caller's working directory captured at `start`.
+`wait` returns a Promise of a typed result with the execution directory, durable
+run outcome, task statuses, exit codes, timing, log paths and cache information.
+A failed or cancelled pipeline is an `Ok` report; invalid plans, launch/I/O failures
+and malformed reports are separate adapter errors. Legacy reports without a run
+outcome remain readable. Unknown statuses and duplicate task IDs are rejected.
+
+Retain the execution handle to call `local.cancel(execution)`. Its Promise resolves
+after cooperative SIGINT cancellation and engine closure, including child cleanup.
+You can then `wait` for the cancelled report. Cancellation before launch produces a
+transport error because no engine report exists. Cancellation does not impose a
+hard kill deadline on the engine. Run directories and raw logs are retained;
+callers own their retention policy. Live progress inherits the caller's terminal.
+
+A typed HTTP adapter is still outstanding. The existing APIs below use the legacy
+engine path. Verify host plans and local execution against a built release engine with:
 
 ```sh
 FLUENTCI_ENGINE_BIN=/absolute/path/to/target/release/fluentci-engine gleam test
@@ -70,7 +110,8 @@ Without that environment variable, serialization tests run and engine integratio
 is explicitly reported as skipped. Set `FLUENTCI_REQUIRE_ENGINE=1` to make a missing
 engine configuration fail instead; host CI requires this on Linux and both macOS
 architectures using pinned Gleam/Deno versions and Node 26. The engine fixture uses temporary directories,
-checks cold/warm caching across workspaces, and performs no package installation.
+checks cold/warm caching across workspaces, typed local success/failure, launch errors,
+and cancellation cleanup. Tests perform no package installation.
 
 ## Legacy API quick start
 
