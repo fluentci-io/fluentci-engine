@@ -11,7 +11,66 @@ The FluentCI Gleam SDK provides a set of APIs to interact with FluentCI in Gleam
 gleam add fluentci
 ```
 
-## 🚀 Quick Start
+## Pure host plans (JavaScript target)
+
+`fluentci/host` builds immutable data for the bounded host executor. Functions take
+the pipeline value first, so they compose with Gleam's `|>`:
+
+```gleam
+import fluentci/host
+import gleam/io
+
+pub fn main() {
+  let build = host.task("build", "/bin/sh", ".")
+    |> host.with_args(["-c", "printf artifact > output"])
+    |> host.with_relocatable_cache(host.cache([], ["output"], "my-toolchain-v1"))
+  let check = host.task("check", "/bin/sh", ".")
+    |> host.with_args(["-c", "test -s output"])
+    |> host.needs([build])
+  let assert Ok(json) = host.plan([build, check])
+    |> host.with_jobs(2)
+    |> host.with_workspace("/absolute/project", [])
+    |> host.with_cache_directory("/absolute/cache")
+    |> host.compile
+  io.println(json)
+}
+```
+
+Save the generated JSON and execute it with the release engine:
+
+```sh
+fluentci-engine execute plan.json --run-dir /tmp/new-run --progress auto
+```
+
+Builders cover explicit argv/environment, dependencies, concurrency, resource
+leases and wait timeouts, cache policies, copied workspaces, service readiness and
+health, and Homebrew/MacPorts/BSD provider declarations. `install` creates an
+explicit package installation task; `with_package_environment` selects environments
+for consumers, and `needs` supplies the ordering. `provider(MacPortsRust)` selects
+the optional Rust backend. Platform support and native prerequisites are enforced
+by the engine; the SDK does not install package managers automatically.
+
+Construction and `compile` perform no I/O. Compilation checks IDs, missing
+references, commands, and basic limits; the engine still validates cycles, paths,
+cache contracts, platform support, and service/resource constraints. An explicit
+`with_relocatable_cache` asserts path-independent outputs and logs; keep
+`with_cache` for path-dependent commands. Workspaces separate run files, not host
+permissions. Unused optional fields are omitted for older-engine compatibility.
+
+This module targets JavaScript and adds no dependencies. It is a plan compiler,
+not yet a typed HTTP or local execution adapter. The existing APIs below still use
+the legacy engine path. Verify host plans against a built release engine with:
+
+```sh
+FLUENTCI_ENGINE_BIN=/absolute/path/to/target/release/fluentci-engine gleam test
+FLUENTCI_ENGINE_BIN=/absolute/path/to/target/release/fluentci-engine gleam test --runtime nodejs
+```
+
+Without that environment variable, serialization tests run and engine integration
+is explicitly reported as skipped. The engine fixture uses temporary directories,
+checks cold/warm caching across workspaces, and performs no package installation.
+
+## Legacy API quick start
 
 ```gleam
 import fluentci.{dag, pipeline, set_secret}
