@@ -53,6 +53,13 @@ fn cli() -> Command<'static> {
                 .about("Calls the specified function in a FluentCI Session"),
         )
         .subcommand(
+            Command::new("serve-runs")
+                .arg(Arg::new("listen").long("listen").takes_value(true).default_value("127.0.0.1:6881"))
+                .arg(Arg::new("data-dir").long("data-dir").takes_value(true).required(true))
+                .arg(Arg::new("max-runs").long("max-runs").takes_value(true).default_value("4"))
+                .about("Serves authenticated independent host pipeline runs"),
+        )
+        .subcommand(
             Command::new("serve")
                 .arg(arg!(--listen "The address to listen on").default_value("127.0.0.1:6880"))
                 .about("Starts the FluentCI Engine server"),
@@ -69,6 +76,9 @@ async fn main() -> Result<(), Error> {
         Some(("run", args)) => {
             let command = args.values_of("command").unwrap();
             run(&command.collect::<Vec<_>>().join(" ")).await?;
+        }
+        Some(("serve-runs", args)) => {
+            fluentci_server::runs::start(args.value_of("listen").unwrap(), std::path::Path::new(args.value_of("data-dir").unwrap()), args.value_of("max-runs").unwrap().parse()?).await?;
         }
         Some(("serve", args)) => {
             let listen = args.value_of("listen").unwrap();

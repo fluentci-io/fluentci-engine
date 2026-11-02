@@ -2384,11 +2384,19 @@ dependencies = [
  "async-graphql",
  "async-graphql-actix-web",
  "fluentci-core",
+ "fluentci-executor",
  "fluentci-ext",
  "fluentci-graphql",
+ "libc",
  "mime_guess",
+ "opentelemetry",
+ "opentelemetry_sdk",
  "owo-colors",
+ "serde",
+ "serde_json",
+ "tempfile",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
