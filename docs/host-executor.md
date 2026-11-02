@@ -364,3 +364,19 @@ These locks do not guarantee child termination after a hard engine kill or machi
 failure. The OS releases the engine's locks on death, but orphaned child commands
 may remain on some hosts. Use graceful cancellation/shutdown until independent
 crash supervision is implemented; do not treat locks as a sandbox boundary.
+
+
+### PureScript SDK
+
+The sibling `purescript-fluentci` repository now has `FluentCI.Host.Plan` pure
+receiver-last builders, `FluentCI.Host.Client` for the run API, and
+`FluentCI.Host.Local` for direct Node execution. Plans compose with `#`; execution
+returns `Aff (Either RunError ...)`. Services, action caches, resource leases,
+raw logs, event cursors, cancellation, and resumed run handles use the same wire
+contract. Existing `FluentCI.Pipeline`/GraphQL APIs remain available separately.
+
+After building this engine with `cargo build --release -p fluentci-engine`, run
+`python3 test/e2e_host.py` in the sibling SDK repository. Set `FLUENTCI_ENGINE_BIN`
+to this release binary when the repositories are not siblings. This integration
+has been exercised locally; cross-repository CI and the other language adapters
+remain follow-through work.

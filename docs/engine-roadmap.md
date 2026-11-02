@@ -24,9 +24,11 @@ milestones do not establish a claim of being the fastest engine.
 
 1. Integrate environment providers with the new plan runtime and all public
    entry points. Package installation must be explicit and coordinated per prefix.
-2. Provide pure immutable plan builders/handles in TypeScript, PureScript, Gleam,
-   and Elixir. Keep execution as an explicit effect and errors as typed results.
-   Existing APIs need a documented compatibility/migration path.
+2. The sibling PureScript SDK now provides pure immutable host plans, typed remote
+   execution, and a direct Node adapter with Aff cancellation. Its end-to-end tests
+   exercise this release engine. Implement equivalent TypeScript, Gleam, and Elixir
+   builders/adapters, automate cross-repository compatibility tests, and complete
+   the legacy SDK migration path.
 3. Independent authenticated server runs now support submission, status, cancellation,
    persisted results, resumable events/raw logs, restart reconciliation, and remote
    trace context. Follow through with SDK migration, idempotent submission, durable
