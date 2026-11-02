@@ -597,3 +597,29 @@ not rewritten for the new run. Cacheable commands must not require side effects
 outside declared outputs. Keep the default for path-dependent commands; declaring
 relocatability incorrectly can return incorrect artifacts. This is an explicit
 extension to the existing declared-input/toolchain contract, not hermetic execution.
+
+## Compare cache decisions
+
+Compare two saved run directories or `result.json` files without executing a plan:
+
+```sh
+fluentci-engine cache-diff ./previous-run ./current-run
+fluentci-engine cache-diff ./previous-run/result.json ./current-run/result.json --json
+```
+
+Tasks are matched by ID, independent of report order. Each task is `changed`,
+`unchanged`, `added`, `removed`, or `unavailable` (one or both runs did not produce
+an action key, for example an uncached, skipped, or early-failed task). Changed
+component names identify differences in inputs, command, environment, toolchain,
+outputs, dependencies, working directory, executable, or platform. Values and raw
+error messages are not printed. Plain output quotes task/component names so control
+characters cannot become terminal escapes; JSON output has a versioned envelope.
+Malformed reports and duplicate task IDs fail instead of silently dropping tasks.
+
+This compares recorded identities, not the live filesystem or cache store. An
+unchanged key does not guarantee a hit: entries may be absent, evicted, or rejected
+for integrity errors. Inspect the original result's cache outcome/reason for that
+case. A changed dependency digest identifies upstream invalidation but does not
+recursively explain that dependency; compare its task entry as well. Only digests
+are stored, so this command cannot name individual changed input files or reveal
+which environment variable changed.

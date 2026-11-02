@@ -3,3 +3,4 @@ pub mod run;
 pub mod serve;
 pub mod execute;
 mod progress;
+pub mod cache_diff;

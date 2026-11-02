@@ -47,6 +47,50 @@ class HostExecution(unittest.TestCase):
         self.assertEqual((source / "input").read_text(), "original")
         self.assertFalse((source / "output").exists())
 
+    def test_cache_diff_explains_changes_without_exposing_environment_values(self):
+        cached = self.task("cached", "printf artifact > artifact")
+        cached["cache"] = dict(inputs=[], outputs=["artifact"], toolchain="diff-fixture")
+        cached["env"] = dict(TOKEN="baseline-secret")
+        def execute(tasks, run):
+            plan = self.plan(tasks, inherit_env=False, cache_dir=str(self.root / "cache"))
+            result = subprocess.run(self.command(plan, run), capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        execute([cached, self.task("removed", "true"), self.task("uncached", "true")], "before")
+        cached["env"]["TOKEN"] = "current-secret"
+        execute([cached, self.task("added", "true"), self.task("uncached", "true")], "after")
+        command = [str(BINARY), "cache-diff", str(self.root / "before"), str(self.root / "after/result.json")]
+        result = subprocess.run(command + ["--json"], capture_output=True, text=True, timeout=5)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        tasks = {task["id"]: task for task in report["tasks"]}
+        self.assertEqual(report["version"], 1)
+        self.assertEqual(tasks["cached"], dict(id="cached", status="changed", changed_components=["environment"]))
+        self.assertEqual(tasks["removed"]["status"], "removed")
+        self.assertEqual(tasks["added"]["status"], "added")
+        self.assertEqual(tasks["uncached"]["status"], "unavailable")
+        plain = subprocess.run(command, capture_output=True, text=True, timeout=5)
+        self.assertEqual(plain.returncode, 0, plain.stderr)
+        for output in [result.stdout, plain.stdout]:
+            self.assertNotIn("baseline-secret", output)
+            self.assertNotIn("current-secret", output)
+        same = subprocess.run([str(BINARY), "cache-diff", str(self.root / "after"), str(self.root / "after"), "--json"], capture_output=True, text=True, timeout=5)
+        self.assertEqual(same.returncode, 0, same.stderr)
+        self.assertEqual(next(task for task in json.loads(same.stdout)["tasks"] if task["id"] == "cached")["status"], "unchanged")
+        document = json.loads((self.root / "after/result.json").read_text())
+        document["tasks"].append(document["tasks"][0])
+        malformed = self.root / "invalid.json"
+        malformed.write_text(json.dumps(document))
+        invalid = subprocess.run([str(BINARY), "cache-diff", str(malformed), str(self.root / "after")], capture_output=True, text=True, timeout=5)
+        self.assertNotEqual(invalid.returncode, 0)
+        self.assertIn("duplicate task id", invalid.stderr)
+        document["tasks"].pop()
+        document["tasks"][0]["id"] = "unsafe\x1b[31m\nname"
+        malformed.write_text(json.dumps(document))
+        escaped = subprocess.run([str(BINARY), "cache-diff", str(malformed), str(self.root / "after")], capture_output=True, text=True, timeout=5)
+        self.assertEqual(escaped.returncode, 0, escaped.stderr)
+        self.assertNotIn("\x1b", escaped.stdout)
+        self.assertIn("unsafe\\u001b[31m\\nname", escaped.stdout)
+
     def test_resources_coordinate_separate_cli_processes(self):
         holder = self.task("holder", "touch holding; while :; do sleep 0.02; done")
         holder["resources"] = ["shared-checkout"]

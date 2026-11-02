@@ -51,8 +51,9 @@ milestones do not establish a claim of being the fastest engine.
    and server processes. Add isolated workspaces, cross-run deadlock/fairness policy,
    independent crash supervision, and explicit declared I/O semantics beyond the
    current user-supplied cache contract.
-5. Extend cache support with contained symlinks, remote storage, cache inspection
-   and explanation commands, retention/GC, and scalable hashing/transfer scheduling.
+5. Saved-run `cache-diff` now compares task key components without exposing values.
+   Extend cache support with contained symlinks, remote storage, live cache inspection,
+   retention/GC, and scalable hashing/transfer scheduling.
 6. Validate the GitHub matrix on actual remote runners. Add native provisioning
    and integration jobs for MacPorts and macports-rs. Homebrew and BSD native
    package-plan installation tests are configured but await remote verification.

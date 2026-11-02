@@ -25,6 +25,13 @@ fn cli() -> Command<'static> {
         )
         .author("Tsiry Sandratraina <tsiry.sndr@fluentci.io>")
         .subcommand(
+            Command::new("cache-diff")
+                .arg(Arg::new("before").required(true))
+                .arg(Arg::new("after").required(true))
+                .arg(Arg::new("json").long("json"))
+                .about("Compares cache key components in saved run results"),
+        )
+        .subcommand(
             Command::new("execute")
                 .arg(Arg::new("progress").long("progress").takes_value(true).possible_values(["auto", "plain", "tui", "json"]).default_value("auto"))
                 .arg(Arg::new("plan").required(true))
@@ -70,6 +77,9 @@ fn cli() -> Command<'static> {
 async fn main() -> Result<(), Error> {
     let matches = cli().get_matches();
     match matches.subcommand() {
+        Some(("cache-diff", args)) => {
+            cmd::cache_diff::compare(std::path::Path::new(args.value_of("before").unwrap()), std::path::Path::new(args.value_of("after").unwrap()), args.is_present("json"))?;
+        }
         Some(("execute", args)) => {
             cmd::execute::execute(args.value_of("plan").unwrap(), args.value_of("run-dir").unwrap(), args.value_of("progress").unwrap()).await?;
         }
