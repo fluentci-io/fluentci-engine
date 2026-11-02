@@ -83,7 +83,7 @@ pub async fn start(listen: &str) -> Result<(), Error> {
     let addr = format!("{}:{}", host, port);
     println!(
         "Server is running on {}",
-        format!("{}", addr).bright_green()
+        addr.to_string().bright_green()
     );
 
     let (tx, rx) = mpsc::channel();
@@ -95,8 +95,8 @@ pub async fn start(listen: &str) -> Result<(), Error> {
 
     let schema = Schema::build(
         Query::default(),
-        EmptyMutation::default(),
-        EmptySubscription::default(),
+        EmptyMutation,
+        EmptySubscription,
     )
     .data(graph)
     .data(Arc::new(Mutex::new(rx)))
