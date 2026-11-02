@@ -203,3 +203,55 @@ fn ready_services_keep_leases_until_shutdown() {
         .unwrap()
         .success());
 }
+
+#[test]
+fn shared_readers_overlap_across_runs_and_each_reader_blocks_writers() {
+    let root = tempfile::tempdir().unwrap();
+    let mut a = plan(
+        root.path(),
+        "touch reader-a; while :; do sleep 0.02; done",
+        &[],
+    );
+    let mut b = plan(
+        root.path(),
+        "touch reader-b; while :; do sleep 0.02; done",
+        &[],
+    );
+    a.tasks[0].shared_resources = vec!["prefix".into()];
+    b.tasks[0].shared_resources = vec!["prefix".into()];
+    let cancel_a = Cancellation::default();
+    let cancel_b = Cancellation::default();
+    thread::scope(|scope| {
+        let first = scope.spawn(|| a.execute(&root.path().join("a"), &cancel_a).unwrap());
+        let second = scope.spawn(|| b.execute(&root.path().join("b"), &cancel_b).unwrap());
+        wait(&root.path().join("reader-a"));
+        wait(&root.path().join("reader-b"));
+        let mut writer = plan(root.path(), "touch written", &["prefix"]);
+        writer.tasks[0].resource_wait_timeout_ms = Some(80);
+        assert_eq!(
+            writer
+                .execute(&root.path().join("blocked-a"), &Cancellation::default())
+                .unwrap()
+                .tasks[0]
+                .status,
+            Status::TimedOut
+        );
+        cancel_a.cancel();
+        first.join().unwrap();
+        assert_eq!(
+            writer
+                .execute(&root.path().join("blocked-b"), &Cancellation::default())
+                .unwrap()
+                .tasks[0]
+                .status,
+            Status::TimedOut
+        );
+        cancel_b.cancel();
+        second.join().unwrap();
+        assert!(writer
+            .execute(&root.path().join("writer"), &Cancellation::default())
+            .unwrap()
+            .success());
+    });
+    assert!(root.path().join("written").exists());
+}

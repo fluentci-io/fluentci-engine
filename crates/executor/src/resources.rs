@@ -2,6 +2,7 @@
 //! lock inode while another process uses it would split the coordination domain.
 use sha2::{Digest, Sha256};
 use std::{
+    collections::BTreeMap,
     fs::{self, File, OpenOptions},
     path::{Path, PathBuf},
 };
@@ -46,12 +47,16 @@ pub(crate) fn initialize(path: &Path) -> Result<(), String> {
     }
     Ok(())
 }
-pub(crate) fn acquire(root: &Path, names: &[String]) -> Result<Attempt, String> {
-    let mut names: Vec<_> = names.iter().collect();
-    names.sort_unstable();
-    names.dedup();
-    let mut files = Vec::new();
+pub(crate) fn acquire(root: &Path, names: &[String], shared: &[String]) -> Result<Attempt, String> {
+    let mut modes = BTreeMap::new();
+    for name in shared {
+        modes.insert(name, false);
+    }
     for name in names {
+        modes.insert(name, true);
+    }
+    let mut files = Vec::new();
+    for (name, exclusive) in modes {
         let path = root.join(hex::encode(Sha256::digest(name.as_bytes())));
         let mut options = OpenOptions::new();
         options.read(true).write(true).create(true).truncate(false);
@@ -67,7 +72,17 @@ pub(crate) fn acquire(root: &Path, names: &[String]) -> Result<Attempt, String> 
         #[cfg(unix)]
         {
             use std::os::fd::AsRawFd;
-            if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
+            if unsafe {
+                libc::flock(
+                    file.as_raw_fd(),
+                    (if exclusive {
+                        libc::LOCK_EX
+                    } else {
+                        libc::LOCK_SH
+                    }) | libc::LOCK_NB,
+                )
+            } != 0
+            {
                 let error = std::io::Error::last_os_error();
                 if error.kind() == std::io::ErrorKind::WouldBlock {
                     return Ok(Attempt::Busy(name.clone()));

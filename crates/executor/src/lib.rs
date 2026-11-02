@@ -3,6 +3,7 @@
 pub mod cache;
 pub mod events;
 pub mod graph;
+pub mod packages;
 mod resources;
 pub mod service;
 mod telemetry;
@@ -10,7 +11,7 @@ mod telemetry;
 use graph::DependencyGraph;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     ffi::OsString,
     fs::{self, File, OpenOptions},
     path::{Path, PathBuf},
@@ -29,6 +30,7 @@ pub struct Task {
     pub id: String,
     #[serde(default)]
     pub needs: Vec<String>,
+    #[serde(default)]
     pub program: String,
     #[serde(default)]
     pub args: Vec<String>,
@@ -38,6 +40,12 @@ pub struct Task {
     /// Exclusive resource names, e.g. "checkout:app" or "cache:cargo".
     #[serde(default)]
     pub resources: Vec<String>,
+    #[serde(default)]
+    pub shared_resources: Vec<String>,
+    #[serde(default)]
+    pub package_install: Option<packages::Install>,
+    #[serde(default)]
+    pub package_environment: Vec<packages::Provider>,
     #[serde(default)]
     pub resource_wait_timeout_ms: Option<u64>,
     #[serde(default)]
@@ -163,6 +171,13 @@ impl Drop for Running {
 
 impl Plan {
     pub fn validate(&self) -> Result<DependencyGraph, String> {
+        if self.has_package_tasks() {
+            self.resolve_packages()?.validate_resolved()
+        } else {
+            self.validate_resolved()
+        }
+    }
+    fn validate_resolved(&self) -> Result<DependencyGraph, String> {
         if self.version != 1 {
             return Err(format!("unsupported plan version: {}", self.version));
         }
@@ -173,7 +188,11 @@ impl Plan {
             return Err("resource_dir must be absolute".into());
         }
         for task in &self.tasks {
-            if task.resources.iter().any(|r| r.is_empty())
+            if task
+                .resources
+                .iter()
+                .chain(task.shared_resources.iter())
+                .any(|r| r.is_empty())
                 || task.resource_wait_timeout_ms == Some(0)
             {
                 return Err("resource names and wait limits must be nonempty/positive".into());
@@ -234,8 +253,11 @@ impl Plan {
                     if self.tasks[i].cache.is_some() {
                         return Err("service consumers cannot be cached".into());
                     }
-                    if self.tasks[i]
-                        .resources
+                    if self.tasks[i].resources.iter().any(|r| {
+                        self.tasks[p].resources.contains(r)
+                            || self.tasks[p].shared_resources.contains(r)
+                    }) || self.tasks[i]
+                        .shared_resources
                         .iter()
                         .any(|r| self.tasks[p].resources.contains(r))
                     {
@@ -253,7 +275,14 @@ impl Plan {
     /// Cancellation and process timeouts are observed at most one polling interval (10 ms)
     /// after the scheduler regains control. Resource leases coordinate runs sharing a resource directory.
     pub fn execute(&self, run_dir: &Path, cancel: &Cancellation) -> Result<RunResult, String> {
-        let graph = self.validate()?;
+        if self.has_package_tasks() {
+            self.resolve_packages()?.execute_resolved(run_dir, cancel)
+        } else {
+            self.execute_resolved(run_dir, cancel)
+        }
+    }
+    fn execute_resolved(&self, run_dir: &Path, cancel: &Cancellation) -> Result<RunResult, String> {
+        let graph = self.validate_resolved()?;
         let absolute_run_dir = if run_dir.is_absolute() {
             run_dir.to_path_buf()
         } else {
@@ -266,7 +295,11 @@ impl Plan {
                 cache::validate_storage(task, &absolute_run_dir)?;
             }
         }
-        let resource_dir = if self.tasks.iter().any(|t| !t.resources.is_empty()) {
+        let resource_dir = if self
+            .tasks
+            .iter()
+            .any(|t| !t.resources.is_empty() || !t.shared_resources.is_empty())
+        {
             let root = resources::directory(self.resource_dir.as_deref())?;
             for task in &self.tasks {
                 if task.cache.is_some() {
@@ -321,6 +354,7 @@ impl Plan {
         let mut remaining: Vec<_> = graph.dependencies.iter().map(Vec::len).collect();
         let mut running: Vec<Running> = Vec::new();
         let mut resources = HashSet::new();
+        let mut readers: HashMap<String, usize> = HashMap::new();
         let mut waiting_since: Vec<Option<Instant>> = vec![None; self.tasks.len()];
         let mut retry_at: Vec<Option<Instant>> = vec![None; self.tasks.len()];
         let mut failed = false;
@@ -479,6 +513,14 @@ impl Plan {
                     for resource in &self.tasks[i].resources {
                         resources.remove(resource);
                     }
+                    for resource in &self.tasks[i].shared_resources {
+                        if let Some(count) = readers.get_mut(resource) {
+                            *count -= 1;
+                            if *count == 0 {
+                                readers.remove(resource);
+                            }
+                        }
+                    }
                     results[i].status = status;
                     results[i].exit_code = code;
                     results[i].error = error;
@@ -562,14 +604,24 @@ impl Plan {
                         if let Some(name) = self.tasks[i]
                             .resources
                             .iter()
-                            .find(|r| resources.contains(*r))
+                            .find(|r| resources.contains(*r) || readers.contains_key(*r))
+                            .or_else(|| {
+                                self.tasks[i]
+                                    .shared_resources
+                                    .iter()
+                                    .find(|r| resources.contains(*r))
+                            })
                         {
                             Ok(resources::Attempt::Busy(name.clone()))
                         } else {
-                            resources::acquire(root, &self.tasks[i].resources)
+                            resources::acquire(
+                                root,
+                                &self.tasks[i].resources,
+                                &self.tasks[i].shared_resources,
+                            )
                         }
                     } else {
-                        resources::acquire(Path::new(""), &[])
+                        resources::acquire(Path::new(""), &[], &[])
                     };
                     let task_leases = match acquired {
                         Ok(resources::Attempt::Acquired(leases)) => {
@@ -672,6 +724,9 @@ impl Plan {
                     ) {
                         Ok(child) => {
                             resources.extend(self.tasks[i].resources.iter().cloned());
+                            for resource in &self.tasks[i].shared_resources {
+                                *readers.entry(resource.clone()).or_default() += 1;
+                            }
                             results[i].status = Status::Running;
                             running.push(Running {
                                 index: i,
@@ -707,6 +762,10 @@ impl Plan {
                         && remaining[i] == 0
                         && self.tasks[i]
                             .resources
+                            .iter()
+                            .all(|r| !resources.contains(r) && !readers.contains_key(r))
+                        && self.tasks[i]
+                            .shared_resources
                             .iter()
                             .all(|r| !resources.contains(r))
                         && (self.tasks[i].service.is_none() || running.len() < self.max_services)

@@ -103,7 +103,7 @@ fn safe_relative(path: &Path) -> bool {
 }
 
 /// Compare canonical existing ancestors, including cache/run paths not created yet.
-fn resolved_location(path: &Path) -> Result<PathBuf, String> {
+pub(crate) fn resolved_location(path: &Path) -> Result<PathBuf, String> {
     let mut ancestor = path;
     let mut tail = Vec::new();
     while !ancestor.exists() {
