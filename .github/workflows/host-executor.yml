@@ -1,0 +1,124 @@
+name: Host executor
+
+on:
+  pull_request:
+    paths:
+      - 'crates/**'
+      - 'Cargo.*'
+      - 'tests/**'
+      - '.github/workflows/host-executor.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: host-executor-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host:
+    name: Executor and CLI (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          components: clippy
+      - name: Executor, cache, and legacy regression tests
+        run: cargo test --release --locked -p fluentci-executor -p fluentci-core --lib --tests
+      - name: Package-manager fixture tests (no installation)
+        run: |
+          cargo test --release --locked -p fluentci-ext --lib homebrew
+          cargo test --release --locked -p fluentci-ext --lib macports
+          cargo test --release --locked -p fluentci-ext --lib bsd
+      - name: Executor lint
+        run: cargo clippy --release --locked -p fluentci-executor --all-targets -- -D warnings
+      - name: Build CLI and run end-to-end tests
+        run: |
+          cargo build --release --locked -p fluentci-engine
+          python3 tests/e2e_host.py -v
+
+  freebsd:
+    name: Native FreeBSD executor and pkg
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc # v1
+        with:
+          release: '14.3'
+          arch: x86_64
+          mem: 8192
+          cpu: 2
+          copyback: false
+          prepare: |
+            set -eu
+            pkg install -y rust git pkgconf
+          run: |
+            set -eu
+            export CARGO_BUILD_JOBS=2
+            uname -a
+            rustc --version
+            cargo test --release --locked -p fluentci-executor
+            cargo test --release --locked -p fluentci-ext --lib bsd
+            cargo test --release --locked -p fluentci-ext --test native_packages native_bsd_package_install -- --ignored --exact
+
+  netbsd:
+    name: Native NetBSD executor and pkgin
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: vmactions/netbsd-vm@c8a0d7ddb84619a7a8cc4e652efa7950b3fd9f92 # v1
+        with:
+          release: '10.1'
+          arch: x86_64
+          mem: 8192
+          cpu: 2
+          copyback: false
+          prepare: |
+            set -eu
+            /usr/pkg/bin/pkgin -y install rust git pkgconf
+          run: |
+            set -eu
+            export PATH=/usr/pkg/bin:/usr/pkg/sbin:$PATH
+            export CARGO_BUILD_JOBS=2
+            uname -a
+            rustc --version
+            cargo test --release --locked -p fluentci-executor
+            cargo test --release --locked -p fluentci-ext --lib bsd
+            cargo test --release --locked -p fluentci-ext --test native_packages native_bsd_package_install -- --ignored --exact
+
+  openbsd:
+    name: Native OpenBSD executor and pkg_add
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: vmactions/openbsd-vm@f1ca8bc8ecc5b6ef7218e5b914836e067e1546d3 # v1
+        with:
+          release: '7.8'
+          arch: x86_64
+          mem: 8192
+          cpu: 2
+          copyback: false
+          prepare: |
+            set -eu
+            pkg_add -I rust git pkgconf
+          run: |
+            set -eu
+            export PATH=/usr/local/bin:/usr/local/sbin:$PATH
+            export CARGO_BUILD_JOBS=2
+            uname -a
+            rustc --version
+            cargo test --release --locked -p fluentci-executor
+            cargo test --release --locked -p fluentci-ext --lib bsd
+            cargo test --release --locked -p fluentci-ext --test native_packages native_bsd_package_install -- --ignored --exact

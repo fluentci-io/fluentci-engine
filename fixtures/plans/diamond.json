@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "jobs": 2,
+  "fail_fast": true,
+  "inherit_env": false,
+  "tasks": [
+    { "id": "prepare", "program": "/bin/echo", "args": ["prepare"], "cwd": "." },
+    { "id": "lint", "needs": ["prepare"], "program": "/bin/echo", "args": ["lint"], "cwd": "." },
+    { "id": "test", "needs": ["prepare"], "program": "/bin/echo", "args": ["test"], "cwd": "." },
+    { "id": "complete", "needs": ["lint", "test"], "program": "/bin/echo", "args": ["complete"], "cwd": "." }
+  ]
+}
