@@ -194,7 +194,10 @@ impl Progress {
         }
     }
     fn render(&mut self) -> Result<(), String> {
-        let running = self.rows.values().any(|r| r.status == Status::Running);
+        let running = self
+            .rows
+            .values()
+            .any(|r| matches!(r.status, Status::Running | Status::Ready | Status::Stopping));
         if !self.dirty && !running {
             return Ok(());
         }
@@ -220,13 +223,17 @@ impl Progress {
         for id in ids.iter().take(max_rows) {
             let row = &self.rows[*id];
             let icon = match row.status {
-                Status::Running => spinner,
+                Status::Running | Status::Stopping => spinner,
+                Status::Ready => '~',
                 Status::Succeeded => '+',
                 Status::Pending => '.',
                 Status::Skipped => '-',
                 _ => '!',
             };
-            let duration = if row.status == Status::Running {
+            let duration = if matches!(
+                row.status,
+                Status::Running | Status::Ready | Status::Stopping
+            ) {
                 elapsed.saturating_sub(row.started_ms.unwrap_or(elapsed))
             } else {
                 row.duration_ms

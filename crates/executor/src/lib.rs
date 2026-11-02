@@ -3,6 +3,7 @@
 pub mod cache;
 pub mod events;
 pub mod graph;
+pub mod service;
 mod telemetry;
 
 use graph::DependencyGraph;
@@ -40,6 +41,8 @@ pub struct Task {
     pub timeout_ms: Option<u64>,
     #[serde(default)]
     pub cache: Option<cache::CachePolicy>,
+    #[serde(default)]
+    pub service: Option<service::Service>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -50,6 +53,8 @@ pub struct Plan {
     pub tasks: Vec<Task>,
     #[serde(default = "default_jobs")]
     pub jobs: usize,
+    #[serde(default = "default_services")]
+    pub max_services: usize,
     #[serde(default = "default_true")]
     pub fail_fast: bool,
     /// Disable to supply a fully explicit environment through task.env.
@@ -57,6 +62,9 @@ pub struct Plan {
     pub inherit_env: bool,
     #[serde(default)]
     pub cache_dir: Option<PathBuf>,
+}
+fn default_services() -> usize {
+    8
 }
 fn protocol_version() -> u32 {
     1
@@ -84,6 +92,8 @@ impl Cancellation {
 pub enum Status {
     Pending,
     Running,
+    Ready,
+    Stopping,
     Succeeded,
     Failed,
     Skipped,
@@ -92,7 +102,10 @@ pub enum Status {
 }
 impl Status {
     fn terminal(&self) -> bool {
-        !matches!(self, Self::Pending | Self::Running)
+        !matches!(
+            self,
+            Self::Pending | Self::Running | Self::Ready | Self::Stopping
+        )
     }
 }
 
@@ -145,10 +158,16 @@ impl Plan {
         if self.version != 1 {
             return Err(format!("unsupported plan version: {}", self.version));
         }
-        if self.jobs == 0 {
+        if self.jobs == 0 || self.max_services == 0 {
             return Err("jobs must be greater than zero".into());
         }
         for task in &self.tasks {
+            if let Some(service) = &task.service {
+                service.validate()?;
+                if task.cache.is_some() {
+                    return Err("services cannot be cached".into());
+                }
+            }
             if let Some(policy) = &task.cache {
                 policy.validate()?;
                 if self.inherit_env {
@@ -184,14 +203,34 @@ impl Plan {
                 }
             }
         }
-        DependencyGraph::new(
+        let graph = DependencyGraph::new(
             &self.tasks.iter().map(|t| t.id.clone()).collect::<Vec<_>>(),
             &self
                 .tasks
                 .iter()
                 .map(|t| t.needs.clone())
                 .collect::<Vec<_>>(),
-        )
+        )?;
+        let ancestors = service_ancestors(&graph, &self.tasks);
+        for (i, parents) in ancestors.iter().enumerate() {
+            for &p in parents {
+                if self.tasks[p].service.is_some() {
+                    if self.tasks[i].cache.is_some() {
+                        return Err("service consumers cannot be cached".into());
+                    }
+                    if self.tasks[i]
+                        .resources
+                        .iter()
+                        .any(|r| self.tasks[p].resources.contains(r))
+                    {
+                        return Err(
+                            "service and consumer cannot hold the same exclusive resource".into(),
+                        );
+                    }
+                }
+            }
+        }
+        Ok(graph)
     }
 
     /// Run in a fresh caller-selected directory. All output is spooled to disk.
@@ -242,23 +281,144 @@ impl Plan {
             })
             .collect();
         let mut journal = events::Journal::new(&run_dir.join("events.jsonl"), &self.tasks)?;
+        let ancestors = service_ancestors(&graph, &self.tasks);
+        let mut supervisors: Vec<_> = self
+            .tasks
+            .iter()
+            .map(|t| t.service.as_ref().map(|_| service::Supervisor::new()))
+            .collect();
+        let mut shutdowns: Vec<Option<service::Shutdown>> =
+            (0..self.tasks.len()).map(|_| None).collect();
         let mut remaining: Vec<_> = graph.dependencies.iter().map(Vec::len).collect();
         let mut running: Vec<Running> = Vec::new();
         let mut resources = HashSet::new();
         let mut failed = false;
+        let mut stalled = false;
         let mut prepared: Vec<Option<cache::Prepared>> =
             (0..self.tasks.len()).map(|_| None).collect();
         loop {
-            let stopping = cancel.is_cancelled() || (self.fail_fast && failed);
+            let stopping = stalled || cancel.is_cancelled() || (self.fail_fast && failed);
             // Reap before dispatch: completion releases dependencies and resource leases.
             let mut n = 0;
             while n < running.len() {
                 let i = running[n].index;
                 let elapsed = running[n].started.elapsed();
+                results[i].duration_ms = elapsed.as_millis();
                 let timed_out = self.tasks[i]
                     .timeout_ms
                     .is_some_and(|ms| elapsed >= Duration::from_millis(ms));
-                let outcome = if stopping || timed_out {
+                let dependency_failed = ancestors[i].iter().any(|&p| {
+                    (results[p].status.terminal() && results[p].status != Status::Succeeded)
+                        || shutdowns[p]
+                            .as_ref()
+                            .is_some_and(|shutdown| shutdown.status != Status::Succeeded)
+                });
+                let outcome = if let Some(config) = &self.tasks[i].service {
+                    let child_exit = running[n].child.try_wait();
+                    if let Ok(Some(exit)) = child_exit {
+                        if let Some(shutdown) = shutdowns[i].take() {
+                            Some((shutdown.status, exit.code(), shutdown.error))
+                        } else {
+                            Some((
+                                Status::Failed,
+                                exit.code(),
+                                Some("service exited before shutdown".into()),
+                            ))
+                        }
+                    } else if let Err(error) = child_exit {
+                        Some((Status::Failed, None, Some(error.to_string())))
+                    } else {
+                        if shutdowns[i].is_none() {
+                            let startup_expired = !supervisors[i].as_ref().unwrap().ready
+                                && elapsed >= Duration::from_millis(config.startup_timeout_ms);
+                            let unused = results[i].status == Status::Ready
+                                && !ancestors.iter().enumerate().any(|(j, parents)| {
+                                    parents.contains(&i) && !results[j].status.terminal()
+                                });
+                            let stop = if stopping || dependency_failed {
+                                Some((
+                                    if stalled {
+                                        Status::Failed
+                                    } else {
+                                        Status::Cancelled
+                                    },
+                                    Some(
+                                        if stalled {
+                                            "service capacity or resource leases prevent progress"
+                                        } else {
+                                            "service cancelled"
+                                        }
+                                        .into(),
+                                    ),
+                                ))
+                            } else if timed_out || startup_expired {
+                                Some((Status::TimedOut, Some("service lifecycle timeout".into())))
+                            } else if unused {
+                                Some((Status::Succeeded, None))
+                            } else {
+                                match supervisors[i]
+                                    .as_mut()
+                                    .unwrap()
+                                    .poll(&self.tasks[i], &environment)
+                                {
+                                    service::Health::Ready => {
+                                        results[i].status = Status::Ready;
+                                        for &next in &graph.successors[i] {
+                                            remaining[next] -= 1;
+                                        }
+                                        None
+                                    }
+                                    service::Health::Failed(error) => {
+                                        Some((Status::Failed, Some(error)))
+                                    }
+                                    service::Health::Waiting => None,
+                                }
+                            };
+                            if let Some((status, error)) = stop {
+                                supervisors[i].as_mut().unwrap().stop();
+                                if status != Status::Succeeded {
+                                    failed = true;
+                                }
+                                shutdowns[i] = Some(service::Shutdown {
+                                    started: None,
+                                    status,
+                                    error,
+                                });
+                                results[i].status = Status::Stopping;
+                            }
+                        }
+                        if let Some(shutdown) = &mut shutdowns[i] {
+                            if shutdown.started.is_none()
+                                && !ancestors.iter().enumerate().any(|(j, parents)| {
+                                    parents.contains(&i) && !results[j].status.terminal()
+                                })
+                            {
+                                #[cfg(unix)]
+                                unsafe {
+                                    libc::kill(-(running[n].child.id() as i32), libc::SIGTERM);
+                                }
+                                #[cfg(not(unix))]
+                                {
+                                    let _ = running[n].child.kill();
+                                }
+                                shutdown.started = Some(Instant::now());
+                            }
+                        }
+                        if shutdowns[i]
+                            .as_ref()
+                            .and_then(|s| s.started)
+                            .is_some_and(|start| {
+                                start.elapsed() >= Duration::from_millis(config.shutdown_timeout_ms)
+                            })
+                        {
+                            running[n].terminate();
+                            let shutdown = shutdowns[i].take().unwrap();
+                            Some((shutdown.status, None, shutdown.error))
+                        } else {
+                            None
+                        }
+                    }
+                } else if stopping || timed_out || dependency_failed {
                     running[n].terminate();
                     Some((
                         if timed_out {
@@ -294,6 +454,9 @@ impl Plan {
                     results[i].duration_ms = elapsed.as_millis();
                     // Stop background descendants before capturing output artifacts.
                     running.swap_remove(n);
+                    if let Some(supervisor) = &mut supervisors[i] {
+                        supervisor.stop();
+                    }
                     if let Some(action) = prepared[i].take() {
                         if results[i].status == Status::Succeeded {
                             match action.save(
@@ -312,8 +475,10 @@ impl Plan {
                         }
                     }
                     if results[i].status == Status::Succeeded {
-                        for &next in &graph.successors[i] {
-                            remaining[next] -= 1;
+                        if self.tasks[i].service.is_none() {
+                            for &next in &graph.successors[i] {
+                                remaining[next] -= 1;
+                            }
                         }
                     } else {
                         failed = true;
@@ -327,14 +492,33 @@ impl Plan {
                 if results[i].status != Status::Pending {
                     continue;
                 }
-                if graph.dependencies[i].iter().any(|&p| {
-                    results[p].status.terminal() && results[p].status != Status::Succeeded
-                }) {
+                if graph.dependencies[i]
+                    .iter()
+                    .chain(ancestors[i].iter())
+                    .any(|&p| {
+                        (results[p].status.terminal() && results[p].status != Status::Succeeded)
+                            || shutdowns[p]
+                                .as_ref()
+                                .is_some_and(|shutdown| shutdown.status != Status::Succeeded)
+                    })
+                {
                     results[i].status = Status::Skipped;
-                } else if cancel.is_cancelled() || (self.fail_fast && failed) {
+                } else if stalled || cancel.is_cancelled() || (self.fail_fast && failed) {
                     results[i].status = Status::Cancelled;
                 } else if remaining[i] == 0
-                    && running.len() < self.jobs
+                    && if self.tasks[i].service.is_some() {
+                        running
+                            .iter()
+                            .filter(|r| self.tasks[r.index].service.is_some())
+                            .count()
+                            < self.max_services
+                    } else {
+                        running
+                            .iter()
+                            .filter(|r| self.tasks[r.index].service.is_none())
+                            .count()
+                            < self.jobs
+                    }
                     && self.tasks[i]
                         .resources
                         .iter()
@@ -430,6 +614,30 @@ impl Plan {
                     }
                 }
             }
+            // A set of ready daemons can occupy all capacity/resources required by
+            // their pending consumers. Fail with cleanup instead of waiting forever.
+            if !running.is_empty()
+                && running
+                    .iter()
+                    .all(|r| results[r.index].status == Status::Ready)
+                && results.iter().any(|r| r.status == Status::Pending)
+                && !running.iter().any(|r| {
+                    !ancestors.iter().enumerate().any(|(j, parents)| {
+                        parents.contains(&r.index) && !results[j].status.terminal()
+                    })
+                })
+                && !results.iter().enumerate().any(|(i, r)| {
+                    r.status == Status::Pending
+                        && remaining[i] == 0
+                        && self.tasks[i]
+                            .resources
+                            .iter()
+                            .all(|r| !resources.contains(r))
+                        && (self.tasks[i].service.is_none() || running.len() < self.max_services)
+                })
+            {
+                stalled = true;
+            }
             let finished = results.iter().all(|r| r.status.terminal());
             journal.update(&results, &graph.order, finished)?;
             if finished {
@@ -443,6 +651,20 @@ impl Plan {
         serde_json::to_writer_pretty(report, &result).map_err(|e| e.to_string())?;
         Ok(result)
     }
+}
+
+fn service_ancestors(graph: &DependencyGraph, tasks: &[Task]) -> Vec<HashSet<usize>> {
+    let mut ancestors = vec![HashSet::new(); graph.dependencies.len()];
+    for &i in &graph.order {
+        for &p in &graph.dependencies[i] {
+            let inherited = ancestors[p].clone();
+            ancestors[i].extend(inherited);
+            if tasks[p].service.is_some() {
+                ancestors[i].insert(p);
+            }
+        }
+    }
+    ancestors
 }
 
 fn spawn(

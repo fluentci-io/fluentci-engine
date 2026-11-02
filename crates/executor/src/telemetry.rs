@@ -28,6 +28,10 @@ impl Telemetry {
                 let cx = run.with_span(span);
                 cx.span()
                     .set_attribute(KeyValue::new("pipeline.step.id", task.id.clone()));
+                cx.span().set_attribute(KeyValue::new(
+                    "pipeline.step.service",
+                    task.service.is_some(),
+                ));
                 cx
             })
             .collect();
@@ -99,6 +103,19 @@ impl Telemetry {
             "pipeline.cache.outcome",
             result.cache.outcome.clone(),
         ));
+        if matches!(result.status, Status::Ready | Status::Stopping) {
+            span.add_event(
+                if result.status == Status::Ready {
+                    "service.ready"
+                } else {
+                    "service.stopping"
+                },
+                vec![KeyValue::new(
+                    "service.elapsed_ms",
+                    result.duration_ms.min(i64::MAX as u128) as i64,
+                )],
+            );
+        }
         if result.status.terminal() {
             span.set_attribute(KeyValue::new(
                 "pipeline.execution.duration_ms",

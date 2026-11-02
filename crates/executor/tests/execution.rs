@@ -14,11 +14,13 @@ fn task(id: &str, script: &str, cwd: &Path, needs: &[&str]) -> Task {
         resources: vec![],
         timeout_ms: Some(3000),
         cache: None,
+        service: None,
     }
 }
 fn plan(tasks: Vec<Task>) -> Plan {
     Plan {
         version: 1,
+        max_services: 8,
         tasks,
         jobs: 2,
         fail_fast: true,
