@@ -54,11 +54,12 @@ to `target/release/fluentci-engine`. Do not report debug-profile timings.
 
 ## Additional requested work
 
-- First-class long-running services: readiness-gated dependencies, bounded startup
-  and health probes, failure propagation to consumers, graceful shutdown followed
-  by process-group kill, teardown ordering, and cancellation/crash tests.
+- First-class run-scoped services are implemented: readiness gates, bounded startup
+  and recurring health probes, consumer failure propagation, TERM/KILL shutdown,
+  reverse dependency teardown, and cancellation/crash tests. Follow through with
+  cross-run endpoint allocation and server/SDK integration.
 - Per-step OpenTelemetry is implemented for host tasks with correlated journal
-  events and exporter shutdown. Extend this to service lifecycle spans, metrics,
+  events and exporter shutdown. Service lifecycle events are implemented. Extend this to metrics,
   remote propagation, and server execution. HTTP/protobuf export and failed-run
   flushing are covered by a local receiver e2e test.
 - Keep changes in multiple conventional commits, including the Node 26 mise update.

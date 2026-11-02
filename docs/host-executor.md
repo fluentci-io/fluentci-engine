@@ -223,6 +223,56 @@ directories, and environment values are not exported as span attributes.
 The library uses the host's global OpenTelemetry provider and current parent context;
 it does not initialize or shut down an exporter. The CLI flushes its exporter on a
 blocking worker before exiting, including on failed runs. Exporters should use bounded
-batch processing. Spans currently cover the host executor; service readiness/shutdown,
-metrics, remote context propagation, and server run API integration remain follow-up
+batch processing. Spans currently cover the host executor; metrics, remote context propagation, and server run API integration remain follow-up
 work. Queue duration includes scheduler/dependency waiting, with polling granularity.
+
+
+### Long-running services
+
+A task with a `service` object remains alive while its direct and transitive
+consumers run. Dependencies on a service are released when its readiness command
+succeeds, rather than when the service exits. For example, a PostgreSQL task can
+run `postgres` with a readiness command of `pg_isready` against an explicitly
+configured port. All service/probe commands use argv arrays, the task working
+directory, and its child-local environment.
+
+```json
+"service": {
+  "readiness": {
+    "program": "/path/to/pg_isready",
+    "args": ["-h", "127.0.0.1", "-p", "55432"],
+    "interval_ms": 250,
+    "timeout_ms": 1000
+  },
+  "startup_timeout_ms": 30000,
+  "shutdown_timeout_ms": 5000,
+  "failure_threshold": 3
+}
+```
+
+The readiness command continues as a health check. Consecutive failures after
+readiness fail the service and cancel its active consumers even with
+`fail_fast: false`; independent work can continue. An unexpected service exit,
+including exit code zero, fails the service. Startup timeout is separate from
+optional task `timeout_ms`, which limits its entire lifetime.
+
+Services use `max_services` (default 8), independently of `jobs`. Probes run as
+supervised child process groups with timeouts; they do not block scheduler polling.
+`ready` and `stopping` states appear in the TUI and JSON event journal, with
+corresponding service lifecycle events on the step span. Probe output is discarded;
+service stdout/stderr is retained as normal task logs.
+
+When consumers finish, or execution is cancelled, dependent services are stopped
+before their providers. Shutdown signals the Unix process group with TERM, waits
+up to `shutdown_timeout_ms`, then uses KILL and reaps the child. Probe process groups
+are also cleaned up. Services and their consumers cannot be cached because mutable
+service state is outside the action-cache contract. Sharing an exclusive resource
+between a service and its consumer is rejected. Capacity/resource configurations
+that leave only ready services holding leases needed by pending work fail with a
+cleanup diagnostic instead of hanging.
+
+This implementation is Unix-first. Ports, data directories, and endpoint environment
+variables must currently be chosen explicitly by the caller; cross-run endpoint
+allocation, automatic restart policies, and server-managed persistent services are
+not yet implemented. Service programs must stay in the foreground; deliberately
+escaping process groups is outside the supervision guarantee.

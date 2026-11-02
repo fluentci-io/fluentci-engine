@@ -6,6 +6,7 @@ from pathlib import Path
 import queue
 import signal
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -32,6 +33,27 @@ class HostExecution(unittest.TestCase):
 
     def command(self, plan, run="run", progress="json"):
         return [str(BINARY), "execute", str(plan), "--run-dir", str(self.root / run), "--progress", progress]
+
+    def test_service_readiness_and_cleanup_with_single_job(self):
+        daemon = "import http.server, pathlib, os; s=http.server.HTTPServer(('127.0.0.1',0),http.server.SimpleHTTPRequestHandler); pathlib.Path('port').write_text(str(s.server_port)); pathlib.Path('pid').write_text(str(os.getpid())); print('service-ready', flush=True); s.serve_forever()"
+        probe = "import pathlib, urllib.request; urllib.request.urlopen('http://127.0.0.1:'+pathlib.Path('port').read_text()+'/health', timeout=0.2).read()"
+        (self.root / "health").write_text("healthy")
+        service = dict(id="http", program=sys.executable, args=["-c", daemon], cwd=".",
+                       service=dict(readiness=dict(program=sys.executable, args=["-c", probe], interval_ms=20, timeout_ms=1000),
+                                    startup_timeout_ms=3000, shutdown_timeout_ms=200))
+        client = dict(id="client", needs=["http"], program=sys.executable, args=["-c", probe], cwd=".")
+        plan = self.plan([service, client])
+        document = json.loads(plan.read_text())
+        document["jobs"] = 1
+        plan.write_text(json.dumps(document))
+        result = subprocess.run(self.command(plan), capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        events = [json.loads(line) for line in result.stdout.splitlines()]
+        self.assertTrue(any(e.get("status") == "ready" for e in events))
+        self.assertTrue(any(e.get("status") == "stopping" for e in events))
+        self.assertTrue(events[-1]["success"])
+        with self.assertRaises(ProcessLookupError):
+            os.kill(int((self.root / "pid").read_text()), 0)
 
     def test_otlp_flushes_step_spans_before_failed_cli_exit(self):
         payloads = []
