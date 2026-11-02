@@ -12,6 +12,7 @@ version = "0.3.8"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+fluentci-executor = { path = "../executor", version = "0.1.0" }
 anyhow = "1.0.81"
 chrono = "0.4.35"
 dirs = "5.0.1"

@@ -400,6 +400,21 @@ impl Graph {
         Ok(())
     }
 
+    /// Validate both legacy edge representations and produce a dependency-safe order.
+    fn execution_order(&self) -> Result<Vec<usize>, Error> {
+        let ids: Vec<_> = self.vertices.iter().map(|v| v.id.clone()).collect();
+        let mut needs: Vec<_> = self.vertices.iter().map(|v| v.needs.clone()).collect();
+        for edge in &self.edges {
+            if edge.from >= ids.len() || edge.to >= ids.len() {
+                return Err(Error::msg("Graph edge references a missing vertex"));
+            }
+            needs[edge.to].push(ids[edge.from].clone());
+        }
+        fluentci_executor::graph::DependencyGraph::new(&ids, &needs)
+            .map(|graph| graph.order)
+            .map_err(Error::msg)
+    }
+
     pub fn execute_graph(&mut self, output: Output) {
         let tracer_provider = global::tracer_provider();
         let tracer = tracer_provider.versioned_tracer(
@@ -408,121 +423,92 @@ impl Graph {
             Some("https://opentelemetry.io/schemas/1.17.0"),
             None,
         );
-
-        let skip = vec![
-            "git",
-            "git-checkout",
-            "git-last-commit",
-            "tree",
-            "http",
-            "cache",
-            "file",
-            "directory",
-            "chmod",
-            "withFile",
-            "asService",
-            "trust",
-        ];
-        let mut visited = vec![false; self.vertices.len()];
-        let mut stack = Vec::new();
-        for (i, vertex) in self.vertices.iter().enumerate() {
-            if vertex.needs.is_empty() {
-                stack.push(i);
-            }
-        }
-        let root_span = tracer.start("root");
-        let context = Context::current_with_span(root_span);
-
-        match self.execute_services(&context) {
-            Ok(_) => {}
-            Err(e) => {
-                println!("Error: {}", e);
-                self.tx.send(("Error".to_string(), 1)).unwrap();
-                return;
-            }
-        }
-
-        while let Some(i) = stack.pop() {
-            let label = &self.vertices[i].label.as_str();
-            if visited[i] {
-                continue;
-            }
-            visited[i] = true;
-            for edge in self.edges.iter().filter(|e| e.from == i) {
-                stack.push(edge.to);
-            }
-
-            if skip.contains(&label) {
-                continue;
-            }
-
-            let (tx, rx) = mpsc::channel();
-            let mut span = tracer.start_with_context(
-                format!("{} {}", label.to_string(), self.vertices[i].command.clone()),
-                &context,
-            );
-
-            span.set_attribute(KeyValue::new("command", self.vertices[i].command.clone()));
-
-            if self.vertices[i].label == "withWorkdir" {
-                if !Path::new(&self.vertices[i].command).exists() {
-                    println!("Error: {}", self.vertices[i].id);
-                    span.end();
-                    self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                    break;
-                }
-                self.work_dir = self.vertices[i].command.clone();
-                span.end();
-                continue;
-            }
-
-            if self.vertices[i].label == "useEnv" {
-                match Envhub::default().r#use(&self.vertices[i].command, &self.work_dir) {
-                    Ok(_) => {
-                        span.end();
+        let context = Context::current_with_span(tracer.start("root"));
+        // Validate before starting services or running any commands.
+        let result = self.execution_order().and_then(|order| {
+            self.execute_services(&context)?;
+            let skip = [
+                "git",
+                "git-checkout",
+                "git-last-commit",
+                "tree",
+                "http",
+                "cache",
+                "file",
+                "directory",
+                "chmod",
+                "withFile",
+                "asService",
+                "trust",
+            ];
+            let target = order.iter().rev().copied().find(|&i| {
+                let v = &self.vertices[i];
+                !skip.contains(&v.label.as_str())
+                    && !v.command.is_empty()
+                    && v.label != "withWorkdir"
+                    && v.label != "useEnv"
+            });
+            let mut result = String::new();
+            let execution = (|| -> Result<(), Error> {
+                for i in order {
+                    let vertex = &self.vertices[i];
+                    if skip.contains(&vertex.label.as_str()) || vertex.command.is_empty() {
+                        continue;
                     }
-                    Err(e) => {
-                        println!("Error: {}", e);
-                        span.end();
-                        self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                        break;
-                    }
-                }
-                span.end();
-                continue;
-            }
-
-            match self.vertices[i].run(tx, output.clone(), stack.len() == 1, &self.work_dir) {
-                Ok(status) => {
-                    if !status.success() {
-                        println!("Error: {}", self.vertices[i].id);
-                        span.end();
-                        self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                        break;
-                    }
-                }
-                Err(e) => {
-                    println!("Error: {}", e);
-                    span.end();
-                    self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                    break;
-                }
-            };
-
-            if stack.len() == 1 {
-                if let Ok(command_output) = rx.recv() {
-                    match self.tx.send((command_output, 0)) {
-                        Ok(_) => {}
-                        Err(e) => {
-                            println!("Error: {}", e);
+                    let mut span = tracer.start_with_context(
+                        format!("{} {}", vertex.label, vertex.command),
+                        &context,
+                    );
+                    span.set_attribute(KeyValue::new("command", vertex.command.clone()));
+                    let step = (|| -> Result<(), Error> {
+                        if self.vertices[i].label == "withWorkdir" {
+                            if !Path::new(&self.vertices[i].command).is_dir() {
+                                return Err(Error::msg(format!(
+                                    "Invalid working directory: {}",
+                                    self.vertices[i].command
+                                )));
+                            }
+                            self.work_dir = self.vertices[i].command.clone();
+                            return Ok(());
                         }
-                    }
+                        if self.vertices[i].label == "useEnv" {
+                            Envhub::default().r#use(&self.vertices[i].command, &self.work_dir)?;
+                            return Ok(());
+                        }
+                        let capture = Some(i) == target;
+                        let (tx, rx) = mpsc::channel();
+                        let status =
+                            self.vertices[i].run(tx, output.clone(), capture, &self.work_dir)?;
+                        if !status.success() {
+                            return Err(Error::msg(format!(
+                                "Command failed ({}): {}",
+                                status, self.vertices[i].command
+                            )));
+                        }
+                        if capture {
+                            result = rx
+                                .recv()
+                                .map_err(|e| Error::msg(format!("Missing command output: {e}")))?;
+                        }
+                        Ok(())
+                    })();
+                    span.end();
+                    step?;
                 }
-            }
-            span.end();
-        }
-
-        self.post_execute(&context);
+                Ok(())
+            })();
+            // Cleanup occurs on both success and command failure.
+            self.post_execute(&context);
+            execution?;
+            Ok(result)
+        });
+        // Exactly one completion message, including empty graphs and validation failures.
+        let completion = match result {
+            Ok(stdout) => (stdout, 0),
+            Err(error) => (error.to_string(), 1),
+        };
+        let _ = self.tx.send(completion);
+        context.span().end();
     }
 
     pub fn execute_vertex(&mut self, id: &str) -> Result<String, Error> {
@@ -537,13 +523,11 @@ impl Graph {
         let mut result = String::from("");
         let mut visited = vec![false; self.vertices.len()];
         let mut stack = Vec::new();
-        let mut index = 0;
-        for (i, vertex) in self.vertices.iter().enumerate() {
-            if vertex.id == id {
-                index = i;
-                break;
-            }
-        }
+        let index = self
+            .vertices
+            .iter()
+            .position(|v| v.id == id)
+            .ok_or_else(|| Error::msg(format!("Vertex not found: {id}")))?;
         stack.push(index);
         while let Some(i) = stack.pop() {
             if visited[i] {
@@ -734,5 +718,105 @@ mod tests {
 
         assert_eq!(graph.size(), 0);
         Ok(())
+    }
+    #[derive(Default)]
+    struct RecordingRunner {
+        calls: Arc<std::sync::Mutex<Vec<String>>>,
+    }
+    impl fluentci_ext::Extension for RecordingRunner {
+        fn setup(&self) -> Result<(), Error> {
+            Ok(())
+        }
+        fn exec(
+            &mut self,
+            command: &str,
+            tx: mpsc::Sender<String>,
+            _: Output,
+            capture: bool,
+            _: &str,
+        ) -> Result<std::process::ExitStatus, Error> {
+            self.calls.lock().unwrap().push(command.into());
+            if command == "fail" {
+                return Err(Error::msg("intentional failure"));
+            }
+            if capture {
+                tx.send(command.into())?;
+            }
+            Ok(std::process::ExitStatus::default())
+        }
+    }
+    fn recording_graph() -> (
+        Graph,
+        mpsc::Receiver<(String, usize)>,
+        Arc<std::sync::Mutex<Vec<String>>>,
+    ) {
+        let (tx, rx) = mpsc::channel();
+        (
+            Graph::new(tx, Arc::new(Box::new(Runner::default()))),
+            rx,
+            Arc::default(),
+        )
+    }
+    fn add_recording(
+        graph: &mut Graph,
+        id: &str,
+        needs: &[&str],
+        calls: &Arc<std::sync::Mutex<Vec<String>>>,
+    ) {
+        graph
+            .execute(GraphCommand::AddVertex(
+                id.into(),
+                "exec".into(),
+                id.into(),
+                needs.iter().map(|s| s.to_string()).collect(),
+                Arc::new(Box::new(RecordingRunner {
+                    calls: calls.clone(),
+                })),
+            ))
+            .unwrap();
+    }
+    #[test]
+    fn diamond_executes_once_after_all_dependencies_and_returns_terminal_output() {
+        let (mut graph, rx, calls) = recording_graph();
+        add_recording(&mut graph, "a", &[], &calls);
+        add_recording(&mut graph, "b", &["a"], &calls);
+        add_recording(&mut graph, "c", &["a"], &calls);
+        add_recording(&mut graph, "d", &["b", "c"], &calls);
+        graph.execute_graph(Output::Stdout);
+        assert_eq!(*calls.lock().unwrap(), vec!["a", "b", "c", "d"]);
+        assert_eq!(
+            rx.recv_timeout(std::time::Duration::from_secs(1)).unwrap(),
+            ("d".into(), 0)
+        );
+        assert!(rx.try_recv().is_err());
+    }
+    #[test]
+    fn empty_graph_completes_without_waiting_for_nonexistent_output() {
+        let (mut graph, rx, _) = recording_graph();
+        graph.execute_graph(Output::Stdout);
+        assert_eq!(
+            rx.recv_timeout(std::time::Duration::from_secs(1)).unwrap(),
+            ("".into(), 0)
+        );
+    }
+    #[test]
+    fn invalid_graph_fails_before_any_command_runs() {
+        let (mut graph, rx, calls) = recording_graph();
+        add_recording(&mut graph, "a", &["b"], &calls);
+        add_recording(&mut graph, "b", &["a"], &calls);
+        graph.execute_graph(Output::Stdout);
+        assert_eq!(rx.recv().unwrap().1, 1);
+        assert!(calls.lock().unwrap().is_empty());
+        assert!(graph.execute_vertex("missing").is_err());
+    }
+    #[test]
+    fn failure_sends_one_completion_and_stops_dependents() {
+        let (mut graph, rx, calls) = recording_graph();
+        add_recording(&mut graph, "fail", &[], &calls);
+        add_recording(&mut graph, "never", &["fail"], &calls);
+        graph.execute_graph(Output::Stdout);
+        assert_eq!(rx.recv().unwrap().1, 1);
+        assert_eq!(*calls.lock().unwrap(), vec!["fail"]);
+        assert!(rx.try_recv().is_err());
     }
 }

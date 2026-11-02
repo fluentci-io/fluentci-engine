@@ -2221,6 +2221,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "dirs 5.0.1",
+ "fluentci-executor",
  "fluentci-ext",
  "fluentci-logging",
  "fluentci-secrets",
