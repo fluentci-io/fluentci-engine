@@ -335,3 +335,38 @@ fn ordered_output_overwrites_restore_each_action_before_consumers() {
         "firstsecondconsumer"
     );
 }
+
+#[test]
+fn executable_permission_changes_during_execution_prevent_cache_publication() {
+    let dir = TempDir::new().unwrap();
+    let mut p = plan(dir.path());
+    let executable = dir.path().join("runner");
+    fs::write(
+        &executable,
+        "#!/bin/sh\n/bin/chmod 700 \"$0\"; printf artifact > output\n",
+    )
+    .unwrap();
+    fs::set_permissions(&executable, fs::Permissions::from_mode(0o755)).unwrap();
+    p.tasks[0].program = executable.to_string_lossy().into();
+    p.tasks[0].args.clear();
+    let result = p
+        .execute(&dir.path().join("changed"), &Cancellation::default())
+        .unwrap();
+    assert_eq!(result.tasks[0].status, Status::Failed, "{result:?}");
+    assert!(result.tasks[0]
+        .error
+        .as_deref()
+        .unwrap()
+        .contains("executable"));
+    assert_eq!(
+        fs::read_dir(dir.path().join("cache/actions"))
+            .unwrap()
+            .count(),
+        0
+    );
+    // The same command is cacheable once its executable mode remains stable.
+    let stable = run(&p, dir.path(), "stable");
+    assert_eq!(stable.tasks[0].cache.outcome, "stored");
+    let warm = run(&p, dir.path(), "warm");
+    assert_eq!(warm.tasks[0].cache.outcome, "hit");
+}

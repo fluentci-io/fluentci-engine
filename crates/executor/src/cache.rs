@@ -584,7 +584,11 @@ impl Prepared {
         #[cfg(all(test, unix))]
         crate::cache_worker_tests::pause_save(&task.cwd, &self.cancel)?;
         let policy = task.cache.as_ref().ok_or("missing cache policy")?;
-        if file_digest(&self.executable, &self.cancel)? != self.components["executable"] {
+        if file_digest(&self.executable, &self.cancel)? != self.components["executable"]
+            || encoded_digest(&mode(
+                &fs::metadata(&self.executable).map_err(|e| e.to_string())?,
+            ))? != self.components["executable_mode"]
+        {
             return Err("executable changed during execution; action was not cached".into());
         }
         // Never publish under the old key if declared inputs changed during execution.
