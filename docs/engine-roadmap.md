@@ -48,8 +48,11 @@ milestones do not establish a claim of being the fastest engine.
    and integration jobs for MacPorts and macports-rs. Homebrew and BSD native
    package-plan installation tests are configured but await remote verification.
    BSD kernel/package-manager tests do not prove Wasmtime/legacy server portability.
-7. Benchmark orchestration, cold/warm cache, large logs/artifacts, cancellation,
-   and independent task scaling. Optimize based on measured bottlenecks.
+7. The release CLI benchmark in `benchmarks/host.py` now measures empty runs,
+   dependency chains, independent tasks, bounded parallelism, 1 MiB logs, and
+   cold/warm artifact caching with outcome checks and machine-readable samples.
+   Extend measurements to cancellation, large DAGs, services, server throughput,
+   and competing engines; optimize based on measured bottlenecks.
 8. Improve UX for local/server workflows: concise actionable errors, attach to
    running jobs, inspect task logs/results, explain cache decisions, and sensible
    zero-daemon local defaults.
