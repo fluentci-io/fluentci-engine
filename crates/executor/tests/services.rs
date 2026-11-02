@@ -289,3 +289,52 @@ fn invalid_service_contracts_are_rejected_without_effects() {
         .unwrap_err()
         .contains("consumers cannot be cached"));
 }
+
+#[test]
+fn separate_health_probe_runs_only_after_readiness_and_keeps_service_alive() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut db = service(
+        "db",
+        DAEMON,
+        "test -f ready && test ! -f became-ready && touch became-ready",
+        &[],
+    );
+    db["service"]["health"] = json!({"program":"/bin/sh", "args":["-c", "test -f became-ready && touch health-checked"], "interval_ms":10, "timeout_ms":100});
+    let p = plan(dir.path(), vec![db, task("consumer",
+        "while test ! -f health-checked; do sleep 0.01; done; sleep 0.1; test ! -f shutdown", &["db"])]);
+    let result = p
+        .execute(&dir.path().join("run"), &Cancellation::default())
+        .unwrap();
+    assert!(result.success(), "{result:?}");
+    assert!(dir.path().join("health-checked").exists());
+}
+
+#[test]
+fn separate_health_timeout_kills_probe_and_cancels_consumers() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut db = service("db", DAEMON, "test -f ready", &[]);
+    db["service"]["health"] = json!({"program":"/bin/sh", "args":["-c", "echo $$ > health.pid; sleep 20"], "interval_ms":10, "timeout_ms":40});
+    db["service"]["failure_threshold"] = json!(1);
+    let p = plan(dir.path(), vec![db, task("consumer", "sleep 20", &["db"])]);
+    let result = p
+        .execute(&dir.path().join("run"), &Cancellation::default())
+        .unwrap();
+    assert_eq!(result.tasks[0].status, Status::Failed, "{result:?}");
+    assert_eq!(result.tasks[1].status, Status::Cancelled);
+    let pid: i32 = fs::read_to_string(dir.path().join("health.pid"))
+        .unwrap()
+        .trim()
+        .parse()
+        .unwrap();
+    assert_eq!(unsafe { libc::kill(pid, 0) }, -1);
+    for health in [
+        json!({"program":""}),
+        json!({"program":"/bin/true", "interval_ms":0}),
+        json!({"program":"/bin/true", "timeout_ms":0}),
+    ] {
+        let mut invalid = p.clone();
+        invalid.tasks[0].service.as_mut().unwrap().health =
+            Some(serde_json::from_value(health).unwrap());
+        assert!(invalid.validate().is_err());
+    }
+}

@@ -12,6 +12,9 @@ use std::{
 #[serde(deny_unknown_fields)]
 pub struct Service {
     pub readiness: Probe,
+    /// Optional recurring check after readiness; defaults to the readiness probe.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub health: Option<Probe>,
     #[serde(default = "startup_timeout")]
     pub startup_timeout_ms: u64,
     #[serde(default = "shutdown_timeout")]
@@ -52,6 +55,9 @@ impl Service {
             || self.shutdown_timeout_ms == 0
             || self.readiness.interval_ms == 0
             || self.readiness.timeout_ms == 0
+            || self.health.as_ref().is_some_and(|probe| {
+                probe.program.is_empty() || probe.interval_ms == 0 || probe.timeout_ms == 0
+            })
             || self.failure_threshold == 0
         {
             return Err("service requires a probe and positive lifecycle limits".into());
@@ -85,20 +91,27 @@ impl Supervisor {
     }
     pub fn poll(&mut self, task: &Task, inherited: &BTreeMap<OsString, OsString>) -> Health {
         let config = task.service.as_ref().expect("service configuration");
+        let check = if self.ready {
+            config.health.as_ref().unwrap_or(&config.readiness)
+        } else {
+            &config.readiness
+        };
         if let Some(probe) = &mut self.probe {
             let outcome = match probe.child.try_wait() {
                 Ok(Some(status)) => Some(status.success()),
-                Ok(None)
-                    if probe.started.elapsed()
-                        < Duration::from_millis(config.readiness.timeout_ms) =>
-                {
+                Ok(None) if probe.started.elapsed() < Duration::from_millis(check.timeout_ms) => {
                     None
                 }
                 _ => Some(false),
             };
             if let Some(success) = outcome {
                 self.probe.take();
-                self.next = Instant::now() + Duration::from_millis(config.readiness.interval_ms);
+                let next_check = if success {
+                    config.health.as_ref().unwrap_or(&config.readiness)
+                } else {
+                    check
+                };
+                self.next = Instant::now() + Duration::from_millis(next_check.interval_ms);
                 if success {
                     self.failures = 0;
                     if !self.ready {
@@ -115,9 +128,9 @@ impl Supervisor {
                 }
             }
         } else if Instant::now() >= self.next {
-            let mut command = Command::new(&config.readiness.program);
+            let mut command = Command::new(&check.program);
             command
-                .args(&config.readiness.args)
+                .args(&check.args)
                 .current_dir(&task.cwd)
                 .env_clear()
                 .envs(inherited)

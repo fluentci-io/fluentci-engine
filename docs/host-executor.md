@@ -325,7 +325,12 @@ directory, and its child-local environment.
 }
 ```
 
-The readiness command continues as a health check. Consecutive failures after
+By default, the readiness command continues as a health check. Set optional
+`service.health` to a separate probe with its own `program`, `args`, `interval_ms`,
+and `timeout_ms` to replace it after readiness succeeds. Health checks never gate
+initial readiness: the first health check is scheduled after its own interval
+following successful readiness. Both probe types have the same environment and
+working directory as the service and use supervised process groups. Consecutive failures after
 readiness fail the service and cancel its active consumers even with
 `fail_fast: false`; independent work can continue. An unexpected service exit,
 including exit code zero, fails the service. Startup timeout is separate from
