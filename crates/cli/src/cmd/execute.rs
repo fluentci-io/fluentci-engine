@@ -36,12 +36,24 @@ async fn execute_inner(path: &str, run_dir: &str, progress: &str) -> Result<(), 
     let run_dir = PathBuf::from(run_dir);
     let mut display = super::progress::Progress::new(&plan, progress).map_err(|e| anyhow!(e))?;
     let event_path = run_dir.join("events.jsonl");
+    // Register before starting commands so early SDK cancellation cannot take
+    // the default SIGINT action after a child has already been launched.
+    #[cfg(unix)]
+    let mut interrupt = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
+    #[cfg(unix)]
+    let shutdown = async move {
+        interrupt.recv().await;
+        Ok::<(), std::io::Error>(())
+    };
+    #[cfg(not(unix))]
+    let shutdown = tokio::signal::ctrl_c();
+    tokio::pin!(shutdown);
     let mut run = tokio::task::spawn_blocking(move || plan.execute(&run_dir, &worker_cancel));
     let mut ticker = tokio::time::interval(std::time::Duration::from_millis(50));
     let result = loop {
         tokio::select! {
             result = &mut run => break result,
-            signal = tokio::signal::ctrl_c() => {
+            signal = &mut shutdown => {
                 cancel.cancel();
                 signal?;
                 break run.await;
