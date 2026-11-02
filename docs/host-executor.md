@@ -157,6 +157,11 @@ hermetic sandbox. Side-effecting deployment and publishing tasks should not opt 
 Blobs are content-addressed with SHA-256. Writes are staged and atomically
 published. Action locks deduplicate concurrent identical executions on Unix.
 Restoration verifies all staged artifacts and logs before replacing outputs.
+Output replacement keeps backups and rolls back earlier replacements if a later
+filesystem operation fails. If rollback itself fails, backups are retained and
+the cache diagnostic reports their location. This is not crash-atomic across
+multiple output paths, and concurrent workspace mutation is not supported. A
+rejected restore falls back to normal execution, which cleans declared outputs.
 Corrupt entries trigger a miss; failed commands, missing outputs, and inputs
 modified during execution are never published as successful cache entries.
 

@@ -506,20 +506,127 @@ impl Prepared {
         for entry in manifest.outputs.iter().rev().filter(|e| e.directory) {
             set_mode(&artifacts.join(&entry.path), entry.mode)?;
         }
-        for root in &policy.outputs {
-            let destination = checked_path(&task.cwd, root)?;
+        // A log write failure must not occur after workspace publication.
+        fs::copy(staged_stdout, stdout).map_err(|e| e.to_string())?;
+        fs::copy(staged_stderr, stderr).map_err(|e| e.to_string())?;
+        publish_outputs(&task.cwd, &artifacts, &policy.outputs)?;
+        Ok(true)
+    }
+}
+
+/// Preserve existing outputs until every replacement succeeds. This rolls back
+/// ordinary filesystem errors; it is not a crash-atomic multi-path transaction.
+fn publish_outputs(cwd: &Path, artifacts: &Path, outputs: &[PathBuf]) -> Result<(), String> {
+    let backups = tempfile::Builder::new()
+        .prefix(".fluentci-backup-")
+        .tempdir_in(cwd)
+        .map_err(|e| e.to_string())?;
+    let mut replaced = Vec::new();
+    let publication = (|| {
+        for (index, root) in outputs.iter().enumerate() {
+            let destination = checked_path(cwd, root)?;
             if let Some(parent) = destination.parent() {
                 fs::create_dir_all(parent).map_err(|e| e.to_string())?;
             }
-            if destination.is_dir() {
-                fs::remove_dir_all(&destination).map_err(|e| e.to_string())?;
-            } else if destination.exists() {
-                fs::remove_file(&destination).map_err(|e| e.to_string())?;
+            let backup = backups.path().join(index.to_string());
+            let existed = destination.try_exists().map_err(|e| e.to_string())?;
+            if existed {
+                fs::rename(&destination, &backup).map_err(|e| e.to_string())?;
             }
+            // Record the backup before attempting the replacement, so even a
+            // failure on this rename restores the original output.
+            replaced.push((destination.clone(), backup, existed, false));
             fs::rename(artifacts.join(root), &destination).map_err(|e| e.to_string())?;
+            replaced.last_mut().unwrap().3 = true;
         }
-        fs::copy(staged_stdout, stdout).map_err(|e| e.to_string())?;
-        fs::copy(staged_stderr, stderr).map_err(|e| e.to_string())?;
-        Ok(true)
+        Ok::<_, String>(())
+    })();
+    if let Err(error) = publication {
+        let mut failures = Vec::new();
+        for (destination, backup, existed, installed) in replaced.into_iter().rev() {
+            let rollback = (|| {
+                if installed {
+                    // Move back instead of recursively deleting: read-only
+                    // output trees can still be rolled back by their parent.
+                    let relative = destination.strip_prefix(cwd).map_err(|e| e.to_string())?;
+                    fs::rename(&destination, artifacts.join(relative))
+                        .map_err(|e| e.to_string())?;
+                }
+                if existed {
+                    fs::rename(&backup, &destination).map_err(|e| e.to_string())?;
+                }
+                Ok::<_, String>(())
+            })();
+            if let Err(reason) = rollback {
+                failures.push(format!("{}: {reason}", destination.display()));
+            }
+        }
+        if !failures.is_empty() {
+            let retained = backups.into_path();
+            return Err(format!(
+                "cache publication failed: {error}; rollback failed: {}; backups retained at {}",
+                failures.join("; "),
+                retained.display()
+            ));
+        }
+        return Err(format!(
+            "cache publication failed (outputs rolled back): {error}"
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod publication_tests {
+    use super::*;
+
+    #[test]
+    fn later_failure_restores_replaced_outputs_and_preserves_blocker() {
+        let workspace = tempfile::tempdir().unwrap();
+        let staged = tempfile::tempdir().unwrap();
+        fs::write(workspace.path().join("first"), "original").unwrap();
+        fs::write(workspace.path().join("blocked"), "keep").unwrap();
+        fs::write(staged.path().join("first"), "cached").unwrap();
+        fs::create_dir(staged.path().join("blocked")).unwrap();
+        fs::write(staged.path().join("blocked/second"), "second").unwrap();
+        let error = publish_outputs(
+            workspace.path(),
+            staged.path(),
+            &["first".into(), "blocked/second".into()],
+        )
+        .unwrap_err();
+        assert!(error.contains("outputs rolled back"), "{error}");
+        assert_eq!(
+            fs::read_to_string(workspace.path().join("first")).unwrap(),
+            "original"
+        );
+        assert_eq!(
+            fs::read_to_string(workspace.path().join("blocked")).unwrap(),
+            "keep"
+        );
+        assert_eq!(
+            fs::read_to_string(staged.path().join("first")).unwrap(),
+            "cached"
+        );
+    }
+
+    #[test]
+    fn failed_replacement_restores_its_backup_and_removes_new_outputs() {
+        let workspace = tempfile::tempdir().unwrap();
+        let staged = tempfile::tempdir().unwrap();
+        fs::write(workspace.path().join("second"), "original").unwrap();
+        fs::write(staged.path().join("first"), "cached").unwrap();
+        // The second staged output is deliberately missing.
+        assert!(publish_outputs(
+            workspace.path(),
+            staged.path(),
+            &["first".into(), "second".into()]
+        )
+        .is_err());
+        assert!(!workspace.path().join("first").exists());
+        assert_eq!(
+            fs::read_to_string(workspace.path().join("second")).unwrap(),
+            "original"
+        );
     }
 }
