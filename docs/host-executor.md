@@ -461,15 +461,16 @@ manager or invokes sudo automatically. Install tasks use literal argv and appear
 as normal steps in logs, results, the TUI, and OpenTelemetry. Set `timeout_ms` and
 needed environment values such as `HOME` explicitly for your CI host.
 
-Provider environments prepend the manager executable's directory and conventional
-package `bin`/`sbin` directories to task-local PATH. Existing explicit task PATH is
-preserved as the suffix; an explicit-environment plan otherwise gets the system
+Provider environments prepend conventional package `bin`/`sbin` directories, then
+the manager executable's directory, to task-local PATH. Package binaries take
+precedence over unrelated tools next to a custom manager executable. Existing
+explicit task PATH is preserved as the suffix; an explicit-environment plan otherwise gets the system
 path `/usr/bin:/bin:/usr/sbin:/sbin`. Multiple providers use array order as PATH
 precedence. Homebrew also receives `HOMEBREW_PREFIX` and `NONINTERACTIVE=1`.
 Direct manager commands (`program: "port"`, for example) are pinned to the chosen
 binary. Arbitrary shell scripts are not rewritten; use absolute paths when calling
-custom-named manager executables from a shell. Keg-only formula paths and custom
-installation prefixes must be configured separately; this is not a general
+custom-named manager executables or selecting the Rust `port` backend from a
+shell. Keg-only formula paths and custom installation prefixes must be configured separately; this is not a general
 replacement for every manager-specific shell initialization hook.
 
 Installers automatically take an exclusive `package-prefix:<canonical-prefix>`
@@ -495,3 +496,22 @@ includes an opt-in `native_package_plan_install` test that installs `jq` and run
 through the provider environment on supported Homebrew and BSD hosts. These jobs
 are configured but have not yet been executed remotely. MacPorts provisioning and
 native macports-rs CI coverage remain pending.
+
+
+### Native MacPorts CI
+
+The host-executor workflow has separate macOS ARM64 and x86_64 jobs for native
+MacPorts and the optional Rust backend. It builds [MacPorts base v2.12.7](https://github.com/macports/macports-base/tree/dcf596a2d661edf370cd448d65db8fe99f8524e9)
+using the [official source installation procedure](https://guide.macports.org/#installing.macports.source)
+and builds [macports-rs at a pinned commit](https://github.com/tsirysndr/macports-rs/tree/5942733500137883ba642db6e8261f57907c531e)
+with `cargo build --release --locked`. Both configurations use base-provided
+configuration and a synced ports tree; this does not test standalone Rust-backend
+bootstrap. The ports tree and package archives remain upstream network inputs.
+
+Compilation runs without elevation. Only provisioning and the already-built
+ignored native tests run as root on disposable GitHub runners. Each job starts
+without `/opt/local/bin/jq`, installs it through the chosen provider, verifies that
+PATH selects that exact binary, then exercises the legacy extension adapter.
+These jobs are configured; successful remote execution is still required before
+claiming native backend coverage. Do not run these installation steps on a normal
+development host.

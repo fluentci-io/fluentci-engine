@@ -62,6 +62,68 @@ jobs:
           python3 tests/e2e_host.py -v
           python3 tests/e2e_server.py -v
 
+  macports:
+    name: Native MacPorts (${{ matrix.os }}, ${{ matrix.backend }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel]
+        backend: [native, rust]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - name: Checkout pinned MacPorts base
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: macports/macports-base
+          ref: dcf596a2d661edf370cd448d65db8fe99f8524e9 # v2.12.7
+          path: .ci/macports-base
+          persist-credentials: false
+      - name: Provision empty MacPorts prefix on disposable runner
+        working-directory: .ci/macports-base
+        run: |
+          set -euo pipefail
+          test ! -e /opt/local/bin/jq
+          ./configure --prefix=/opt/local
+          make -j 3
+          sudo -n make install
+          /opt/local/bin/port version
+          sudo -n /opt/local/bin/port -N sync
+      - name: Checkout pinned Rust backend
+        if: matrix.backend == 'rust'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: tsirysndr/macports-rs
+          ref: 5942733500137883ba642db6e8261f57907c531e
+          path: .ci/macports-rs
+          persist-credentials: false
+      - name: Build and install release Rust backend
+        if: matrix.backend == 'rust'
+        working-directory: .ci/macports-rs
+        run: |
+          cargo build --release --locked --bin port
+          sudo -n install -d /usr/local/bin
+          sudo -n install -m 755 target/release/port /usr/local/bin/port
+          /usr/local/bin/port version
+      - name: Build release native-install tests without elevation
+        run: |
+          set -euo pipefail
+          cargo test --release --locked -p fluentci-executor --test packages --no-run --message-format=json > "$RUNNER_TEMP/executor-tests.json"
+          cargo test --release --locked -p fluentci-ext --test native_packages --no-run --message-format=json > "$RUNNER_TEMP/extension-tests.json"
+      - name: Install through selected backend and verify provider PATH
+        env:
+          MACPORTS_BACKEND: ${{ matrix.backend }}
+        run: |
+          set -euo pipefail
+          test ! -e /opt/local/bin/jq
+          executor_test=$(python3 -c 'import json,sys; rows=[json.loads(s) for s in open(sys.argv[1])]; bins=[r["executable"] for r in rows if r.get("reason")=="compiler-artifact" and r.get("executable") and r["target"]["name"]=="packages"]; assert len(bins)==1, bins; print(bins[0])' "$RUNNER_TEMP/executor-tests.json")
+          extension_test=$(python3 -c 'import json,sys; rows=[json.loads(s) for s in open(sys.argv[1])]; bins=[r["executable"] for r in rows if r.get("reason")=="compiler-artifact" and r.get("executable") and r["target"]["name"]=="native_packages"]; assert len(bins)==1, bins; print(bins[0])' "$RUNNER_TEMP/extension-tests.json")
+          sudo -n env HOME=/var/root FLUENTCI_TEST_PACKAGE_MANAGER=macports FLUENTCI_TEST_MACPORTS_BACKEND="$MACPORTS_BACKEND" "$executor_test" native_package_plan_install --ignored --exact --nocapture
+          sudo -n env HOME=/var/root FLUENTCI_TEST_MACPORTS_BACKEND="$MACPORTS_BACKEND" "$extension_test" native_macports_package_install --ignored --exact --nocapture
+          /opt/local/bin/jq --version
+
   freebsd:
     name: Native FreeBSD executor and pkg
     runs-on: ubuntu-24.04

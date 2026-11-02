@@ -21,7 +21,8 @@ milestones do not establish a claim of being the fastest engine.
 - Rust extension adapters for Homebrew (macOS ARM64/Linux x86_64), MacPorts
   (macOS; native or macports-rs), FreeBSD pkg, NetBSD pkgin, OpenBSD pkg_add.
 - Local fixture, executor, cache, CLI e2e, and PTY tests. GitHub native-host/VM
-  workflows are configured but not remotely executed/verified yet.
+  workflows, including native/Rust MacPorts on macOS ARM64 and x86_64, are
+  configured but not remotely executed/verified yet.
 
 ## Required follow-through
 
