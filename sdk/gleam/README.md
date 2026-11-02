@@ -156,8 +156,23 @@ individual pages may split UTF-8 characters, so use a streaming decoder for text
 presentation. `gleam/bit_array.to_string` is suitable only when the bytes being
 decoded form a complete UTF-8 sequence.
 
-History, structured live events, and trace-context propagation remain to be added
-to this Gleam adapter.
+Use `get_events(id, cursor, config)` for typed journal pages up to 4 MiB. The
+`fluentci/host/journal` module defines `RunStarted`, `TaskState`, `Log`, and
+`RunFinished` variants. Records include sequence numbers, elapsed time, and optional
+trace/span IDs; task-state events include cache decisions, wait reasons and errors.
+All task lifecycle states—including service readiness and stopping—are represented.
+
+Start the event cursor at zero and save each page's `next_cursor`. This cursor is a
+**byte offset**, distinct from an event sequence number or a raw-log cursor. Resume
+with the returned offset, including after reconnecting. Empty pages may occur while
+a run is active. The client checks byte counts, UTF-8, record boundaries, field types
+and increasing sequence numbers within each page. Unknown event variants fail with
+`DecodeError`; update the SDK when a server introduces new journal variants.
+Consumers can retain the last sequence number to detect accidental replay across
+pages. Journal log text is intended for display; use `get_logs` for exact bytes.
+
+History and outgoing trace-context propagation remain to be added to this Gleam
+adapter; existing event trace/span IDs are already decoded.
 
 The existing APIs below use the legacy engine path. Verify host plans, local
 execution and server execution against a built release engine with:
@@ -173,7 +188,8 @@ engine configuration fail instead; host CI requires this on Linux and both macOS
 architectures using pinned Gleam/Deno versions and Node 26. The engine fixture uses temporary directories,
 checks cold/warm caching across workspaces, typed local success/failure, launch errors,
 cancellation cleanup, authenticated server execution, keyed replay, live binary
-output, service probe logs, resumable byte cursors and HTTP error paths. Tests perform no package installation.
+output, service probe logs, typed journal events, resumable byte cursors and HTTP
+error paths. Tests perform no package installation.
 
 ## Legacy API quick start
 

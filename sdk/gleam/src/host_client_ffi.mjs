@@ -82,3 +82,17 @@ export function logs(config, id, index, stream, cursor, ok, invalid, http_error,
     return ok(bytes, next);
   }, transport_error);
 }
+
+export function events(config, id, cursor, ok, invalid, http_error, transport_error) {
+  if (!Number.isSafeInteger(cursor) || cursor < 0) return Promise.resolve(transport_error("invalid event cursor"));
+  return perform(config, "GET", id, `/events?cursor=${cursor}`, "", "", (response, bytes) => {
+    if (response.status !== 200) return http_error(response.status, new TextDecoder().decode(bytes));
+    const header = response.headers.get("X-Next-Cursor"), next = Number(header);
+    if (!header || !/^(0|[1-9][0-9]*)$/.test(header) || !Number.isSafeInteger(next) ||
+        next !== cursor + bytes.byteLength || bytes.byteLength > 4 * 1024 * 1024) return invalid();
+    let text;
+    try { text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); }
+    catch { return invalid(); }
+    return ok(text, next);
+  }, transport_error);
+}

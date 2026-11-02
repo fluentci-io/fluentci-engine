@@ -1,5 +1,6 @@
 /// Authenticated host run API for the JavaScript target (Node/Deno).
 import fluentci/host
+import fluentci/host/journal
 import fluentci/host/result as report
 import gleam/dynamic.{type DecodeErrors, type Dynamic}
 import gleam/javascript/promise.{type Promise}
@@ -278,6 +279,43 @@ pub fn get_logs(
       dynamic.bit_array(data)
       |> result.map_error(fn(_) { DecodeError })
       |> result.map(fn(bytes) { LogPage(bytes:, next_cursor:) })
+    },
+    fn() { Error(DecodeError) },
+    fn(code, body) { Error(HttpError(code, body)) },
+    fn(message) { Error(TransportError(message)) },
+  )
+}
+
+pub type EventPage {
+  EventPage(events: List(journal.Event), next_cursor: Int)
+}
+
+@external(javascript, "../../host_client_ffi.mjs", "events")
+fn events_impl(
+  config: Config,
+  id: String,
+  cursor: Int,
+  ok: fn(String, Int) -> Result(EventPage, Error),
+  invalid: fn() -> Result(EventPage, Error),
+  http_error: fn(Int, String) -> Result(EventPage, Error),
+  transport_error: fn(String) -> Result(EventPage, Error),
+) -> Promise(Result(EventPage, Error))
+
+/// Read up to 4 MiB of complete journal records. Start at zero and resume with
+/// the returned byte cursor, not a sequence number. Empty pages may precede completion.
+pub fn get_events(
+  id: String,
+  cursor: Int,
+  config: Config,
+) -> Promise(Result(EventPage, Error)) {
+  events_impl(
+    config,
+    id,
+    cursor,
+    fn(text, next_cursor) {
+      journal.parse(text)
+      |> result.map_error(fn(_) { DecodeError })
+      |> result.map(fn(events) { EventPage(events:, next_cursor:) })
     },
     fn() { Error(DecodeError) },
     fn(code, body) { Error(HttpError(code, body)) },

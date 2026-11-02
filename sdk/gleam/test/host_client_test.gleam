@@ -1,8 +1,10 @@
 import fluentci/host
 import fluentci/host/client
+import fluentci/host/journal
 import fluentci/host/result as report
 import gleam/bit_array
 import gleam/javascript/promise.{type Promise}
+import gleam/list
 import gleam/option.{Some}
 import gleam/string
 import gleeunit/should
@@ -131,6 +133,25 @@ pub fn remote_execution_replay_and_cancel_test() {
       config,
     ))
     let assert Error(client.HttpError(400, _)) = value
+    use value <- promise.await(client.get_events(admitted.id, 0, config))
+    let assert Ok(page) = value
+    let assert Ok(first) = list.first(page.events)
+    first.kind |> should.equal(journal.RunStarted(2))
+    let assert Ok(last) = list.last(page.events)
+    last.kind |> should.equal(journal.RunFinished(True))
+    list.any(page.events, fn(event) {
+      case event.kind {
+        journal.Log("service", journal.ProbeStdout, _) -> True
+        _ -> False
+      }
+    })
+    |> should.be_true
+    use value <- promise.await(client.get_events(
+      admitted.id,
+      page.next_cursor,
+      config,
+    ))
+    value |> should.equal(Ok(client.EventPage([], page.next_cursor)))
     let changed = host.plan([host.task("other", "/bin/true", root)])
     use value <- promise.await(client.submit_with_key(
       changed,
@@ -148,6 +169,9 @@ pub fn remote_execution_replay_and_cancel_test() {
     use value <- promise.await(client.get_state(admitted.id, config))
     let assert Ok(running) = value
     running.status |> should.equal(client.Running)
+    use value <- promise.await(client.get_events(admitted.id, 0, config))
+    let assert Ok(live_page) = value
+    let assert Ok(last_live) = list.last(live_page.events)
     use value <- promise.await(client.cancel(admitted.id, config))
     value |> should.equal(Ok(Nil))
     use state <- promise.await(terminal(admitted.id, config, 200))
@@ -155,6 +179,17 @@ pub fn remote_execution_replay_and_cancel_test() {
     use value <- promise.await(client.get_result(admitted.id, config))
     let assert Ok(value) = value
     value.outcome |> should.equal(Some(report.Cancelled))
+    use value <- promise.await(client.get_events(
+      admitted.id,
+      live_page.next_cursor,
+      config,
+    ))
+    let assert Ok(tail) = value
+    let assert Ok(first_tail) = list.first(tail.events)
+    { first_tail.sequence > last_live.sequence } |> should.be_true
+    let assert Ok(last_tail) = list.last(tail.events)
+    last_tail.kind |> should.equal(journal.RunFinished(False))
+
     use value <- promise.map(client.get_state(
       admitted.id,
       client.Config(base, "wrong", 5000),
@@ -226,4 +261,11 @@ fn log_transport_contract() -> Promise(Nil)
 
 pub fn log_cursor_validation_test() {
   log_transport_contract()
+}
+
+@external(javascript, "./host_client_test_ffi.mjs", "event_transport_contract")
+fn event_transport_contract() -> Promise(Nil)
+
+pub fn event_cursor_validation_test() {
+  event_transport_contract()
 }

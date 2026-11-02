@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import process from 'node:process';
 import assert from 'node:assert/strict';
-import { request, logs } from './host_client_ffi.mjs';
+import { request, logs, events } from './host_client_ffi.mjs';
 
 export const pause = () => new Promise(resolve => setTimeout(resolve, 25));
 const listen = server => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(server.address().port)));
@@ -136,5 +136,37 @@ export async function log_transport_contract() {
     for (const cursor of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1]) assert.equal(await read(0, cursor), 'transport-error');
     for (const index of [-1, 0.5, 10000]) assert.equal(await read(index), 'transport-error');
     assert.equal(calls, before, 'invalid arguments must not reach the server');
+  } finally { await close(server); }
+}
+
+
+export async function event_transport_contract() {
+  const text = '{"sequence":0,"elapsed_ms":0,"type":"log","id":"x","stream":"stdout","text":"é"}\n';
+  let body = new TextEncoder().encode(text), header = String(body.length), calls = 0;
+  const server = createServer((req, res) => {
+    calls++;
+    assert.equal(req.url, '/v1/runs/00000000-0000-0000-0000-000000000001/events?cursor=0');
+    res.writeHead(200, header === null ? {} : { 'X-Next-Cursor': header });
+    res.end(body);
+  });
+  const port = await listen(server);
+  const config = { base_url: `http://127.0.0.1:${port}`, token: 'event-token', timeout_ms: 5000 };
+  const read = (cursor = 0) => events(config, '00000000-0000-0000-0000-000000000001', cursor,
+    (text, next) => ({ text, next }), () => 'decode-error', () => 'http-error', () => 'transport-error');
+  try {
+    assert.deepEqual(await read(), { text, next: body.length });
+    header = String(text.length);
+    assert.equal(await read(), 'decode-error', 'cursor counts UTF-8 bytes, not characters');
+    header = null;
+    assert.equal(await read(), 'decode-error');
+    body = new Uint8Array([255, 10]); header = '2';
+    assert.equal(await read(), 'decode-error', 'invalid UTF-8 must not silently become replacement characters');
+    body = new Uint8Array(4 * 1024 * 1024 + 1); header = String(body.length);
+    assert.equal(await read(), 'decode-error');
+    body = new Uint8Array(); header = '0';
+    assert.deepEqual(await read(), { text: '', next: 0 });
+    const before = calls;
+    for (const cursor of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1]) assert.equal(await read(cursor), 'transport-error');
+    assert.equal(calls, before);
   } finally { await close(server); }
 }
