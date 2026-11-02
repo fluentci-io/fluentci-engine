@@ -10,7 +10,10 @@ use std::{
     fs,
     io::Write,
     path::{Path, PathBuf},
-    sync::Mutex,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Mutex,
+    },
     thread::JoinHandle,
 };
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
@@ -37,6 +40,8 @@ pub struct Runs {
     token: String,
     max_runs: usize,
     active: Mutex<HashMap<String, Active>>,
+    closing: AtomicBool,
+    shutdown_lock: Mutex<()>,
 }
 fn save(path: &Path, value: &impl Serialize) -> Result<(), String> {
     let mut file =
@@ -131,6 +136,8 @@ impl Runs {
             token,
             max_runs,
             active: Mutex::new(HashMap::new()),
+            closing: AtomicBool::new(false),
+            shutdown_lock: Mutex::new(()),
         })
     }
     fn authorized(&self, request: &HttpRequest) -> bool {
@@ -160,7 +167,14 @@ impl Runs {
         Ok(path)
     }
     pub fn shutdown(&self) {
-        let active = std::mem::take(&mut *self.active.lock().unwrap());
+        // Serialize shutdown callers so each returns only after cleanup finishes.
+        let _shutdown = self.shutdown_lock.lock().unwrap();
+        let active = {
+            let mut active = self.active.lock().unwrap();
+            // Admission checks this under the same lock before registering a worker.
+            self.closing.store(true, Ordering::Release);
+            std::mem::take(&mut *active)
+        };
         for run in active.values() {
             run.cancel.cancel();
         }
@@ -290,6 +304,9 @@ fn admit(
     parent: opentelemetry::Context,
     key: Option<&str>,
 ) -> Result<RunState, (u16, String)> {
+    if runs.closing.load(Ordering::Acquire) {
+        return Err((503, "run server is shutting down".into()));
+    }
     if plan.jobs > 64 || plan.max_services > 32 || plan.tasks.len() > 10_000 {
         return Err((
             400,
@@ -303,6 +320,9 @@ fn admit(
         return Err((400, error));
     }
     let mut active = runs.active.lock().unwrap();
+    if runs.closing.load(Ordering::Acquire) {
+        return Err((503, "run server is shutting down".into()));
+    }
     // Validation ran outside the admission lock; another request may have won.
     if let Some(existing) = replay(runs, key, &plan)? {
         return Ok(existing);
@@ -595,4 +615,74 @@ pub async fn start(listen: &str, root: &Path, max_runs: usize) -> anyhow::Result
     })
     .await?;
     outcome.map_err(Into::into)
+}
+
+#[cfg(all(test, unix))]
+mod lifecycle_tests {
+    use super::*;
+    use std::sync::Barrier;
+
+    fn plan(root: &Path) -> Plan {
+        serde_json::from_value(serde_json::json!({
+            "inherit_env": false,
+            "tasks": [{"id":"work", "program":"/bin/sh",
+                "args":["-c", "while :; do /bin/sleep 0.02; done"],
+                "cwd":root, "timeout_ms":5000}]
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn shutdown_closes_admission_and_joins_all_accepted_workers() {
+        let root = tempfile::tempdir().unwrap();
+        let runs = Runs::new(
+            &root.path().join("store"),
+            "test-lifecycle-token".into(),
+            32,
+        )
+        .unwrap();
+        let plan = plan(root.path());
+        let first = admit(&runs, plan.clone(), opentelemetry::Context::new(), None)
+            .unwrap_or_else(|(_, error)| panic!("{error}"));
+        let barrier = Barrier::new(17);
+        let accepted = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..16)
+                .map(|_| {
+                    let runs = &runs;
+                    let plan = plan.clone();
+                    let barrier = &barrier;
+                    scope.spawn(move || {
+                        barrier.wait();
+                        admit(runs, plan, opentelemetry::Context::new(), None)
+                    })
+                })
+                .collect();
+            barrier.wait();
+            runs.shutdown();
+            handles
+                .into_iter()
+                .filter_map(|handle| match handle.join().unwrap() {
+                    Ok(state) => Some(state.id),
+                    Err((status, _)) => {
+                        assert_eq!(status, 503);
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
+        });
+        assert!(runs.active.lock().unwrap().is_empty());
+        for id in accepted.into_iter().chain([first.id]) {
+            let state: RunState =
+                serde_json::from_slice(&fs::read(runs.root.join(id).join("state.json")).unwrap())
+                    .unwrap();
+            assert_eq!(state.status, "cancelled");
+        }
+        // An already closed store must never restart work, including keyed requests.
+        assert!(matches!(
+            admit(&runs, plan, opentelemetry::Context::new(), Some("late")),
+            Err((503, _))
+        ));
+        assert!(!submission_path(&runs, "late").exists());
+        runs.shutdown();
+    }
 }

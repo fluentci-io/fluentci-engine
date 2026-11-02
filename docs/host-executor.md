@@ -650,3 +650,13 @@ remaining bytes before the run-finished event. Journal text is lossy UTF-8 for
 display; use the files or raw HTTP streams for binary fidelity. Probe journal
 events carry the service step trace/span IDs, but raw output is not added to span
 attributes.
+
+## Run-store shutdown admission
+
+Shutting down the run store permanently closes admission for that instance before
+cancelling and joining its registered workers. Admission rechecks closure after
+plan validation while holding the same lock used to register workers, so a request
+that was validating during shutdown cannot start work afterward. Such submissions
+receive HTTP 503 (`run server is shutting down`). Concurrent shutdown callers wait
+for the same cleanup to finish. Restart with a new store/server instance to admit
+new runs; this does not introduce a durable admission queue or crash supervision.
