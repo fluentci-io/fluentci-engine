@@ -15,6 +15,7 @@ use superconsole::{
 };
 
 pub mod archive;
+pub mod bsd;
 pub mod cache;
 pub mod devbox;
 pub mod devenv;
@@ -26,6 +27,8 @@ pub mod git_last_commit;
 pub mod hash;
 pub mod hermit;
 pub mod http;
+pub mod homebrew;
+pub mod macports;
 pub mod mise;
 pub mod nix;
 pub mod pixi;
@@ -60,10 +63,21 @@ pub fn exec(
     last_cmd: bool,
     work_dir: &str,
 ) -> Result<ExitStatus, Error> {
+    exec_with_shell("bash", cmd, tx, out, last_cmd, work_dir)
+}
+
+pub(crate) fn exec_with_shell(
+    shell: &str,
+    cmd: &str,
+    tx: Sender<String>,
+    out: Output,
+    last_cmd: bool,
+    work_dir: &str,
+) -> Result<ExitStatus, Error> {
     let (stdout_tx, stdout_rx): (Sender<String>, Receiver<String>) = mpsc::channel();
     let (stderr_tx, stderr_rx): (Sender<String>, Receiver<String>) = mpsc::channel();
 
-    let mut child = Command::new("bash")
+    let mut child = Command::new(shell)
         .arg("-c")
         .arg(cmd)
         .current_dir(work_dir)
