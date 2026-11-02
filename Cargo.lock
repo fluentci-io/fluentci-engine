@@ -2258,6 +2258,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "fluentci-executor"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "libc",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "serde",
+ "serde_json",
+ "sha2 0.10.8",
+ "tempfile",
+]
+
+[[package]]
 name = "fluentci-ext"
 version = "0.2.7"
 dependencies = [

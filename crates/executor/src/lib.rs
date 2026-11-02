@@ -1,0 +1,480 @@
+//! Isolated, bounded host execution. Plans contain data, never a mutable "current" pipeline.
+//! Filesystem access is not sandboxed: callers must declare shared writable resources.
+pub mod cache;
+pub mod events;
+pub mod graph;
+mod telemetry;
+
+use graph::DependencyGraph;
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::{BTreeMap, HashSet},
+    ffi::OsString,
+    fs::{self, File, OpenOptions},
+    path::{Path, PathBuf},
+    process::{Child, Command, Stdio},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    thread,
+    time::{Duration, Instant},
+};
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Task {
+    pub id: String,
+    #[serde(default)]
+    pub needs: Vec<String>,
+    pub program: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    pub cwd: PathBuf,
+    #[serde(default)]
+    pub env: BTreeMap<String, String>,
+    /// Exclusive resource names, e.g. "checkout:app" or "cache:cargo".
+    #[serde(default)]
+    pub resources: Vec<String>,
+    #[serde(default)]
+    pub timeout_ms: Option<u64>,
+    #[serde(default)]
+    pub cache: Option<cache::CachePolicy>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Plan {
+    #[serde(default = "protocol_version")]
+    pub version: u32,
+    pub tasks: Vec<Task>,
+    #[serde(default = "default_jobs")]
+    pub jobs: usize,
+    #[serde(default = "default_true")]
+    pub fail_fast: bool,
+    /// Disable to supply a fully explicit environment through task.env.
+    #[serde(default = "default_true")]
+    pub inherit_env: bool,
+    #[serde(default)]
+    pub cache_dir: Option<PathBuf>,
+}
+fn protocol_version() -> u32 {
+    1
+}
+fn default_jobs() -> usize {
+    thread::available_parallelism().map_or(1, |n| n.get())
+}
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Clone, Default)]
+pub struct Cancellation(Arc<AtomicBool>);
+impl Cancellation {
+    pub fn cancel(&self) {
+        self.0.store(true, Ordering::Release);
+    }
+    pub fn is_cancelled(&self) -> bool {
+        self.0.load(Ordering::Acquire)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Status {
+    Pending,
+    Running,
+    Succeeded,
+    Failed,
+    Skipped,
+    Cancelled,
+    TimedOut,
+}
+impl Status {
+    fn terminal(&self) -> bool {
+        !matches!(self, Self::Pending | Self::Running)
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct TaskResult {
+    pub id: String,
+    pub status: Status,
+    pub exit_code: Option<i32>,
+    pub error: Option<String>,
+    pub duration_ms: u128,
+    pub stdout: PathBuf,
+    pub stderr: PathBuf,
+    pub cache: cache::CacheResult,
+}
+#[derive(Debug, Serialize)]
+pub struct RunResult {
+    pub tasks: Vec<TaskResult>,
+}
+impl RunResult {
+    pub fn success(&self) -> bool {
+        self.tasks.iter().all(|r| r.status == Status::Succeeded)
+    }
+}
+
+struct Running {
+    index: usize,
+    child: Child,
+    started: Instant,
+}
+impl Running {
+    /// Children share a dedicated Unix process group so cancellation includes subprocesses.
+    fn terminate(&mut self) {
+        #[cfg(unix)]
+        unsafe {
+            libc::kill(-(self.child.id() as i32), libc::SIGKILL);
+        }
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+impl Drop for Running {
+    fn drop(&mut self) {
+        // Also clean up background descendants when their direct parent has exited.
+        self.terminate();
+    }
+}
+
+impl Plan {
+    pub fn validate(&self) -> Result<DependencyGraph, String> {
+        if self.version != 1 {
+            return Err(format!("unsupported plan version: {}", self.version));
+        }
+        if self.jobs == 0 {
+            return Err("jobs must be greater than zero".into());
+        }
+        for task in &self.tasks {
+            if let Some(policy) = &task.cache {
+                policy.validate()?;
+                if self.inherit_env {
+                    return Err(
+                        "cached tasks require inherit_env: false and explicit environment values"
+                            .into(),
+                    );
+                }
+                if self.cache_dir.as_ref().is_none_or(|p| !p.is_absolute()) {
+                    return Err("cached tasks require an absolute cache_dir".into());
+                }
+                cache::validate_storage(
+                    task,
+                    self.cache_dir.as_ref().expect("checked cache directory"),
+                )?;
+            }
+            if task.program.is_empty() {
+                return Err(format!("task {} has no program", task.id));
+            }
+            if !task.cwd.is_absolute() || !task.cwd.is_dir() {
+                return Err(format!(
+                    "task {} requires an existing absolute cwd: {}",
+                    task.id,
+                    task.cwd.display()
+                ));
+            }
+            if task.timeout_ms == Some(0) {
+                return Err(format!("task {} has a zero timeout", task.id));
+            }
+            for (key, value) in &task.env {
+                if key.is_empty() || key.contains(['=', '\0']) || value.contains('\0') {
+                    return Err(format!("task {} has an invalid environment entry", task.id));
+                }
+            }
+        }
+        DependencyGraph::new(
+            &self.tasks.iter().map(|t| t.id.clone()).collect::<Vec<_>>(),
+            &self
+                .tasks
+                .iter()
+                .map(|t| t.needs.clone())
+                .collect::<Vec<_>>(),
+        )
+    }
+
+    /// Run in a fresh caller-selected directory. All output is spooled to disk.
+    /// Cancellation and timeouts are observed at most one polling interval (10 ms)
+    /// after the scheduler regains control. Resource locks are local to this run.
+    pub fn execute(&self, run_dir: &Path, cancel: &Cancellation) -> Result<RunResult, String> {
+        let graph = self.validate()?;
+        let absolute_run_dir = if run_dir.is_absolute() {
+            run_dir.to_path_buf()
+        } else {
+            std::env::current_dir()
+                .map_err(|e| e.to_string())?
+                .join(run_dir)
+        };
+        for task in &self.tasks {
+            if task.cache.is_some() {
+                cache::validate_storage(task, &absolute_run_dir)?;
+            }
+        }
+        let mut directory = fs::DirBuilder::new();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            directory.mode(0o700);
+        }
+        directory
+            .create(run_dir)
+            .map_err(|e| format!("create run directory: {e}"))?;
+        let run_dir = fs::canonicalize(run_dir).map_err(|e| e.to_string())?;
+        let environment: BTreeMap<OsString, OsString> = if self.inherit_env {
+            std::env::vars_os().collect()
+        } else {
+            BTreeMap::new()
+        };
+        let mut results: Vec<_> = self
+            .tasks
+            .iter()
+            .enumerate()
+            .map(|(i, t)| TaskResult {
+                id: t.id.clone(),
+                status: Status::Pending,
+                exit_code: None,
+                error: None,
+                duration_ms: 0,
+                stdout: run_dir.join(format!("{i}.stdout")),
+                stderr: run_dir.join(format!("{i}.stderr")),
+                cache: cache::CacheResult::disabled(),
+            })
+            .collect();
+        let mut journal = events::Journal::new(&run_dir.join("events.jsonl"), &self.tasks)?;
+        let mut remaining: Vec<_> = graph.dependencies.iter().map(Vec::len).collect();
+        let mut running: Vec<Running> = Vec::new();
+        let mut resources = HashSet::new();
+        let mut failed = false;
+        let mut prepared: Vec<Option<cache::Prepared>> =
+            (0..self.tasks.len()).map(|_| None).collect();
+        loop {
+            let stopping = cancel.is_cancelled() || (self.fail_fast && failed);
+            // Reap before dispatch: completion releases dependencies and resource leases.
+            let mut n = 0;
+            while n < running.len() {
+                let i = running[n].index;
+                let elapsed = running[n].started.elapsed();
+                let timed_out = self.tasks[i]
+                    .timeout_ms
+                    .is_some_and(|ms| elapsed >= Duration::from_millis(ms));
+                let outcome = if stopping || timed_out {
+                    running[n].terminate();
+                    Some((
+                        if timed_out {
+                            Status::TimedOut
+                        } else {
+                            Status::Cancelled
+                        },
+                        None,
+                        None,
+                    ))
+                } else {
+                    match running[n].child.try_wait() {
+                        Ok(Some(status)) => Some((
+                            if status.success() {
+                                Status::Succeeded
+                            } else {
+                                Status::Failed
+                            },
+                            status.code(),
+                            None,
+                        )),
+                        Ok(None) => None,
+                        Err(e) => Some((Status::Failed, None, Some(e.to_string()))),
+                    }
+                };
+                if let Some((status, code, error)) = outcome {
+                    for resource in &self.tasks[i].resources {
+                        resources.remove(resource);
+                    }
+                    results[i].status = status;
+                    results[i].exit_code = code;
+                    results[i].error = error;
+                    results[i].duration_ms = elapsed.as_millis();
+                    // Stop background descendants before capturing output artifacts.
+                    running.swap_remove(n);
+                    if let Some(action) = prepared[i].take() {
+                        if results[i].status == Status::Succeeded {
+                            match action.save(
+                                &self.tasks[i],
+                                &results[i].stdout,
+                                &results[i].stderr,
+                            ) {
+                                Ok(()) => results[i].cache.outcome = "stored".into(),
+                                Err(e) => {
+                                    results[i].status = Status::Failed;
+                                    results[i].error = Some(e.clone());
+                                    results[i].cache.outcome = "error".into();
+                                    results[i].cache.reason = e;
+                                }
+                            }
+                        }
+                    }
+                    if results[i].status == Status::Succeeded {
+                        for &next in &graph.successors[i] {
+                            remaining[next] -= 1;
+                        }
+                    } else {
+                        failed = true;
+                    }
+                } else {
+                    n += 1;
+                }
+            }
+            // Topological iteration propagates failed-dependency skips in one pass.
+            for &i in &graph.order {
+                if results[i].status != Status::Pending {
+                    continue;
+                }
+                if graph.dependencies[i].iter().any(|&p| {
+                    results[p].status.terminal() && results[p].status != Status::Succeeded
+                }) {
+                    results[i].status = Status::Skipped;
+                } else if cancel.is_cancelled() || (self.fail_fast && failed) {
+                    results[i].status = Status::Cancelled;
+                } else if remaining[i] == 0
+                    && running.len() < self.jobs
+                    && self.tasks[i]
+                        .resources
+                        .iter()
+                        .all(|r| !resources.contains(r))
+                {
+                    let started = Instant::now();
+                    if self.tasks[i].cache.is_some() {
+                        let dependency_keys: Vec<_> = graph.dependencies[i]
+                            .iter()
+                            .map(|&p| {
+                                results[p].cache.key.clone().unwrap_or_else(|| {
+                                    format!("uncached:{}:{}", run_dir.display(), self.tasks[p].id)
+                                })
+                            })
+                            .collect();
+                        let action = match cache::prepare(
+                            self.cache_dir.as_ref().expect("validated cache directory"),
+                            &self.tasks[i],
+                            &dependency_keys,
+                        ) {
+                            Ok(Some(action)) => action,
+                            Ok(None) => {
+                                results[i].cache.outcome = "waiting".into();
+                                results[i].cache.reason =
+                                    "another execution owns this action".into();
+                                continue;
+                            }
+                            Err(error) => {
+                                results[i].status = Status::Failed;
+                                results[i].error = Some(error.clone());
+                                results[i].cache.outcome = "error".into();
+                                results[i].cache.reason = error;
+                                failed = true;
+                                continue;
+                            }
+                        };
+                        results[i].cache.key = Some(action.key.clone());
+                        results[i].cache.components = action.components.clone();
+                        match action.restore(&self.tasks[i], &results[i].stdout, &results[i].stderr)
+                        {
+                            Ok(true) => {
+                                results[i].status = Status::Succeeded;
+                                results[i].exit_code = Some(0);
+                                results[i].duration_ms = started.elapsed().as_millis();
+                                results[i].cache.outcome = "hit".into();
+                                results[i].cache.reason = "verified cached outputs restored".into();
+                                for &next in &graph.successors[i] {
+                                    remaining[next] -= 1;
+                                }
+                                continue;
+                            }
+                            Ok(false) => results[i].cache.reason = "no matching action".into(),
+                            Err(error) => {
+                                results[i].cache.reason = format!("cache rejected: {error}")
+                            }
+                        }
+                        results[i].cache.outcome = "miss".into();
+                        // A failed restore may have written a log before an I/O error.
+                        // These are private, newly allocated paths for this task.
+                        let _ = fs::remove_file(&results[i].stdout);
+                        let _ = fs::remove_file(&results[i].stderr);
+                        if let Err(error) = action.clean_outputs(&self.tasks[i]) {
+                            results[i].status = Status::Failed;
+                            results[i].error = Some(error);
+                            failed = true;
+                            continue;
+                        }
+                        prepared[i] = Some(action);
+                    }
+                    match spawn(
+                        &self.tasks[i],
+                        &results[i],
+                        &environment,
+                        prepared[i]
+                            .as_ref()
+                            .map(|action| action.executable.as_path()),
+                    ) {
+                        Ok(child) => {
+                            resources.extend(self.tasks[i].resources.iter().cloned());
+                            results[i].status = Status::Running;
+                            running.push(Running {
+                                index: i,
+                                child,
+                                started,
+                            });
+                        }
+                        Err(e) => {
+                            prepared[i].take();
+                            results[i].status = Status::Failed;
+                            results[i].error = Some(e.to_string());
+                            failed = true;
+                        }
+                    }
+                }
+            }
+            let finished = results.iter().all(|r| r.status.terminal());
+            journal.update(&results, &graph.order, finished)?;
+            if finished {
+                break;
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        let result = RunResult { tasks: results };
+        journal.finish(result.success())?;
+        let report = File::create(run_dir.join("result.json")).map_err(|e| e.to_string())?;
+        serde_json::to_writer_pretty(report, &result).map_err(|e| e.to_string())?;
+        Ok(result)
+    }
+}
+
+fn spawn(
+    task: &Task,
+    result: &TaskResult,
+    inherited: &BTreeMap<OsString, OsString>,
+    executable: Option<&Path>,
+) -> std::io::Result<Child> {
+    fn output(path: &Path) -> std::io::Result<File> {
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        options.open(path)
+    }
+    let mut command = Command::new(executable.unwrap_or_else(|| Path::new(&task.program)));
+    command
+        .args(&task.args)
+        .current_dir(&task.cwd)
+        .env_clear()
+        .envs(inherited)
+        .envs(&task.env)
+        .stdin(Stdio::null())
+        .stdout(output(&result.stdout)?)
+        .stderr(output(&result.stderr)?);
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        command.process_group(0);
+    }
+    command.spawn()
+}
