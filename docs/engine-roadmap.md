@@ -43,7 +43,7 @@ milestones do not establish a claim of being the fastest engine.
    builders/adapters, automate cross-repository compatibility tests, and complete
    the legacy SDK migration path.
 3. Independent authenticated server runs now support submission, status, cancellation,
-   persisted results, resumable events/raw logs, restart reconciliation, and remote
+   persisted results, authenticated cursor-paginated history, resumable events/raw logs, restart reconciliation, and remote
    trace context and durable keyed submission replay. Follow through with SDK migration, durable
    admission queues, history indexing, and run-store retention. The legacy GraphQL
    server remains separate.

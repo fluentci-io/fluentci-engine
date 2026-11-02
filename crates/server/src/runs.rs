@@ -6,7 +6,7 @@ use opentelemetry_sdk::propagation::TraceContextPropagator;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     fs,
     io::Write,
     path::{Path, PathBuf},
@@ -21,6 +21,8 @@ use uuid::Uuid;
 
 #[derive(Serialize, Deserialize)]
 struct RunState {
+    #[serde(default)]
+    created_at_ms: u64,
     id: String,
     status: String,
     error: Option<String>,
@@ -367,7 +369,13 @@ fn admit(
     }
     let id = Uuid::new_v4().to_string();
     let path = runs.root.join(&id);
+    let created_at_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| (500, "system clock is before Unix epoch".into()))?
+        .as_millis()
+        .min(u64::MAX as u128) as u64;
     let state = RunState {
+        created_at_ms,
         id: id.clone(),
         status: "running".into(),
         error: None,
@@ -400,6 +408,7 @@ fn admit(
         let _ = save(
             &path.join("state.json"),
             &RunState {
+                created_at_ms,
                 id: id.clone(),
                 status: "failed".into(),
                 error: Some("could not persist run".into()),
@@ -427,6 +436,7 @@ fn admit(
             if let Err(error) = save(
                 &worker_path.join("state.json"),
                 &RunState {
+                    created_at_ms,
                     id: worker_id,
                     status: status.into(),
                     error,
@@ -444,6 +454,7 @@ fn admit(
             let _ = save(
                 &path.join("state.json"),
                 &RunState {
+                    created_at_ms,
                     id,
                     status: "failed".into(),
                     error: Some("could not start run worker".into()),
@@ -453,6 +464,96 @@ fn admit(
         }
     }
 }
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HistoryQuery {
+    #[serde(default = "history_limit")]
+    limit: usize,
+    before: Option<String>,
+}
+fn history_limit() -> usize {
+    50
+}
+#[derive(Serialize)]
+struct RunPage {
+    runs: Vec<RunState>,
+    next_cursor: Option<String>,
+}
+fn history_page(
+    root: &Path,
+    limit: usize,
+    before: Option<(u64, String)>,
+) -> Result<RunPage, String> {
+    let mut selected = BTreeMap::new();
+    for entry in fs::read_dir(root).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let id = entry.file_name().to_string_lossy().into_owned();
+        if Uuid::parse_str(&id).is_err() || !entry.file_type().map_err(|e| e.to_string())?.is_dir()
+        {
+            continue;
+        }
+        let bytes = match fs::read(entry.path().join("state.json")) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => return Err(error.to_string()),
+        };
+        let state: RunState = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+        if state.id != id {
+            return Err("run state identity mismatch".into());
+        }
+        let key = (state.created_at_ms, id);
+        if before.as_ref().is_some_and(|before| &key >= before) {
+            continue;
+        }
+        selected.insert(key, state);
+        if selected.len() > limit + 1 {
+            selected.pop_first();
+        }
+    }
+    let more = selected.len() > limit;
+    let runs: Vec<_> = selected
+        .into_iter()
+        .rev()
+        .take(limit)
+        .map(|(_, state)| state)
+        .collect();
+    let next_cursor = if more {
+        runs.last()
+            .map(|run| format!("{}_{}", run.created_at_ms, run.id))
+    } else {
+        None
+    };
+    Ok(RunPage { runs, next_cursor })
+}
+async fn history(
+    request: HttpRequest,
+    runs: web::Data<Runs>,
+    query: web::Query<HistoryQuery>,
+) -> HttpResponse {
+    if !runs.authorized(&request) {
+        return HttpResponse::Unauthorized().finish();
+    }
+    if !(1..=200).contains(&query.limit) {
+        return HttpResponse::BadRequest().body("limit must be 1-200");
+    }
+    let before = match query.before.as_deref() {
+        None => None,
+        Some(cursor) => match cursor.split_once('_').and_then(|(time, id)| {
+            let time = time.parse::<u64>().ok()?;
+            let parsed = Uuid::parse_str(id).ok()?;
+            (parsed.to_string() == id).then(|| (time, id.to_owned()))
+        }) {
+            Some(before) => Some(before),
+            None => return HttpResponse::BadRequest().body("invalid history cursor"),
+        },
+    };
+    let limit = query.limit;
+    match tokio::task::spawn_blocking(move || history_page(&runs.root, limit, before)).await {
+        Ok(Ok(page)) => HttpResponse::Ok().json(page),
+        _ => HttpResponse::InternalServerError().finish(),
+    }
+}
+
 async fn state(request: HttpRequest, runs: web::Data<Runs>, id: web::Path<String>) -> HttpResponse {
     read_file(request, runs, id, "state.json").await
 }
@@ -620,6 +721,7 @@ pub fn configure(config: &mut web::ServiceConfig) {
     config
         .app_data(web::JsonConfig::default().limit(1024 * 1024))
         .route("/v1/runs", web::post().to(submit))
+        .route("/v1/runs", web::get().to(history))
         .route("/v1/runs/{id}", web::get().to(state))
         .route("/v1/runs/{id}/result", web::get().to(result))
         .route("/v1/runs/{id}/cancel", web::post().to(cancel))
@@ -662,6 +764,38 @@ mod lifecycle_tests {
                 "cwd":root, "timeout_ms":5000}]
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn history_orders_timestamp_ties_and_legacy_states_without_losing_runs() {
+        let root = tempfile::tempdir().unwrap();
+        for (number, timestamp) in [(1, Some(5)), (2, Some(5)), (3, Some(4)), (4, None)] {
+            let id = Uuid::from_u128(number).to_string();
+            let path = root.path().join(&id);
+            fs::create_dir(&path).unwrap();
+            let mut state = serde_json::json!({"id":id,"status":"succeeded","error":null});
+            if let Some(timestamp) = timestamp {
+                state["created_at_ms"] = timestamp.into();
+            }
+            fs::write(path.join("state.json"), serde_json::to_vec(&state).unwrap()).unwrap();
+        }
+        let mut before = None;
+        let mut seen = Vec::new();
+        loop {
+            let page = history_page(root.path(), 1, before).unwrap();
+            seen.extend(page.runs.iter().map(|run| run.id.clone()));
+            match page.next_cursor {
+                None => break,
+                Some(cursor) => {
+                    let (time, id) = cursor.split_once('_').unwrap();
+                    before = Some((time.parse().unwrap(), id.into()));
+                }
+            }
+        }
+        assert_eq!(
+            seen,
+            [2, 1, 3, 4].map(|number| Uuid::from_u128(number).to_string())
+        );
     }
 
     #[test]

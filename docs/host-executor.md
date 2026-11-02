@@ -686,3 +686,23 @@ all tasks succeeded and failed otherwise, since those reports cannot distinguish
 external cancellation. These recovery tests seed persisted crash-window states;
 they do not establish independent orphan-process cleanup after an actual hard
 server crash.
+
+## Discover previous runs
+
+`GET /v1/runs?limit=50` returns authenticated history as
+`{"runs": [...], "next_cursor": null | "..."}`. Follow `next_cursor` with
+`GET /v1/runs?limit=50&before=<URL-encoded cursor>`. Limits are 1–200. Entries use
+creation time descending, with descending run ID as a deterministic timestamp tie
+breaker. Each state now persists `created_at_ms` (Unix milliseconds); it is retained
+through completion, replay, and restart. Legacy states use zero for unknown time
+and sort after timestamped states. This is a live listing, not a snapshot: statuses
+can change between pages and newly created entries are discovered by refreshing
+the first page. Ordering follows the host clock; clock adjustments can affect where
+new entries appear.
+
+History scans run state files on a blocking worker and keeps at most `limit + 1`
+selected states in memory. It does not read plans or logs. Each page still requires
+a store scan; a durable history index and retention remain future work. A directory
+with no state yet is omitted; malformed existing state causes a server error rather
+than silently hiding history. UUID directories are inspected without following
+directory symlinks. History uses the same bearer authentication as execution.

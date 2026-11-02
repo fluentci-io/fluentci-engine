@@ -173,6 +173,39 @@ class RunServer(unittest.TestCase):
         self.start()
         self.assertEqual(self.terminal(location)["status"], "cancelled")
 
+    def test_history_is_authenticated_paginated_and_persistent(self):
+        self.assertEqual(self.request("GET", "/v1/runs", token=False)[0], 401)
+        self.assertEqual(json.loads(self.request("GET", "/v1/runs")[1]), dict(runs=[], next_cursor=None))
+        ids = []
+        for index in range(5):
+            path = self.submit(self.plan("exit 0"))
+            self.terminal(path)
+            ids.append(path.rsplit("/", 1)[1])
+        first = json.loads(self.request("GET", "/v1/runs?limit=2")[1])
+        self.assertEqual([run["id"] for run in first["runs"]], list(reversed(ids[-2:])))
+        self.assertTrue(all(run["created_at_ms"] > 0 for run in first["runs"]))
+        self.assertTrue(all(run["status"] == "succeeded" for run in first["runs"]))
+        # New submissions must not shift an existing cursor's older pages.
+        newer = self.submit(self.plan("exit 0"))
+        self.terminal(newer)
+        cursor = first["next_cursor"]
+        seen = [run["id"] for run in first["runs"]]
+        while cursor is not None:
+            code, body, _ = self.request("GET", "/v1/runs?limit=2&before=" + cursor)
+            self.assertEqual(code, 200, body)
+            page = json.loads(body)
+            seen.extend(run["id"] for run in page["runs"])
+            cursor = page["next_cursor"]
+        self.assertEqual(seen, list(reversed(ids)))
+        self.stop()
+        self.start()
+        restarted = json.loads(self.request("GET", "/v1/runs?limit=2")[1])
+        self.assertEqual(restarted["runs"][0]["id"], newer.rsplit("/", 1)[1])
+        original = next(run for run in restarted["runs"] if run["id"] == ids[-1])
+        self.assertEqual(original["created_at_ms"], first["runs"][0]["created_at_ms"])
+        for query in ["limit=0", "limit=201", "limit=-1", "before=bad", "before=0_../escape"]:
+            self.assertEqual(self.request("GET", "/v1/runs?" + query)[0], 400)
+
     def test_idempotent_submission_replays_conflicts_and_survives_restart(self):
         headers = {"Idempotency-Key": "release-123"}
         plan = self.plan("printf executed >> count")
