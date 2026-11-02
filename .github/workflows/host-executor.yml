@@ -32,8 +32,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           components: clippy
-      - name: Executor, cache, and legacy regression tests
-        run: cargo test --release --locked -p fluentci-executor -p fluentci-core --lib --tests
+      - name: Executor, cache, server lifecycle, and legacy regression tests
+        run: cargo test --release --locked -p fluentci-executor -p fluentci-core -p fluentci-server --lib --tests
       - name: Package-manager fixture tests (no installation)
         run: |
           cargo test --release --locked -p fluentci-ext --lib homebrew
