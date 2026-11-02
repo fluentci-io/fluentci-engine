@@ -131,9 +131,23 @@ fn provider_environment_and_backend_are_applied_to_direct_commands_and_cache_key
         .execute(&root.path().join("warm"), &Cancellation::default())
         .unwrap();
     assert_eq!(warm.tasks[0].cache.outcome, "hit");
-    assert!(fs::read_to_string(root.path().join("output"))
-        .unwrap()
-        .starts_with(root.path().to_str().unwrap()));
+    let path = fs::read_to_string(root.path().join("output")).unwrap();
+    let entries: Vec<_> = std::env::split_paths(&path).collect();
+    assert_eq!(
+        entries[0],
+        Path::new(expected_bin(p["manager"].as_str().unwrap()))
+    );
+    assert_eq!(entries[2], root.path());
+}
+
+fn expected_bin(manager: &str) -> &'static str {
+    match (manager, std::env::consts::OS) {
+        ("macports", _) => "/opt/local/bin",
+        ("homebrew", "macos") => "/opt/homebrew/bin",
+        ("homebrew", _) => "/home/linuxbrew/.linuxbrew/bin",
+        ("netbsd", _) => "/usr/pkg/bin",
+        _ => "/usr/local/bin",
+    }
 }
 
 #[test]
@@ -158,8 +172,8 @@ fn native_package_plan_install() {
         provider["backend"] = backend.into();
     }
     let mut consume = consumer(root.path(), "jq", &provider, "", &["install"]);
-    consume["program"] = "jq".into();
-    consume["args"] = json!(["--version"]);
+    consume["program"] = "/bin/sh".into();
+    consume["args"] = json!(["-c", "command -v jq; exec jq --version"]);
     let mut plan = plan(
         root.path(),
         vec![
@@ -172,8 +186,22 @@ fn native_package_plan_install() {
     let result = plan
         .execute(&root.path().join("run"), &Cancellation::default())
         .unwrap();
+    if !result.success() {
+        for task in &result.tasks {
+            eprintln!(
+                "{} stdout:\n{}\nstderr:\n{}",
+                task.id,
+                fs::read_to_string(&task.stdout).unwrap_or_default(),
+                fs::read_to_string(&task.stderr).unwrap_or_default()
+            );
+        }
+    }
     assert!(result.success(), "{result:?}");
-    assert!(fs::read_to_string(&result.tasks[1].stdout)
-        .unwrap()
-        .starts_with("jq-"));
+    let stdout = fs::read_to_string(&result.tasks[1].stdout).unwrap();
+    let mut lines = stdout.lines();
+    assert_eq!(
+        lines.next().unwrap(),
+        format!("{}/jq", expected_bin(&manager))
+    );
+    assert!(lines.next().unwrap().starts_with("jq-"));
 }

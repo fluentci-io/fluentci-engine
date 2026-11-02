@@ -183,10 +183,10 @@ impl Plan {
                 task.env.insert(
                     "PATH".into(),
                     format!(
-                        "{}:{}/bin:{}/sbin:{base}",
-                        resolved.executable.parent().unwrap().display(),
+                        "{}/bin:{}/sbin:{}:{base}",
                         prefix.display(),
-                        prefix.display()
+                        prefix.display(),
+                        resolved.executable.parent().unwrap().display()
                     ),
                 );
                 if provider.manager == Manager::Homebrew {

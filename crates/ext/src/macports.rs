@@ -112,7 +112,7 @@ impl Extension for MacPorts {
         );
         // Pin `port` even when both implementations are installed. This function
         // also supports an explicitly named custom executable.
-        format!("export PATH={parent}:\"/opt/local/bin:/opt/local/sbin:$PATH\"; port() {{ {binary} \"$@\"; }}; export -f port; {}", if cmd.is_empty() { ":" } else { cmd })
+        format!("export PATH=\"/opt/local/bin:/opt/local/sbin\":{parent}:\"$PATH\"; port() {{ {binary} \"$@\"; }}; export -f port; {}", if cmd.is_empty() { ":" } else { cmd })
     }
 }
 
@@ -134,7 +134,7 @@ mod tests {
         let before = std::env::var_os("PATH");
         let command = MacPorts::default().format_command("printf hello");
         if cfg!(target_os = "macos") {
-            assert!(command.contains("/opt/local/bin:/opt/local/sbin:$PATH"));
+            assert!(command.starts_with("export PATH=\"/opt/local/bin:/opt/local/sbin\":"));
         }
         assert_eq!(std::env::var_os("PATH"), before);
     }
