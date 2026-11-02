@@ -45,7 +45,8 @@ milestones do not establish a claim of being the fastest engine.
 3. Independent authenticated server runs now support submission, status, cancellation,
    persisted results, authenticated cursor-paginated history, resumable events/raw logs, restart reconciliation, and remote
    trace context and durable keyed submission replay. Follow through with SDK migration, durable
-   admission queues, history indexing, and run-store retention. The legacy GraphQL
+   admission queues, an on-disk history index, and run-store retention. History now
+   uses an ordered in-memory index rebuilt at startup and updated on admission. The legacy GraphQL
    server remains separate.
 4. Cross-run resource leases now coordinate declared resource names across local
    and server processes. Add isolated workspaces, cross-run deadlock/fairness policy,

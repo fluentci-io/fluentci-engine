@@ -700,9 +700,16 @@ can change between pages and newly created entries are discovered by refreshing
 the first page. Ordering follows the host clock; clock adjustments can affect where
 new entries appear.
 
-History scans run state files on a blocking worker and keeps at most `limit + 1`
-selected states in memory. It does not read plans or logs. Each page still requires
-a store scan; a durable history index and retention remain future work. A directory
-with no state yet is omitted; malformed existing state causes a server error rather
-than silently hiding history. UUID directories are inspected without following
-directory symlinks. History uses the same bearer authentication as execution.
+History uses an in-memory ordered index of creation timestamps and run IDs, rebuilt
+from readable persisted states when the store opens and updated when admission
+persists a new state. It uses O(number of runs) index memory. A page selects at most
+`limit + 1` keys under a read lock, releases the lock, and reads at most `limit` state
+files on a blocking worker. It does not scan the store or read plans/logs per page;
+statuses are read fresh instead of cached. Key selection costs O(log N + limit).
+Startup still scans the store; an on-disk index and retention remain future work.
+
+The store owns membership and creation timestamps. Do not edit, import, or remove
+run directories while it is open: external additions appear only after reopening,
+and selected missing/malformed/mismatched states produce an error rather than a
+silently incomplete page. UUID directories are inspected without following directory
+symlinks during discovery. History uses the same bearer authentication as execution.

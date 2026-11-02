@@ -6,13 +6,13 @@ use opentelemetry_sdk::propagation::TraceContextPropagator;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeSet, HashMap},
     fs,
     io::Write,
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
-        Mutex,
+        Mutex, RwLock,
     },
     thread::JoinHandle,
 };
@@ -44,6 +44,7 @@ pub struct Runs {
     active: Mutex<HashMap<String, Active>>,
     closing: AtomicBool,
     shutdown_lock: Mutex<()>,
+    history_index: RwLock<BTreeSet<(u64, String)>>,
 }
 fn save(path: &Path, value: &impl Serialize) -> Result<(), String> {
     let mut file =
@@ -139,15 +140,22 @@ impl Runs {
             .map_err(|e| e.to_string())?;
         // A previous process cannot own live runs in this store. Never silently
         // report them as running after a restart.
+        let mut history_index = BTreeSet::new();
         for entry in fs::read_dir(&root).map_err(|e| e.to_string())? {
             let entry = entry.map_err(|e| e.to_string())?;
-            if Uuid::parse_str(&entry.file_name().to_string_lossy()).is_err() {
+            if Uuid::parse_str(&entry.file_name().to_string_lossy()).is_err()
+                || !entry.file_type().map_err(|e| e.to_string())?.is_dir()
+            {
                 continue;
             }
             let path = entry.path().join("state.json");
             if let Ok(bytes) = fs::read(&path) {
                 let mut state: RunState =
                     serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+                if state.id != entry.file_name().to_string_lossy() {
+                    return Err("run state identity mismatch".into());
+                }
+                history_index.insert((state.created_at_ms, state.id.clone()));
                 if state.status == "running" {
                     match recovered_outcome(&entry.path()) {
                         Some(outcome) => {
@@ -174,6 +182,7 @@ impl Runs {
             active: Mutex::new(HashMap::new()),
             closing: AtomicBool::new(false),
             shutdown_lock: Mutex::new(()),
+            history_index: RwLock::new(history_index),
         })
     }
     fn authorized(&self, request: &HttpRequest) -> bool {
@@ -390,6 +399,10 @@ fn admit(
         dir.create(&path).map_err(|e| e.to_string())?;
         save(&path.join("plan.json"), &plan)?;
         save(&path.join("state.json"), &state)?;
+        runs.history_index
+            .write()
+            .unwrap()
+            .insert((created_at_ms, id.clone()));
         #[cfg(unix)]
         fs::File::open(&runs.root)
             .and_then(|dir| dir.sync_all())
@@ -405,7 +418,7 @@ fn admit(
         Ok::<_, String>(())
     })();
     if preparation.is_err() {
-        let _ = save(
+        let persisted = save(
             &path.join("state.json"),
             &RunState {
                 created_at_ms,
@@ -414,6 +427,12 @@ fn admit(
                 error: Some("could not persist run".into()),
             },
         );
+        if persisted.is_ok() {
+            runs.history_index
+                .write()
+                .unwrap()
+                .insert((created_at_ms, id.clone()));
+        }
         return Err((500, "could not persist run".into()));
     }
     let cancel = Cancellation::default();
@@ -480,43 +499,33 @@ struct RunPage {
     next_cursor: Option<String>,
 }
 fn history_page(
-    root: &Path,
+    store: &Runs,
     limit: usize,
     before: Option<(u64, String)>,
 ) -> Result<RunPage, String> {
-    let mut selected = BTreeMap::new();
-    for entry in fs::read_dir(root).map_err(|e| e.to_string())? {
-        let entry = entry.map_err(|e| e.to_string())?;
-        let id = entry.file_name().to_string_lossy().into_owned();
-        if Uuid::parse_str(&id).is_err() || !entry.file_type().map_err(|e| e.to_string())?.is_dir()
-        {
-            continue;
+    // Copy only this page's keys, then release the index lock before filesystem I/O.
+    let keys: Vec<_> = {
+        let index = store.history_index.read().unwrap();
+        match before {
+            Some(before) => index
+                .range(..before)
+                .rev()
+                .take(limit + 1)
+                .cloned()
+                .collect(),
+            None => index.iter().rev().take(limit + 1).cloned().collect(),
         }
-        let bytes = match fs::read(entry.path().join("state.json")) {
-            Ok(bytes) => bytes,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
-            Err(error) => return Err(error.to_string()),
-        };
+    };
+    let more = keys.len() > limit;
+    let mut runs = Vec::with_capacity(limit.min(keys.len()));
+    for (created_at_ms, id) in keys.into_iter().take(limit) {
+        let bytes = fs::read(store.root.join(&id).join("state.json")).map_err(|e| e.to_string())?;
         let state: RunState = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-        if state.id != id {
-            return Err("run state identity mismatch".into());
+        if state.id != id || state.created_at_ms != created_at_ms {
+            return Err("run state history identity mismatch".into());
         }
-        let key = (state.created_at_ms, id);
-        if before.as_ref().is_some_and(|before| &key >= before) {
-            continue;
-        }
-        selected.insert(key, state);
-        if selected.len() > limit + 1 {
-            selected.pop_first();
-        }
+        runs.push(state);
     }
-    let more = selected.len() > limit;
-    let runs: Vec<_> = selected
-        .into_iter()
-        .rev()
-        .take(limit)
-        .map(|(_, state)| state)
-        .collect();
     let next_cursor = if more {
         runs.last()
             .map(|run| format!("{}_{}", run.created_at_ms, run.id))
@@ -548,7 +557,7 @@ async fn history(
         },
     };
     let limit = query.limit;
-    match tokio::task::spawn_blocking(move || history_page(&runs.root, limit, before)).await {
+    match tokio::task::spawn_blocking(move || history_page(&runs, limit, before)).await {
         Ok(Ok(page)) => HttpResponse::Ok().json(page),
         _ => HttpResponse::InternalServerError().finish(),
     }
@@ -779,10 +788,11 @@ mod lifecycle_tests {
             }
             fs::write(path.join("state.json"), serde_json::to_vec(&state).unwrap()).unwrap();
         }
+        let runs = Runs::new(root.path(), "test-history-token".into(), 1).unwrap();
         let mut before = None;
         let mut seen = Vec::new();
         loop {
-            let page = history_page(root.path(), 1, before).unwrap();
+            let page = history_page(&runs, 1, before).unwrap();
             seen.extend(page.runs.iter().map(|run| run.id.clone()));
             match page.next_cursor {
                 None => break,
@@ -796,6 +806,40 @@ mod lifecycle_tests {
             seen,
             [2, 1, 3, 4].map(|number| Uuid::from_u128(number).to_string())
         );
+    }
+
+    #[test]
+    fn indexed_history_reads_only_page_states_but_observes_current_status() {
+        let root = tempfile::tempdir().unwrap();
+        for number in 1..=100 {
+            let id = Uuid::from_u128(number).to_string();
+            let path = root.path().join(&id);
+            fs::create_dir(&path).unwrap();
+            let state = serde_json::json!({"id":id,"created_at_ms":number as u64,"status":"succeeded","error":null});
+            fs::write(path.join("state.json"), serde_json::to_vec(&state).unwrap()).unwrap();
+        }
+        let store = Runs::new(root.path(), "test-history-token".into(), 1).unwrap();
+        // An unrelated page's state must not be read on the newest-page path.
+        let oldest = Uuid::from_u128(1).to_string();
+        fs::write(
+            root.path().join(&oldest).join("state.json"),
+            b"invalid JSON",
+        )
+        .unwrap();
+        let newest = Uuid::from_u128(100).to_string();
+        let changed =
+            serde_json::json!({"id":newest,"created_at_ms":100,"status":"failed","error":null});
+        fs::write(
+            root.path().join(&newest).join("state.json"),
+            serde_json::to_vec(&changed).unwrap(),
+        )
+        .unwrap();
+        let page = history_page(&store, 2, None).unwrap();
+        assert_eq!(page.runs.len(), 2);
+        assert_eq!(page.runs[0].id, newest);
+        assert_eq!(page.runs[0].status, "failed");
+        assert!(page.next_cursor.is_some());
+        assert!(history_page(&store, 2, Some((2, Uuid::from_u128(2).to_string()))).is_err());
     }
 
     #[test]
