@@ -660,3 +660,22 @@ that was validating during shutdown cannot start work afterward. Such submission
 receive HTTP 503 (`run server is shutting down`). Concurrent shutdown callers wait
 for the same cleanup to finish. Restart with a new store/server instance to admit
 new runs; this does not introduce a durable admission queue or crash supervision.
+
+## Result publication and restart recovery
+
+The executor writes `result.json` through a temporary file in the run directory,
+flushes and syncs it, then atomically renames it and syncs the directory on Unix.
+Readers therefore see a complete result or no published result. This protects
+report publication; it does not make arbitrary task outputs crash-durable.
+
+On restart, a run still marked running is reconciled only from a report with the
+same ordered task IDs/count as its saved plan and terminal statuses for every task.
+A missing, truncated, malformed, mismatched, or nonterminal report marks that run
+interrupted and does not prevent other runs recovering or new work being admitted.
+Reports are retained for diagnosis, and recovery never reruns commands. A complete
+report recovers as succeeded only if every task succeeded; otherwise it recovers
+as failed. The report does not yet persist the external cancellation cause, so
+recovery of the narrow result-written/state-not-written window cannot distinguish
+external cancellation from other unsuccessful outcomes. These recovery tests seed
+persisted crash-window states; they do not establish independent orphan-process
+cleanup after an actual hard server crash.

@@ -56,6 +56,30 @@ fn save(path: &Path, value: &impl Serialize) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     Ok(())
 }
+// A torn, malformed, or incomplete report is not evidence of completion. Leave
+// it on disk for diagnosis, but do not let it prevent unrelated runs recovering.
+fn recovered_success(path: &Path) -> Option<bool> {
+    let plan: Plan = serde_json::from_slice(&fs::read(path.join("plan.json")).ok()?).ok()?;
+    let report: serde_json::Value =
+        serde_json::from_slice(&fs::read(path.join("execution/result.json")).ok()?).ok()?;
+    let tasks = report.get("tasks")?.as_array()?;
+    if tasks.len() != plan.tasks.len() {
+        return None;
+    }
+    let mut success = true;
+    for (task, expected) in tasks.iter().zip(&plan.tasks) {
+        if task.get("id")?.as_str()? != expected.id {
+            return None;
+        }
+        match task.get("status")?.as_str()? {
+            "succeeded" => {}
+            "failed" | "skipped" | "cancelled" | "timed_out" => success = false,
+            _ => return None,
+        }
+    }
+    Some(success)
+}
+
 impl Runs {
     pub fn new(root: &Path, token: String, max_runs: usize) -> Result<Self, String> {
         if token.len() < 16 || max_runs == 0 {
@@ -115,16 +139,18 @@ impl Runs {
                 let mut state: RunState =
                     serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
                 if state.status == "running" {
-                    if let Ok(result) = fs::read(entry.path().join("execution/result.json")) {
-                        let result: serde_json::Value =
-                            serde_json::from_slice(&result).map_err(|e| e.to_string())?;
-                        let success = result["tasks"]
-                            .as_array()
-                            .is_some_and(|tasks| tasks.iter().all(|t| t["status"] == "succeeded"));
-                        state.status = if success { "succeeded" } else { "failed" }.into();
-                    } else {
-                        state.status = "interrupted".into();
-                        state.error = Some("server stopped before the run completed".into());
+                    match recovered_success(&entry.path()) {
+                        Some(success) => {
+                            state.status = if success { "succeeded" } else { "failed" }.into();
+                            state.error = None;
+                        }
+                        None => {
+                            state.status = "interrupted".into();
+                            state.error = Some(
+                                "server stopped without a complete result matching the saved plan"
+                                    .into(),
+                            );
+                        }
                     }
                     save(&path, &state)?;
                 }

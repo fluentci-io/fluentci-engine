@@ -109,6 +109,47 @@ class RunServer(unittest.TestCase):
         self.assertEqual((self.root / "input").read_text(), "original")
         self.assertFalse((self.root / "output").exists())
 
+    def test_restart_recovers_complete_reports_and_isolates_invalid_reports(self):
+        cases = ["success", "failure", "torn", "missing", "empty", "wrong-id", "nonterminal", "bad-plan"]
+        locations = {}
+        for case in cases:
+            location = self.submit(self.plan("printf x >> recovery-count; exit " + ("1" if case == "failure" else "0")))
+            self.terminal(location)
+            locations[case] = location
+        self.stop()
+        for case, location in locations.items():
+            directory = self.root / "runs" / location.rsplit("/", 1)[1]
+            state = json.loads((directory / "state.json").read_text())
+            state.update(status="running", error="stale error")
+            (directory / "state.json").write_text(json.dumps(state))
+            path = directory / "execution/result.json"
+            report = json.loads(path.read_text())
+            if case == "torn":
+                path.write_text('{"tasks":[')
+            elif case == "missing":
+                path.unlink()
+            elif case == "bad-plan":
+                (directory / "plan.json").write_text('{')
+            elif case in ["empty", "wrong-id", "nonterminal"]:
+                if case == "empty":
+                    report["tasks"] = []
+                elif case == "wrong-id":
+                    report["tasks"][0]["id"] = "unrelated"
+                else:
+                    report["tasks"][0]["status"] = "running"
+                path.write_text(json.dumps(report))
+        self.start()
+        for case, location in locations.items():
+            state = self.terminal(location)
+            expected = {"success":"succeeded", "failure":"failed"}.get(case, "interrupted")
+            self.assertEqual(state["status"], expected, case)
+            if expected == "interrupted":
+                self.assertIn("complete result", state["error"])
+            else:
+                self.assertIsNone(state["error"])
+        self.assertEqual((self.root / "recovery-count").read_text(), "x" * len(cases))
+        self.assertEqual(self.terminal(self.submit(self.plan("exit 0")))["status"], "succeeded")
+
     def test_idempotent_submission_replays_conflicts_and_survives_restart(self):
         headers = {"Idempotency-Key": "release-123"}
         plan = self.plan("printf executed >> count")
