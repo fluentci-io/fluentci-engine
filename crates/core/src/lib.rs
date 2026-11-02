@@ -163,3 +163,8 @@ pub fn get_hmac(id: String, name: String) -> Result<String, Error> {
     let key = mac.finalize().into_bytes();
     Ok(hex::encode(key))
 }
+
+/// Flush exporters outside the async runtime worker during CLI shutdown.
+pub fn shutdown_tracer() {
+    global::shutdown_tracer_provider();
+}

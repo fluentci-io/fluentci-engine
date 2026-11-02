@@ -25,6 +25,13 @@ fn cli() -> Command<'static> {
         )
         .author("Tsiry Sandratraina <tsiry.sndr@fluentci.io>")
         .subcommand(
+            Command::new("execute")
+                .arg(Arg::new("progress").long("progress").takes_value(true).possible_values(["auto", "plain", "tui", "json"]).default_value("auto"))
+                .arg(Arg::new("plan").required(true))
+                .arg(Arg::new("run-dir").long("run-dir").takes_value(true).required(true))
+                .about("Executes an explicit host task plan with bounded parallelism"),
+        )
+        .subcommand(
             Command::new("run")
                 .arg(
                     Arg::new("command")
@@ -56,6 +63,9 @@ fn cli() -> Command<'static> {
 async fn main() -> Result<(), Error> {
     let matches = cli().get_matches();
     match matches.subcommand() {
+        Some(("execute", args)) => {
+            cmd::execute::execute(args.value_of("plan").unwrap(), args.value_of("run-dir").unwrap(), args.value_of("progress").unwrap()).await?;
+        }
         Some(("run", args)) => {
             let command = args.values_of("command").unwrap();
             run(&command.collect::<Vec<_>>().join(" ")).await?;

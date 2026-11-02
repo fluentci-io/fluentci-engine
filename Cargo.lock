@@ -2246,14 +2246,17 @@ version = "0.4.12"
 dependencies = [
  "anyhow",
  "clap",
+ "crossterm",
  "extism",
  "fluentci-core",
+ "fluentci-executor",
  "fluentci-ext",
  "fluentci-server",
  "fluentci-shared",
  "get-port",
  "md5",
  "regex",
+ "serde_json",
  "sha256",
  "tokio",
 ]
