@@ -81,7 +81,7 @@ jobs:
           FLUENTCI_ENGINE_BIN: ${{ github.workspace }}/target/release/fluentci-engine
           FLUENTCI_REQUIRE_ENGINE: '1'
         run: |
-          gleam format --check src/fluentci/host.gleam src/fluentci/host/local.gleam src/fluentci/host/result.gleam test/host_test.gleam test/host_local_test.gleam
+          gleam format --check src/fluentci/host.gleam src/fluentci/host/local.gleam src/fluentci/host/result.gleam src/fluentci/host/client.gleam test/host_test.gleam test/host_local_test.gleam test/host_client_test.gleam
           gleam test --runtime nodejs
           gleam test --runtime deno
 

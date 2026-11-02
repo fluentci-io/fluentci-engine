@@ -98,8 +98,55 @@ transport error because no engine report exists. Cancellation does not impose a
 hard kill deadline on the engine. Run directories and raw logs are retained;
 callers own their retention policy. Live progress inherits the caller's terminal.
 
-A typed HTTP adapter is still outstanding. The existing APIs below use the legacy
-engine path. Verify host plans and local execution against a built release engine with:
+### Execute on a run server
+
+`fluentci/host/client` submits the same plan to `fluentci-engine serve-runs`:
+
+```gleam
+import fluentci/host
+import fluentci/host/client
+import gleam/javascript/promise
+
+pub fn main() {
+  let task = host.task("check", "/bin/true", "/absolute/server/workspace")
+  let config = client.Config(
+    base_url: "http://127.0.0.1:8080",
+    token: "replace-with-your-server-token",
+    timeout_ms: 5000,
+  )
+  use admitted <- promise.map(client.submit_with_key(
+    host.plan([task]), config, "unique-build-attempt",
+  ))
+  let assert Ok(state) = admitted
+  state.id
+}
+```
+
+Paths refer to the **server filesystem**; the adapter does not upload a local
+workspace. Store the returned ID and use `get_state(id, config)` to poll until
+`Succeeded`, `Failed`, `Cancelled`, or `Interrupted`. Then `get_result(id, config)`
+retrieves the typed terminal report; interrupted runs may have no report.
+`cancel(id, config)` requests cancellation; its acceptance does not mean cleanup
+has finished. Poll state to observe completion. A result request made before
+publication can return `HttpError(404, ...)`.
+
+`submit` sends once. If a submission times out or loses its response, admission
+may already have happened. Use `submit_with_key` and retry the **same plan and key**
+to recover its run ID without executing twice; a changed plan returns HTTP 409.
+The adapter checks the server's key acknowledgement. It never retries automatically.
+Choose a new key for a new execution, and persist keys across client restarts.
+
+The HTTP adapter accepts an HTTP(S) origin with no credentials, path, query or
+fragment. Requests carry the bearer token and reject redirects. Each request has
+a deadline covering headers and body reads, plus a 16 MiB decoded response limit.
+Transport failures are separate from `HttpError`, malformed response `DecodeError`,
+and invalid plan errors. HTTP error bodies come from the server. Promises do not
+provide an independent request-abort handle; the configured timeout bounds them.
+History, live events/raw logs, and trace-context propagation remain to be added to
+this Gleam adapter.
+
+The existing APIs below use the legacy engine path. Verify host plans, local
+execution and server execution against a built release engine with:
 
 ```sh
 FLUENTCI_ENGINE_BIN=/absolute/path/to/target/release/fluentci-engine gleam test
@@ -111,7 +158,8 @@ is explicitly reported as skipped. Set `FLUENTCI_REQUIRE_ENGINE=1` to make a mis
 engine configuration fail instead; host CI requires this on Linux and both macOS
 architectures using pinned Gleam/Deno versions and Node 26. The engine fixture uses temporary directories,
 checks cold/warm caching across workspaces, typed local success/failure, launch errors,
-and cancellation cleanup. Tests perform no package installation.
+cancellation cleanup, authenticated server execution, keyed replay and HTTP error
+paths. Tests perform no package installation.
 
 ## Legacy API quick start
 

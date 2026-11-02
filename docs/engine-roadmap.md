@@ -41,10 +41,11 @@ milestones do not establish a claim of being the fastest engine.
    execution, and a direct Node adapter with Aff cancellation. Its end-to-end tests
    exercise this release engine. The Gleam JavaScript SDK now has pure pipe-friendly
    host builders, typed direct local execution with cooperative cancellation, and
-   release-engine cache/workspace and process-cleanup fixtures verified on Node and Deno.
+   typed HTTP submission/state/results/cancellation with acknowledged keyed replay.
+   Release-engine cache/workspace, process-cleanup and server fixtures run on Node and Deno.
    The host CI matrix now includes these fixtures on both runtimes with required
-   release-engine execution (configured, not remotely verified). Add a typed Gleam
-   HTTP adapter. Implement
+   release-engine execution (configured, not remotely verified). Complete Gleam HTTP
+   history/events/raw logs and trace-context propagation. Implement
    equivalent TypeScript and Elixir builders/adapters, automate cross-repository
    compatibility tests, and complete
    the legacy SDK migration path.
