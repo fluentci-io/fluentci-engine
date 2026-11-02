@@ -389,6 +389,7 @@ impl Plan {
         let mut shutdowns: Vec<Option<service::Shutdown>> =
             (0..self.tasks.len()).map(|_| None).collect();
         let mut remaining: Vec<_> = graph.dependencies.iter().map(Vec::len).collect();
+        let wake = worker::Wake::default();
         let mut running: Vec<Running> = Vec::new();
         let mut saving: Vec<Saving> = Vec::new();
         let mut preparing: Vec<Preparing> = Vec::new();
@@ -706,7 +707,7 @@ impl Plan {
                             let task = self.tasks[i].clone();
                             let stdout = results[i].stdout.clone();
                             let stderr = results[i].stderr.clone();
-                            match worker::Worker::spawn(move |token| {
+                            match worker::Worker::spawn(&wake, move |token| {
                                 action
                                     .with_cancellation(token)
                                     .save(&task, &stdout, &stderr)
@@ -864,7 +865,7 @@ impl Plan {
                             .clone();
                         let stdout = results[i].stdout.clone();
                         let stderr = results[i].stderr.clone();
-                        match worker::Worker::spawn(move |token| {
+                        match worker::Worker::spawn(&wake, move |token| {
                             cache::lookup(&root, &task, &dependency_keys, &stdout, &stderr, &token)
                         }) {
                             Ok(worker) => {
@@ -953,7 +954,7 @@ impl Plan {
             if finished {
                 break;
             }
-            thread::sleep(Duration::from_millis(10));
+            wake.wait(Duration::from_millis(10));
         }
         let result = RunResult { tasks: results };
         journal.finish(result.success())?;

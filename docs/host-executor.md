@@ -71,7 +71,10 @@ when the task ends. Processes deliberately creating another session/group are
 outside that lifecycle boundary. Non-Unix builds terminate the direct child.
 Task stdin is closed; this execution path is intended for noninteractive CI.
 
-The scheduler polls children every 10 ms. This is a correctness baseline, not a
+The scheduler waits at most 10 ms between child-process polls. Cache-worker
+completion wakes it immediately through a coalescing notification; completions
+that arrive before the wait are retained. Results are published before notification
+so scheduling does not race worker thread exit. This is a correctness baseline, not a
 claim of benchmark-leading performance. It bounds process concurrency, not CPU
 or memory usage inside each command. Cache hashing and copying check run
 cancellation between 64 KiB chunks, and tree snapshots check between entries.
