@@ -304,3 +304,34 @@ fn workspace_aliases_and_nested_working_directories_cannot_hide_conflicts() {
         .unwrap_err()
         .contains("unordered cache paths overlap"));
 }
+
+#[test]
+fn ordered_output_overwrites_restore_each_action_before_consumers() {
+    let dir = TempDir::new().unwrap();
+    let mut p = plan(dir.path());
+    p.tasks[0].args[1] = "printf first > output; printf first >> executions".into();
+    let mut second = p.tasks[0].clone();
+    second.id = "second".into();
+    second.needs = vec!["build".into()];
+    second.args[1] = "printf second > output; printf second >> executions".into();
+    let mut consumer = second.clone();
+    consumer.id = "consumer".into();
+    consumer.needs = vec!["second".into()];
+    consumer.cache.as_mut().unwrap().inputs = vec!["output".into()];
+    consumer.cache.as_mut().unwrap().outputs = vec!["final".into()];
+    consumer.args[1] = "/bin/cat output > final; printf consumer >> executions".into();
+    p.tasks.extend([second, consumer]);
+    run(&p, dir.path(), "cold");
+    fs::write(dir.path().join("output"), "unrelated").unwrap();
+    fs::remove_file(dir.path().join("final")).unwrap();
+    let warm = run(&p, dir.path(), "warm");
+    assert!(warm.tasks.iter().all(|task| task.cache.outcome == "hit"));
+    assert_eq!(
+        fs::read_to_string(dir.path().join("final")).unwrap(),
+        "second"
+    );
+    assert_eq!(
+        fs::read_to_string(dir.path().join("executions")).unwrap(),
+        "firstsecondconsumer"
+    );
+}
