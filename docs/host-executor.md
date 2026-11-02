@@ -44,6 +44,42 @@ For shell syntax, select it explicitly: `program: "/bin/sh"`,
 `args: ["-c", "your script"]`. Otherwise arguments containing spaces, dollar
 signs, or shell metacharacters remain literal arguments.
 
+## Per-run copied workspaces
+
+Set `workspace` to copy declared source paths into a private directory for each run:
+
+```json
+{
+  "version": 1,
+  "inherit_env": false,
+  "workspace": {"source": "./project", "inputs": ["src", "package.json"]},
+  "tasks": [{"id": "build", "program": "/bin/sh", "args": ["-c", "your-build-command"], "cwd": "."}]
+}
+```
+
+The CLI resolves `workspace.source` against the plan file. Library and HTTP plans
+require an absolute source directory. Task `cwd` must be `.` or a relative path
+inside that source; its directory must exist in the source at validation time.
+Each run copies only selected files/directories into `<run-dir>/workspace`, where
+tasks execute and artifacts remain. Nothing is automatically copied back. An
+empty input list creates an empty workspace; an unselected task directory is
+created empty. Inputs cannot be `.`, contain parent traversal, or overlap.
+Symlinks and special files in selected trees are rejected.
+
+Copies preserve file contents and permission modes. Source and copied snapshots
+are compared before execution to detect changes during setup. Avoid modifying
+source inputs during setup: this is not an atomic filesystem snapshot. Copying
+checks cancellation between entries and 64 KiB chunks. Setup finishes before the
+task event journal and task spans begin; setup progress events are not yet emitted.
+
+Separate runs have separate copies, while tasks within a run share their workspace
+and still need dependencies or resource coordination for shared writes. This is
+filesystem layout separation, not an OS sandbox: absolute paths, HOME, network,
+and package installations still access host resources. Cache keys retain the
+physical working directory, so fresh workspaces currently miss across runs even
+with identical inputs. Safe relocatable caching requires a further explicit
+contract; path-dependent outputs must not be reused silently.
+
 ## Functional SDK contract
 
 Constructing a plan is pure data construction. Extending a pipeline should
@@ -61,8 +97,8 @@ paths. Task results retain plan order, regardless of completion order.
 
 This executor isolates process environment and working directory configuration,
 not filesystem access. Shared writable directories must use resource names or
-separate workspaces. Resource leases currently apply within a run, not across
-independent engine processes. Action caching is opt-in through declared inputs/outputs and an explicit
+separate workspaces. Runs using the same resource directory coordinate resource
+leases across engine processes. Action caching is opt-in through declared inputs/outputs and an explicit
 toolchain identity; arbitrary host commands remain uncached by default.
 
 On Unix each task has its own process group, which is killed and reaped on

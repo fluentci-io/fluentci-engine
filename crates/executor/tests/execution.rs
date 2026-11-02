@@ -23,6 +23,7 @@ fn task(id: &str, script: &str, cwd: &Path, needs: &[&str]) -> Task {
 }
 fn plan(tasks: Vec<Task>) -> Plan {
     Plan {
+        workspace: None,
         version: 1,
         resource_dir: None,
         max_services: 8,

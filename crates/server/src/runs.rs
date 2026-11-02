@@ -368,6 +368,7 @@ fn admit(
                 Ok(Ok(result)) if result.success() => ("succeeded", None),
                 Ok(Ok(_)) if worker_cancel.is_cancelled() => ("cancelled", None),
                 Ok(Ok(_)) => ("failed", None),
+                Ok(Err(error)) if worker_cancel.is_cancelled() => ("cancelled", Some(error)),
                 Ok(Err(error)) => ("failed", Some(error)),
                 Err(_) => ("failed", Some("executor panicked".into())),
             };

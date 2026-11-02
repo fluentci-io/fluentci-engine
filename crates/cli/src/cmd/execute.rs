@@ -26,9 +26,15 @@ async fn execute_inner(path: &str, run_dir: &str, progress: &str) -> Result<(), 
             *root = base.join(&root);
         }
     }
-    for task in &mut plan.tasks {
-        if task.cwd.is_relative() {
-            task.cwd = base.join(&task.cwd);
+    if let Some(workspace) = &mut plan.workspace {
+        if workspace.source.is_relative() {
+            workspace.source = base.join(&workspace.source);
+        }
+    } else {
+        for task in &mut plan.tasks {
+            if task.cwd.is_relative() {
+                task.cwd = base.join(&task.cwd);
+            }
         }
     }
     let cancel = Cancellation::default();

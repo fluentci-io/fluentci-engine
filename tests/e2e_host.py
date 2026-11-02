@@ -34,6 +34,19 @@ class HostExecution(unittest.TestCase):
     def command(self, plan, run="run", progress="json"):
         return [str(BINARY), "execute", str(plan), "--run-dir", str(self.root / run), "--progress", progress]
 
+    def test_workspace_source_is_relative_to_plan_and_outputs_stay_in_run(self):
+        source = self.root / "source"
+        source.mkdir()
+        (source / "input").write_text("original")
+        plan = self.plan([self.task("copy", "cat input > output; printf changed > input")],
+                         workspace=dict(source="source", inputs=["input"]))
+        result = subprocess.run(self.command(plan), cwd="/", capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.root / "run/workspace/output").read_text(), "original")
+        self.assertEqual((self.root / "run/workspace/input").read_text(), "changed")
+        self.assertEqual((source / "input").read_text(), "original")
+        self.assertFalse((source / "output").exists())
+
     def test_resources_coordinate_separate_cli_processes(self):
         holder = self.task("holder", "touch holding; while :; do sleep 0.02; done")
         holder["resources"] = ["shared-checkout"]

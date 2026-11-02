@@ -37,12 +37,12 @@ impl CacheResult {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
-struct Entry {
-    path: PathBuf,
-    directory: bool,
-    mode: u32,
+pub(crate) struct Entry {
+    pub path: PathBuf,
+    pub directory: bool,
+    pub mode: u32,
     digest: Option<String>,
 }
 #[derive(Deserialize, Serialize)]
@@ -101,7 +101,11 @@ fn copy_stream(
     }
 }
 
-fn copy_file(source: &Path, destination: &Path, cancel: &Cancellation) -> Result<(), String> {
+pub(crate) fn copy_file(
+    source: &Path,
+    destination: &Path,
+    cancel: &Cancellation,
+) -> Result<(), String> {
     check_cancel(cancel)?;
     let mut input = File::open(source).map_err(|e| e.to_string())?;
     let mut output = File::create(destination).map_err(|e| e.to_string())?;
@@ -139,7 +143,7 @@ fn valid_digest(value: &str) -> bool {
             .bytes()
             .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
 }
-fn safe_relative(path: &Path) -> bool {
+pub(crate) fn safe_relative(path: &Path) -> bool {
     !path.as_os_str().is_empty() && path.components().all(|p| matches!(p, Component::Normal(_)))
 }
 
@@ -280,7 +284,7 @@ impl CachePolicy {
 
 /// Reject symlink traversal and special files. Symlink artifacts will require an
 /// explicit, contained-link representation rather than following host links.
-fn checked_path(base: &Path, relative: &Path) -> Result<PathBuf, String> {
+pub(crate) fn checked_path(base: &Path, relative: &Path) -> Result<PathBuf, String> {
     if !safe_relative(relative) {
         return Err("unsafe artifact path".into());
     }
@@ -313,7 +317,7 @@ fn mode(meta: &fs::Metadata) -> u32 {
         }
     }
 }
-fn set_mode(path: &Path, value: u32) -> Result<(), String> {
+pub(crate) fn set_mode(path: &Path, value: u32) -> Result<(), String> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -328,7 +332,11 @@ fn set_mode(path: &Path, value: u32) -> Result<(), String> {
     }
     Ok(())
 }
-fn snapshot(base: &Path, paths: &[PathBuf], cancel: &Cancellation) -> Result<Vec<Entry>, String> {
+pub(crate) fn snapshot(
+    base: &Path,
+    paths: &[PathBuf],
+    cancel: &Cancellation,
+) -> Result<Vec<Entry>, String> {
     fn visit(
         base: &Path,
         relative: &Path,

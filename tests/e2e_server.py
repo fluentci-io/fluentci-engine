@@ -94,6 +94,21 @@ class RunServer(unittest.TestCase):
             time.sleep(0.02)
         self.fail("run did not reach terminal state")
 
+    def test_workspace_runs_keep_source_and_artifacts_separate(self):
+        (self.root / "input").write_text("original")
+        plan = self.plan("/bin/cat input > output; printf changed > input")
+        plan["tasks"][0]["cwd"] = "."
+        plan["workspace"] = dict(source=str(self.root), inputs=["input"])
+        locations = [self.submit(plan), self.submit(plan)]
+        for location in locations:
+            self.assertEqual(self.terminal(location)["status"], "succeeded")
+            run_id = location.rsplit("/", 1)[1]
+            workspace = self.root / "runs" / run_id / "execution/workspace"
+            self.assertEqual((workspace / "output").read_text(), "original")
+            self.assertEqual((workspace / "input").read_text(), "changed")
+        self.assertEqual((self.root / "input").read_text(), "original")
+        self.assertFalse((self.root / "output").exists())
+
     def test_idempotent_submission_replays_conflicts_and_survives_restart(self):
         headers = {"Idempotency-Key": "release-123"}
         plan = self.plan("printf executed >> count")

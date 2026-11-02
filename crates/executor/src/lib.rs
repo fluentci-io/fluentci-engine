@@ -8,6 +8,7 @@ mod resources;
 pub mod service;
 mod telemetry;
 mod worker;
+pub mod workspace;
 
 use graph::DependencyGraph;
 use serde::{Deserialize, Serialize};
@@ -60,6 +61,8 @@ pub struct Task {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Plan {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace: Option<workspace::Workspace>,
     #[serde(default = "protocol_version")]
     pub version: u32,
     pub tasks: Vec<Task>,
@@ -207,6 +210,9 @@ fn release_resources(
 
 impl Plan {
     pub fn validate(&self) -> Result<DependencyGraph, String> {
+        if let Some(workspace) = &self.workspace {
+            return workspace.validate(self);
+        }
         if self.has_package_tasks() {
             self.resolve_packages()?.validate_resolved()
         } else {
@@ -312,13 +318,22 @@ impl Plan {
     /// Cancellation and process timeouts are observed at most one polling interval (10 ms)
     /// after the scheduler regains control. Resource leases coordinate runs sharing a resource directory.
     pub fn execute(&self, run_dir: &Path, cancel: &Cancellation) -> Result<RunResult, String> {
+        if let Some(workspace) = &self.workspace {
+            return workspace.execute(self, run_dir, cancel);
+        }
         if self.has_package_tasks() {
-            self.resolve_packages()?.execute_resolved(run_dir, cancel)
+            self.resolve_packages()?
+                .execute_resolved(run_dir, cancel, false)
         } else {
-            self.execute_resolved(run_dir, cancel)
+            self.execute_resolved(run_dir, cancel, false)
         }
     }
-    fn execute_resolved(&self, run_dir: &Path, cancel: &Cancellation) -> Result<RunResult, String> {
+    fn execute_resolved(
+        &self,
+        run_dir: &Path,
+        cancel: &Cancellation,
+        workspace_created: bool,
+    ) -> Result<RunResult, String> {
         let graph = self.validate_resolved()?;
         let absolute_run_dir = if run_dir.is_absolute() {
             run_dir.to_path_buf()
@@ -328,7 +343,7 @@ impl Plan {
                 .join(run_dir)
         };
         for task in &self.tasks {
-            if task.cache.is_some() {
+            if task.cache.is_some() && !workspace_created {
                 cache::validate_storage(task, &absolute_run_dir)?;
             }
         }
@@ -348,15 +363,19 @@ impl Plan {
         } else {
             None
         };
-        let mut directory = fs::DirBuilder::new();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::DirBuilderExt;
-            directory.mode(0o700);
+        // Workspace execution already created this fresh private directory. Its
+        // task paths are confined beneath the workspace sibling of the log files.
+        if !workspace_created {
+            let mut directory = fs::DirBuilder::new();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::DirBuilderExt;
+                directory.mode(0o700);
+            }
+            directory
+                .create(run_dir)
+                .map_err(|e| format!("create run directory: {e}"))?;
         }
-        directory
-            .create(run_dir)
-            .map_err(|e| format!("create run directory: {e}"))?;
         let run_dir = fs::canonicalize(run_dir).map_err(|e| e.to_string())?;
         let environment: BTreeMap<OsString, OsString> = if self.inherit_env {
             std::env::vars_os().collect()

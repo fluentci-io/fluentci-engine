@@ -11,7 +11,7 @@ use tempfile::TempDir;
 
 fn plan(root: &Path) -> Plan {
     fs::write(root.join("input"), "hello").unwrap();
-    Plan { version: 1, resource_dir: None, max_services: 8, jobs: 2, fail_fast: true, inherit_env: false,
+    Plan { workspace: None, version: 1, resource_dir: None, max_services: 8, jobs: 2, fail_fast: true, inherit_env: false,
         cache_dir: Some(root.join("cache")), tasks: vec![Task {
             id: "build".into(), needs: vec![], program: "/bin/sh".into(),
             args: vec!["-c".into(), "/bin/cat input > output; printf executed >> executions; printf log; printf error >&2".into()],

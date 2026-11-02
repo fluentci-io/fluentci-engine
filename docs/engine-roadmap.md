@@ -6,6 +6,11 @@ milestones do not establish a claim of being the fastest engine.
 
 ## Implemented in this worktree
 
+- Opt-in per-run copies of declared source paths, with content/mode verification,
+  cancellable setup, CLI/HTTP support, and a PureScript workspace builder. This
+  separates run files but does not sandbox host access or enable relocatable cache
+  reuse; those remain follow-through work.
+
 - Explicit versioned plans with dependency validation, bounded parallel tasks,
   task-local environments, timeouts, process-group cancellation, resource names,
   disk-backed logs, and structured results.
