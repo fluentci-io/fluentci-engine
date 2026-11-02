@@ -16,6 +16,7 @@ use std::{
     collections::{BTreeMap, HashMap, HashSet},
     ffi::OsString,
     fs::{self, File, OpenOptions},
+    io::{BufWriter, Write},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::{
@@ -982,8 +983,21 @@ impl Plan {
         }
         let result = RunResult { tasks: results };
         journal.finish(result.success())?;
-        let report = File::create(run_dir.join("result.json")).map_err(|e| e.to_string())?;
-        serde_json::to_writer_pretty(report, &result).map_err(|e| e.to_string())?;
+        // Readers and restart recovery see a complete report or no report.
+        let mut report = tempfile::NamedTempFile::new_in(&run_dir).map_err(|e| e.to_string())?;
+        {
+            let mut writer = BufWriter::new(report.as_file_mut());
+            serde_json::to_writer_pretty(&mut writer, &result).map_err(|e| e.to_string())?;
+            writer.flush().map_err(|e| e.to_string())?;
+        }
+        report.as_file().sync_all().map_err(|e| e.to_string())?;
+        report
+            .persist(run_dir.join("result.json"))
+            .map_err(|e| e.to_string())?;
+        #[cfg(unix)]
+        File::open(&run_dir)
+            .and_then(|directory| directory.sync_all())
+            .map_err(|e| e.to_string())?;
         Ok(result)
     }
 }
