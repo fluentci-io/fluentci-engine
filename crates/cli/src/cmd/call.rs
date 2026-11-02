@@ -34,13 +34,13 @@ pub fn call(module: &str, command: &str) -> Result<(), Error> {
     match fluentci_core::init_tracer() {
         Ok(_) => {}
         Err(e) => {
-            println!("{}", e.to_string());
+            println!("{}", e);
         }
     }
     match fluentci_core::set_git_repo_metadata() {
         Ok(_) => {}
         Err(e) => {
-            println!("{}", e.to_string());
+            println!("{}", e);
         }
     }
 
@@ -155,7 +155,7 @@ pub fn call(module: &str, command: &str) -> Result<(), Error> {
 }
 
 pub fn download_module(url: &str) -> Result<Wasm, Error> {
-    let filename = format!("{}.wasm", sha256::digest(url).to_string());
+    let filename = format!("{}.wasm", sha256::digest(url));
     let work_dir = format!("{}/.fluentci/cache", std::env::var("HOME").unwrap());
 
     if fs::metadata(format!("{}/{}", work_dir, filename)).is_ok() {
