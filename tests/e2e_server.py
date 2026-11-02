@@ -1,0 +1,195 @@
+"""Authenticated real HTTP run-server tests against the release CLI."""
+import http.server
+import json
+import os
+from pathlib import Path
+import signal
+import socket
+import subprocess
+import tempfile
+import time
+import threading
+import uuid
+import unittest
+import urllib.request
+import urllib.error
+
+BINARY = Path(os.environ.get("FLUENTCI_ENGINE_BIN", "target/release/fluentci-engine")).resolve()
+TOKEN = "test-only-run-server-token"
+
+class RunServer(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="fluentci-server-e2e-")
+        self.root = Path(self.temp.name)
+        self.log = open(self.root / "server.log", "w+")
+        self.proc = None
+        self.extra_env = {}
+        self.start()
+
+    def start(self):
+        with socket.socket() as sock:
+            sock.bind(("127.0.0.1", 0))
+            port = sock.getsockname()[1]
+        self.base = f"http://127.0.0.1:{port}"
+        env = {k:v for k,v in os.environ.items() if not k.startswith("OTEL_")}
+        env["FLUENTCI_RUN_TOKEN"] = TOKEN
+        env.update(self.extra_env)
+        self.proc = subprocess.Popen([str(BINARY), "serve-runs", "--listen", f"127.0.0.1:{port}", "--data-dir", str(self.root / "runs"), "--max-runs", "2"], env=env, stdout=self.log, stderr=self.log)
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            self.assertIsNone(self.proc.poll(), "server exited during startup")
+            try:
+                if self.request("GET", "/v1/runs/missing", token=False)[0] == 401:
+                    return
+            except OSError:
+                time.sleep(0.02)
+        self.fail("server did not become ready")
+
+    def stop(self):
+        if self.proc and self.proc.poll() is None:
+            self.proc.send_signal(signal.SIGINT)
+            try:
+                self.proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+                self.proc.wait()
+                self.fail("server failed to shut down")
+
+    def tearDown(self):
+        self.stop()
+        self.log.close()
+        self.temp.cleanup()
+
+    def request(self, method, path, data=None, token=True, extra_headers=None):
+        headers = {"Content-Type":"application/json"}
+        if token:
+            headers["Authorization"] = "Bearer " + TOKEN
+        headers.update(extra_headers or {})
+        request = urllib.request.Request(self.base + path, data=None if data is None else json.dumps(data).encode(), headers=headers, method=method)
+        try:
+            response = urllib.request.urlopen(request, timeout=5)
+        except urllib.error.HTTPError as error:
+            response = error
+        with response:
+            return response.status, response.read(), response.headers
+
+    def plan(self, script, env=None):
+        return dict(inherit_env=False, tasks=[dict(id="task", program="/bin/sh", args=["-c", script], cwd=str(self.root), env=env or {})])
+
+    def submit(self, plan):
+        code, body, headers = self.request("POST", "/v1/runs", plan)
+        self.assertEqual(code, 202, body)
+        self.assertEqual(headers["Cache-Control"], "no-store")
+        return headers["Location"]
+
+    def terminal(self, path):
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            code, body, _ = self.request("GET", path)
+            self.assertEqual(code, 200)
+            state = json.loads(body)
+            if state["status"] != "running":
+                return state
+            time.sleep(0.02)
+        self.fail("run did not reach terminal state")
+
+    def test_auth_validation_and_single_store_owner(self):
+        self.assertEqual(self.request("POST", "/v1/runs", self.plan("touch unexpected"), token=False)[0], 401)
+        self.assertEqual(self.request("GET", "/v1/runs/missing", extra_headers={"Authorization":"Bearer " + "x" * len(TOKEN)})[0], 401)
+        bad = self.plan("touch unexpected")
+        bad["tasks"][0]["needs"] = ["missing"]
+        self.assertEqual(self.request("POST", "/v1/runs", bad)[0], 400)
+        inherited = self.plan("touch unexpected")
+        inherited["inherit_env"] = True
+        self.assertEqual(self.request("POST", "/v1/runs", inherited)[0], 400)
+        self.assertFalse((self.root / "unexpected").exists())
+        env = dict(os.environ, FLUENTCI_RUN_TOKEN=TOKEN)
+        duplicate = subprocess.run([str(BINARY), "serve-runs", "--listen", "127.0.0.1:0", "--data-dir", str(self.root / "runs")], env=env, capture_output=True, timeout=10)
+        self.assertNotEqual(duplicate.returncode, 0)
+        self.assertIn(b"another run server", duplicate.stderr)
+
+    def test_concurrency_capacity_live_events_cancellation_and_restart(self):
+        paths = [self.submit(self.plan("echo $VALUE; while :; do /bin/sleep 0.02; done", {"VALUE":value})) for value in ["left", "right"]]
+        self.assertEqual(self.request("POST", "/v1/runs", self.plan("exit 0"))[0], 429)
+        for path, expected in zip(paths, ["left", "right"]):
+            deadline = time.monotonic() + 5
+            body = b""
+            while time.monotonic() < deadline:
+                code, body, headers = self.request("GET", path + "/events")
+                self.assertEqual(code, 200)
+                if expected.encode() in body:
+                    break
+                time.sleep(0.02)
+            self.assertIn(expected.encode(), body)
+            code, log, log_headers = self.request("GET", path + "/logs/0/stdout")
+            self.assertEqual(code, 200)
+            self.assertEqual(log, expected.encode() + b"\n")
+            self.assertEqual(self.request("GET", path + "/logs/0/stdout?cursor=" + log_headers["X-Next-Cursor"])[1], b"")
+            self.assertEqual(self.request("GET", path + "/logs/0/invalid")[0], 404)
+            self.assertEqual(self.request("GET", path + "/events?cursor=1")[0], 400)
+            self.assertEqual(self.request("POST", path + "/cancel")[0], 202)
+            self.assertEqual(self.terminal(path)["status"], "cancelled")
+            tail = self.request("GET", path + "/events?cursor=" + headers["X-Next-Cursor"])[1]
+            self.assertEqual(body + tail, self.request("GET", path + "/events")[1])
+            self.assertEqual(json.loads(self.request("GET", path + "/result")[1])["tasks"][0]["status"], "cancelled")
+        self.stop()
+        interrupted = str(uuid.uuid4())
+        abandoned = self.root / "runs" / interrupted
+        abandoned.mkdir()
+        (abandoned / "state.json").write_text(json.dumps(dict(id=interrupted, status="running", error=None)))
+        self.start()
+        self.assertEqual(self.terminal("/v1/runs/" + interrupted)["status"], "interrupted")
+        for path in paths:
+            self.assertEqual(self.terminal(path)["status"], "cancelled")
+            self.assertEqual(self.request("GET", path + "/result")[0], 200)
+
+    def test_remote_trace_context_and_export_flush(self):
+        self.stop()
+        payloads = []
+        class Collector(http.server.BaseHTTPRequestHandler):
+            def do_POST(inner):
+                payloads.append(inner.rfile.read(int(inner.headers["Content-Length"])))
+                inner.send_response(200)
+                inner.send_header("Content-Length", "0")
+                inner.end_headers()
+            def log_message(self, *_):
+                pass
+        collector = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Collector)
+        thread = threading.Thread(target=collector.serve_forever, daemon=True)
+        thread.start()
+        try:
+            self.extra_env = dict(OTEL_EXPORTER_OTLP_ENDPOINT=f"http://127.0.0.1:{collector.server_port}/v1/traces", OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf")
+            self.start()
+            trace = "1234567890abcdef1234567890abcdef"
+            code, _, headers = self.request("POST", "/v1/runs", self.plan("echo traced"), extra_headers={"traceparent":f"00-{trace}-1234567890abcdef-01"})
+            self.assertEqual(code, 202)
+            path = headers["Location"]
+            self.assertEqual(self.terminal(path)["status"], "succeeded")
+            _, body, _ = self.request("GET", path + "/events")
+            events = [json.loads(line) for line in body.splitlines()]
+            self.assertTrue(all(e["trace_id"] == trace for e in events))
+            self.stop()
+            self.assertIn(b"pipeline.step", b"".join(payloads))
+        finally:
+            collector.shutdown()
+            collector.server_close()
+            thread.join(timeout=5)
+
+    def test_server_shutdown_cancels_services_and_persists_results(self):
+        plan = self.plan("echo $$ > service.pid; while :; do /bin/sleep 0.02; done")
+        plan["tasks"][0]["service"] = dict(readiness=dict(program="/bin/sh",args=["-c","exit 0"]), shutdown_timeout_ms=100)
+        plan["tasks"].append(dict(id="consumer", needs=["task"], program="/bin/sleep", args=["20"], cwd=str(self.root)))
+        path = self.submit(plan)
+        deadline = time.monotonic() + 5
+        while not (self.root / "service.pid").exists():
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(0.02)
+        pid = int((self.root / "service.pid").read_text())
+        self.stop()
+        with self.assertRaises(ProcessLookupError):
+            os.kill(pid, 0)
+        self.start()
+        self.assertEqual(self.terminal(path)["status"], "cancelled")
+
+if __name__ == "__main__":
+    unittest.main()

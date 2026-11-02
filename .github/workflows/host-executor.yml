@@ -45,6 +45,7 @@ jobs:
         run: |
           cargo build --release --locked -p fluentci-engine
           python3 tests/e2e_host.py -v
+          python3 tests/e2e_server.py -v
 
   freebsd:
     name: Native FreeBSD executor and pkg
