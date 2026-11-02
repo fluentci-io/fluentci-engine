@@ -13,11 +13,14 @@ import tempfile
 import time
 
 
-def measure(binary, root, name, tasks, jobs):
+def measure(binary, root, name, tasks, jobs, workspace=None):
     plan = root / f"{name}.json"
     run = root / f"run-{name}"
-    plan.write_text(json.dumps(dict(version=1, inherit_env=False, jobs=jobs,
-                                    cache_dir=str(root / "cache"), tasks=tasks)))
+    document = dict(version=1, inherit_env=False, jobs=jobs,
+                    cache_dir=str(root / "cache"), tasks=tasks)
+    if workspace is not None:
+        document["workspace"] = workspace
+    plan.write_text(json.dumps(document))
     started = time.perf_counter()
     process = subprocess.run([str(binary), "execute", str(plan), "--run-dir", str(run),
                               "--progress", "plain"], stdout=subprocess.DEVNULL,
@@ -93,6 +96,25 @@ def main():
                     artifact = root / "artifact"
                     if artifact.stat().st_size != args.artifact_mib * 1048576:
                         raise RuntimeError("Restored artifact size mismatch")
+                data["scenarios"].setdefault(name, {"samples": []})["samples"].append(result)
+                print(f"sample {sample+1}/{args.samples} {name}: {result['seconds']:.4f}s", file=sys.stderr)
+            source = root / "source"
+            source.mkdir()
+            (source / "input").write_bytes(b'x' * args.artifact_mib * 1048576)
+            portable = task(Path("."), "portable", "from pathlib import Path; "
+                            "Path('artifact').write_bytes(Path('input').read_bytes())")
+            portable["cache"] = dict(inputs=["input"], outputs=["artifact"],
+                                     toolchain=sys.version, relocatable=True)
+            for name, expected in [("workspace_cache_cold", "stored"), ("workspace_cache_warm", "hit")]:
+                result = measure(binary, root, name, [portable], 1,
+                                 workspace=dict(source=str(source), inputs=["input"]))
+                if result["cache"] != {expected: 1}:
+                    raise RuntimeError(f"Unexpected workspace cache outcome: {result}")
+                artifact = root / f"run-{name}" / "workspace/artifact"
+                if artifact.read_bytes() != (source / "input").read_bytes():
+                    raise RuntimeError("Workspace artifact contents mismatch")
+                if (source / "artifact").exists():
+                    raise RuntimeError("Workspace command wrote into source")
                 data["scenarios"].setdefault(name, {"samples": []})["samples"].append(result)
                 print(f"sample {sample+1}/{args.samples} {name}: {result['seconds']:.4f}s", file=sys.stderr)
     for result in data["scenarios"].values():

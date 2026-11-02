@@ -15,9 +15,12 @@ completion; the JSON report remains at the requested output path. Custom release
 binary paths are supported with `--binary`; paths containing `debug` are rejected.
 
 Scenarios cover empty-run overhead, independent tasks, a serial dependency chain,
-serial versus parallel 50 ms sleeps, a 1 MiB log stream, and cold/warm artifact
-caching. Each sample has its own workspace and action cache. The warm case deletes
-the output before execution to require restoration. "Cold" means an empty action
+serial versus parallel 50 ms sleeps, a 1 MiB log stream, cold/warm artifact
+caching, and cold/warm relocatable caching in distinct copied run workspaces. Each sample has its own workspace and action cache. The warm case deletes
+the output before execution to require restoration. The copied-workspace cases
+start with fresh output directories, copy a declared input of the configured
+artifact size, and verify exact restored bytes and source separation. Their timed
+region includes source copying and snapshot verification. "Cold" means an empty action
 cache, not a flushed operating-system page cache. Python startup is part of each
 task's workload; this is an end-to-end CLI measurement, not a Rust scheduler
 microbenchmark. Timings include CLI startup, validation, logging, reporting, and
