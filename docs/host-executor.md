@@ -643,6 +643,10 @@ addition to `stdout` and `stderr`. It uses the same byte cursor and 1 MiB respon
 limit; append-only files allow resuming while checks continue. These files are
 separate from the daemon's output. Probe processes write directly to disk, avoiding
 scheduler pipe-draining work and unbounded in-memory output buffers. As with task
-logs, total disk usage is not capped yet. Probe output is not currently streamed
-through the execution journal/TUI or attached to OpenTelemetry spans; inspect the
-files or fetch these raw streams when diagnosing readiness/health failures.
+logs, total disk usage is not capped yet. Probe output is also streamed through the execution journal and plain/TUI progress
+views, labeled `probe_stdout` and `probe_stderr`. Each stream has its own cursor and
+the same 64 KiB per scheduler-tick limit as command output; the final drain records
+remaining bytes before the run-finished event. Journal text is lossy UTF-8 for
+display; use the files or raw HTTP streams for binary fidelity. Probe journal
+events carry the service step trace/span IDs, but raw output is not added to span
+attributes.

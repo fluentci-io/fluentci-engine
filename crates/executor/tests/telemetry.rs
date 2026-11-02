@@ -42,7 +42,7 @@ fn each_step_has_parented_correlated_spans_without_sensitive_command_data() {
             {"id":"success", "program":"/bin/sh", "args":["-c", "echo command-secret"], "env":{"SECRET":"environment-secret"}, "cwd":dir.path()},
             {"id":"failure", "program":"/bin/sh", "args":["-c", "exit 7"], "cwd":dir.path()},
             {"id":"skipped", "needs":["failure"], "program":"/bin/echo", "cwd":dir.path()},
-            {"id":"service", "program":"/bin/sh", "args":["-c", "trap 'exit 0' TERM; while :; do /bin/sleep 0.02; done"], "cwd":dir.path(), "service":{"readiness":{"program":"/usr/bin/true"}, "shutdown_timeout_ms":100}},
+            {"id":"service", "program":"/bin/sh", "args":["-c", "trap 'exit 0' TERM; while :; do /bin/sleep 0.02; done"], "cwd":dir.path(), "service":{"readiness":{"program":"/bin/sh", "args":["-c", "echo probe-secret"]}, "shutdown_timeout_ms":100}},
             {"id":"service-consumer", "needs":["service"], "program":"/bin/echo", "cwd":dir.path()}
         ]
     })).unwrap();
@@ -64,11 +64,18 @@ fn each_step_has_parented_correlated_spans_without_sensitive_command_data() {
     let attributes = format!("{spans:?}");
     assert!(!attributes.contains("command-secret"));
     assert!(!attributes.contains("environment-secret"));
+    assert!(!attributes.contains("probe-secret"));
     assert!(attributes.contains("Skipped"));
     assert!(attributes.contains("process.exit.code"));
     assert!(attributes.contains("service.ready"));
     assert!(attributes.contains("service.stopping"));
     let events = std::fs::read_to_string(dir.path().join("run/events.jsonl")).unwrap();
+    assert!(events.lines().any(|line| {
+        let event: serde_json::Value = serde_json::from_str(line).unwrap();
+        event["type"] == "log"
+            && event["stream"] == "probe_stdout"
+            && event["text"].as_str().unwrap().contains("probe-secret")
+    }));
     for line in events.lines() {
         let event: serde_json::Value = serde_json::from_str(line).unwrap();
         assert_eq!(event["trace_id"], run.span_context.trace_id().to_string());

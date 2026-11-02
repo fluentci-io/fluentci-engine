@@ -91,6 +91,38 @@ class HostExecution(unittest.TestCase):
         self.assertNotIn("\x1b", escaped.stdout)
         self.assertIn("unsafe\\u001b[31m\\nname", escaped.stdout)
 
+    def test_probe_diagnostics_are_journaled_before_service_finishes(self):
+        service = self.task("db", "while :; do /bin/sleep 0.02; done")
+        service.pop("timeout_ms")
+        service["service"] = dict(readiness=dict(program="/bin/sh", args=["-c", "printf readiness-detail >&2; exit 1"], interval_ms=100, timeout_ms=100), startup_timeout_ms=10000, shutdown_timeout_ms=100)
+        proc = subprocess.Popen(self.command(self.plan([service])), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        events = queue.Queue()
+        reader = threading.Thread(target=lambda: [events.put(json.loads(line)) for line in proc.stdout], daemon=True)
+        reader.start()
+        try:
+            deadline = time.monotonic() + 5
+            while True:
+                event = events.get(timeout=max(0.01, deadline - time.monotonic()))
+                if event.get("type") == "log" and event.get("stream") == "probe_stderr" and "readiness-detail" in event["text"]:
+                    break
+                self.assertLess(time.monotonic(), deadline)
+            self.assertEqual(event["id"], "db")
+            self.assertIsNone(proc.poll(), "probe diagnostics must be live")
+            proc.send_signal(signal.SIGINT)
+            self.assertNotEqual(proc.wait(timeout=5), 0)
+            reader.join(timeout=2)
+            journal = [json.loads(line) for line in (self.root / "run/events.jsonl").read_text().splitlines()]
+            self.assertEqual([event["sequence"] for event in journal], list(range(len(journal))))
+            text = "".join(event["text"] for event in journal if event.get("type") == "log" and event.get("stream") == "probe_stderr")
+            self.assertEqual(text, (self.root / "run/0.probe_stderr").read_text())
+        finally:
+            if proc.poll() is None:
+                proc.send_signal(signal.SIGINT)
+                proc.wait(timeout=5)
+            reader.join(timeout=2)
+            proc.stdout.close()
+            proc.stderr.close()
+
     def test_resources_coordinate_separate_cli_processes(self):
         holder = self.task("holder", "touch holding; while :; do sleep 0.02; done")
         holder["resources"] = ["shared-checkout"]
@@ -277,7 +309,9 @@ class HostExecution(unittest.TestCase):
         import termios
         master, slave = pty.openpty()
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 30, 100, 0, 0))
-        path = self.plan([self.task("visible", "printf '\\033[2Junsafe'; /bin/sleep 0.2; echo done")])
+        service = self.task("db", "while :; do /bin/sleep 0.02; done")
+        service["service"] = dict(readiness=dict(program="/bin/sh", args=["-c", "printf probe-visible; exit 0"]), shutdown_timeout_ms=100)
+        path = self.plan([service, self.task("visible", "printf '\\033[2Junsafe'; /bin/sleep 0.2; echo done", ["db"])])
         proc = subprocess.Popen(self.command(path, progress="tui"), stdout=slave, stderr=slave,
                                 env={**os.environ, "TERM": "xterm-256color"})
         os.close(slave)
@@ -302,6 +336,8 @@ class HostExecution(unittest.TestCase):
             self.assertIn(b"visible", output)
             self.assertIn(b"Recent output:", output)
             self.assertIn(b"unsafe", output)
+            self.assertIn(b"probe-visible", output)
+            self.assertIn(b"probe_stdout", output)
             self.assertIn(b"\x1b[?25h", output)
             self.assertNotIn(b"\x1b[2J", output)
         finally:

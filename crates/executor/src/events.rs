@@ -54,7 +54,7 @@ pub(crate) struct Journal {
     started: Instant,
     sequence: u64,
     states: Vec<(Status, String, Option<String>)>,
-    offsets: Vec<[u64; 2]>,
+    offsets: Vec<[u64; 4]>,
 }
 impl Journal {
     pub fn new(path: &Path, tasks: &[Task]) -> Result<Self, String> {
@@ -75,7 +75,7 @@ impl Journal {
             started: Instant::now(),
             sequence: 0,
             states: vec![(Status::Pending, String::new(), None); count],
-            offsets: vec![[0, 0]; count],
+            offsets: vec![[0; 4]; count],
         };
         journal.emit(EventKind::RunStarted { tasks: count })?;
         journal.writer.flush().map_err(|e| e.to_string())?;
@@ -108,10 +108,22 @@ impl Journal {
     ) -> Result<(), String> {
         for &i in order {
             let result = &results[i];
-            for (stream, path) in [("stdout", &result.stdout), ("stderr", &result.stderr)]
-                .into_iter()
-                .enumerate()
+            for (stream, path) in [
+                Some(("stdout", &result.stdout)),
+                Some(("stderr", &result.stderr)),
+                result
+                    .probe_logs
+                    .as_ref()
+                    .map(|logs| ("probe_stdout", &logs.stdout)),
+                result
+                    .probe_logs
+                    .as_ref()
+                    .map(|logs| ("probe_stderr", &logs.stderr)),
+            ]
+            .into_iter()
+            .enumerate()
             {
+                let Some(path) = path else { continue };
                 // A rejected restore can replace/remove these files before spawn.
                 // Do not emit tentative logs or advance their cursors.
                 if result.cache.outcome == "preparing" {
