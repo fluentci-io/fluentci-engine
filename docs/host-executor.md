@@ -276,3 +276,57 @@ variables must currently be chosen explicitly by the caller; cross-run endpoint
 allocation, automatic restart policies, and server-managed persistent services are
 not yet implemented. Service programs must stay in the foreground; deliberately
 escaping process groups is outside the supervision guarantee.
+
+### Independent server runs
+
+The new run API uses the same executor, cache, services, and JSON plan as local
+`execute`. Start it with a private data directory and an authentication token:
+
+```sh
+export FLUENTCI_RUN_TOKEN='replace-with-a-long-random-token'
+cargo run --release -p fluentci-engine -- serve-runs \
+  --listen 127.0.0.1:6881 --data-dir /path/to/run-store --max-runs 4
+```
+
+Every request requires `Authorization: Bearer <token>`. Server plans must set
+`inherit_env: false` and supply absolute working/cache directories on the server.
+The server token and other ambient credentials are therefore not inherited by
+submitted task processes. This is a trusted host execution API: an authorized
+client can run host commands. It does not provide tenant isolation or a sandbox.
+Use a TLS/authenticated gateway when accessing it over an untrusted network.
+
+| Request | Behavior |
+| --- | --- |
+| `POST /v1/runs` with a plan | Validates and persists the plan; returns 202, a run ID, and `Location` |
+| `GET /v1/runs/{id}` | Reads persisted running/succeeded/failed/cancelled/interrupted state |
+| `GET /v1/runs/{id}/result` | Reads the executor result; 404 until it exists |
+| `POST /v1/runs/{id}/cancel` | Requests cancellation and service teardown; repeat requests are safe |
+| `GET /v1/runs/{id}/events?cursor=0` | Reads up to 4 MiB of complete JSONL events |
+| `GET /v1/runs/{id}/logs/{index}/stdout?cursor=0` | Reads up to 1 MiB of exact stdout bytes; `stderr` also supported |
+
+`index` is the task's zero-based position in the submitted plan. Journal/log reads
+return `X-Next-Cursor`; pass it on the next poll to resume without replaying old
+bytes. Event cursors must be at newline boundaries. Poll run state to determine
+completion, then drain remaining events/logs. Responses are marked `no-store`.
+The original binary logs remain on disk; JSON event text remains a lossy UTF-8
+view. Events include trace/span IDs when OpenTelemetry is enabled. Incoming W3C
+`traceparent`/`tracestate` headers become the parent context for run and step spans.
+
+Admission is bounded by `--max-runs`; excess submissions return 429 with
+`Retry-After: 1`. Each plan is limited to 64 ordinary jobs, 32 service slots,
+10,000 tasks, and a 1 MiB JSON body. Plan validation and durable admission run on
+blocking workers, leaving HTTP workers available for status and log requests.
+There is currently no durable waiting queue or submission idempotency key: clients
+must not blindly retry submissions after an ambiguous connection failure.
+
+Plans and state files are atomically replaced in private run directories. A Unix
+file lock prevents two servers from opening the same store. Graceful server shutdown
+cancels active executions, waits for process/service cleanup, persists results, and
+flushes telemetry. After restart, finished reports are retained and incomplete
+metadata is reconciled to a terminal report or `interrupted`. Hard kills or machine
+crashes cannot guarantee child cleanup on every supported OS; interrupted runs are
+not automatically rerun. Run-store garbage collection is not yet implemented.
+
+`serve-runs` is separate from the existing GraphQL `serve` command. The legacy SDK
+server retains its existing semantics until the SDK compatibility path is migrated;
+the new run API does not share its mutable current-pipeline graph.

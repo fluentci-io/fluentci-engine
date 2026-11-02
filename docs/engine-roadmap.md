@@ -27,9 +27,11 @@ milestones do not establish a claim of being the fastest engine.
 2. Provide pure immutable plan builders/handles in TypeScript, PureScript, Gleam,
    and Elixir. Keep execution as an explicit effect and errors as typed results.
    Existing APIs need a documented compatibility/migration path.
-3. Add server run submission, status, cancellation, persisted results, and live
-   event transport using the same plan schema as local execution. Remove global
-   current-pipeline semantics from the new server path.
+3. Independent authenticated server runs now support submission, status, cancellation,
+   persisted results, resumable events/raw logs, restart reconciliation, and remote
+   trace context. Follow through with SDK migration, idempotent submission, durable
+   admission queues, history indexing, and run-store retention. The legacy GraphQL
+   server remains separate.
 4. Add cross-run workspace/resource coordination, isolated workspaces, and
    explicit declared I/O semantics beyond the current user-supplied cache contract.
 5. Extend cache support with contained symlinks, remote storage, cache inspection
