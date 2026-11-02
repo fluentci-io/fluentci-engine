@@ -7,6 +7,7 @@ pub mod packages;
 mod resources;
 pub mod service;
 mod telemetry;
+mod worker;
 
 use graph::DependencyGraph;
 use serde::{Deserialize, Serialize};
@@ -166,6 +167,33 @@ impl Drop for Running {
     fn drop(&mut self) {
         // Also clean up background descendants when their direct parent has exited.
         self.terminate();
+    }
+}
+
+struct Saving {
+    index: usize,
+    started: Instant,
+    // Field order matters: join the worker before releasing its resource leases.
+    worker: worker::Worker<()>,
+    _leases: Option<resources::Leases>,
+    stop: Option<Status>,
+}
+
+fn release_resources(
+    task: &Task,
+    resources: &mut HashSet<String>,
+    readers: &mut HashMap<String, usize>,
+) {
+    for resource in &task.resources {
+        resources.remove(resource);
+    }
+    for resource in &task.shared_resources {
+        if let Some(count) = readers.get_mut(resource) {
+            *count -= 1;
+            if *count == 0 {
+                readers.remove(resource);
+            }
+        }
     }
 }
 
@@ -354,6 +382,7 @@ impl Plan {
             (0..self.tasks.len()).map(|_| None).collect();
         let mut remaining: Vec<_> = graph.dependencies.iter().map(Vec::len).collect();
         let mut running: Vec<Running> = Vec::new();
+        let mut saving: Vec<Saving> = Vec::new();
         let mut resources = HashSet::new();
         let mut readers: HashMap<String, usize> = HashMap::new();
         let mut waiting_since: Vec<Option<Instant>> = vec![None; self.tasks.len()];
@@ -364,6 +393,59 @@ impl Plan {
             (0..self.tasks.len()).map(|_| None).collect();
         loop {
             let stopping = stalled || cancel.is_cancelled() || (self.fail_fast && failed);
+            // Cache publication retains both a job slot and resource leases.
+            let mut publication = 0;
+            while publication < saving.len() {
+                let save = &mut saving[publication];
+                let i = save.index;
+                results[i].duration_ms = save.started.elapsed().as_millis();
+                if save.stop.is_none() {
+                    if stopping {
+                        save.stop = Some(Status::Cancelled);
+                    } else if self.tasks[i]
+                        .timeout_ms
+                        .is_some_and(|ms| save.started.elapsed() >= Duration::from_millis(ms))
+                    {
+                        save.stop = Some(Status::TimedOut);
+                    }
+                    if save.stop.is_some() {
+                        save.worker.cancel();
+                    }
+                }
+                if let Some(outcome) = save.worker.poll() {
+                    let status = save.stop.take().unwrap_or_else(|| {
+                        if outcome.is_ok() {
+                            Status::Succeeded
+                        } else {
+                            Status::Failed
+                        }
+                    });
+                    if status == Status::Succeeded {
+                        results[i].cache.outcome = "stored".into();
+                        for &next in &graph.successors[i] {
+                            remaining[next] -= 1;
+                        }
+                    } else {
+                        results[i].cache.outcome = if status == Status::Failed {
+                            "error"
+                        } else {
+                            "cancelled"
+                        }
+                        .into();
+                        let error = outcome
+                            .err()
+                            .unwrap_or_else(|| "cache publication interrupted".into());
+                        results[i].cache.reason = error.clone();
+                        results[i].error = Some(error);
+                        failed = true;
+                    }
+                    results[i].status = status;
+                    saving.swap_remove(publication);
+                    release_resources(&self.tasks[i], &mut resources, &mut readers);
+                } else {
+                    publication += 1;
+                }
+            }
             // Reap before dispatch: completion releases dependencies and resource leases.
             let mut n = 0;
             while n < running.len() {
@@ -511,17 +593,6 @@ impl Plan {
                     }
                 };
                 if let Some((status, code, error)) = outcome {
-                    for resource in &self.tasks[i].resources {
-                        resources.remove(resource);
-                    }
-                    for resource in &self.tasks[i].shared_resources {
-                        if let Some(count) = readers.get_mut(resource) {
-                            *count -= 1;
-                            if *count == 0 {
-                                readers.remove(resource);
-                            }
-                        }
-                    }
                     results[i].status = status;
                     results[i].exit_code = code;
                     results[i].error = error;
@@ -529,36 +600,43 @@ impl Plan {
                     // Stop background descendants before capturing output artifacts.
                     let completed_leases = running[n].leases.take();
                     let completed_action = running[n].action.take();
+                    let task_started = running[n].started;
                     running.swap_remove(n);
                     if let Some(supervisor) = &mut supervisors[i] {
                         supervisor.stop();
                     }
                     if let Some(action) = completed_action {
                         if results[i].status == Status::Succeeded {
-                            match action.save(
-                                &self.tasks[i],
-                                &results[i].stdout,
-                                &results[i].stderr,
-                            ) {
-                                Ok(()) => results[i].cache.outcome = "stored".into(),
-                                Err(e) => {
-                                    results[i].status = if cancel.is_cancelled() {
-                                        Status::Cancelled
-                                    } else {
-                                        Status::Failed
-                                    };
-                                    results[i].error = Some(e.clone());
-                                    results[i].cache.outcome = if cancel.is_cancelled() {
-                                        "cancelled"
-                                    } else {
-                                        "error"
-                                    }
-                                    .into();
-                                    results[i].cache.reason = e;
+                            let task = self.tasks[i].clone();
+                            let stdout = results[i].stdout.clone();
+                            let stderr = results[i].stderr.clone();
+                            match worker::Worker::spawn(move |token| {
+                                action
+                                    .with_cancellation(token)
+                                    .save(&task, &stdout, &stderr)
+                            }) {
+                                Ok(worker) => {
+                                    saving.push(Saving {
+                                        index: i,
+                                        started: task_started,
+                                        worker,
+                                        _leases: completed_leases,
+                                        stop: None,
+                                    });
+                                    results[i].status = Status::Running;
+                                    results[i].cache.outcome = "storing".into();
+                                    continue;
+                                }
+                                Err(error) => {
+                                    results[i].status = Status::Failed;
+                                    results[i].error = Some(error.clone());
+                                    results[i].cache.outcome = "error".into();
+                                    results[i].cache.reason = error;
                                 }
                             }
                         }
                     }
+                    release_resources(&self.tasks[i], &mut resources, &mut readers);
                     drop(completed_leases);
                     if results[i].status == Status::Succeeded {
                         if self.tasks[i].service.is_none() {
@@ -603,6 +681,7 @@ impl Plan {
                             .iter()
                             .filter(|r| self.tasks[r.index].service.is_none())
                             .count()
+                            + saving.len()
                             < self.jobs
                     }
                 {
@@ -787,7 +866,8 @@ impl Plan {
             }
             // A set of ready daemons can occupy all capacity/resources required by
             // their pending consumers. Fail with cleanup instead of waiting forever.
-            if !running.is_empty()
+            if saving.is_empty()
+                && !running.is_empty()
                 && running
                     .iter()
                     .all(|r| results[r.index].status == Status::Ready)
@@ -875,3 +955,6 @@ fn spawn(
     }
     command.spawn()
 }
+
+#[cfg(all(test, unix))]
+mod cache_worker_tests;

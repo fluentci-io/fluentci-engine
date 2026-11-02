@@ -13,7 +13,8 @@ milestones do not establish a claim of being the fastest engine.
   sequential pending migration to the explicit plan runtime.
 - Opt-in local content-addressed action cache, verified artifact restoration,
   invalidation components, Unix action-lock deduplication, rollback on restoration
-  errors, and preflight rejection of unordered overlapping declared cache paths.
+  errors, preflight rejection of unordered overlapping declared cache paths, and
+  bounded background cache saving that retains leases and dependency gates.
 - Durable JSON execution events and unified live CLI TUI, plain CI output, and
   machine-readable event output.
 - Rust extension adapters for Homebrew (macOS ARM64/Linux x86_64), MacPorts

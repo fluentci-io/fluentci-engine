@@ -477,6 +477,11 @@ pub(crate) fn prepare_cancellable(
 }
 
 impl Prepared {
+    pub(crate) fn with_cancellation(mut self, cancel: Cancellation) -> Self {
+        self.cancel = cancel;
+        self
+    }
+
     fn blob(&self, hash: &str) -> Result<PathBuf, String> {
         if !valid_digest(hash) {
             return Err("invalid blob digest".into());
@@ -515,6 +520,8 @@ impl Prepared {
     }
 
     pub fn save(&self, task: &Task, stdout: &Path, stderr: &Path) -> Result<(), String> {
+        #[cfg(all(test, unix))]
+        crate::cache_worker_tests::pause_save(&task.cwd, &self.cancel)?;
         let policy = task.cache.as_ref().ok_or("missing cache policy")?;
         if file_digest(&self.executable, &self.cancel)? != self.components["executable"] {
             return Err("executable changed during execution; action was not cached".into());

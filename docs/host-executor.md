@@ -76,11 +76,19 @@ claim of benchmark-leading performance. It bounds process concurrency, not CPU
 or memory usage inside each command. Cache hashing and copying check run
 cancellation between 64 KiB chunks, and tree snapshots check between entries.
 Cancelled cache work stops the task without falling back to command execution.
-Filesystem calls, manifest serialization, output cleanup, and output publication
-can still delay the scheduler; publication finishes or rolls back once started.
-This is cooperative cancellation, not a hard real-time deadline. Moving cache
-work off the scheduler remains necessary to keep unrelated task timeouts and
-service probes responsive during large cache operations.
+Successful commands save their cache entries on background workers. A saving task
+remains `running` with cache outcome `storing`, occupies a job slot, and retains
+its action/resource leases. Dependencies are released only after saving succeeds.
+The task timeout includes this save phase. Cancellation, fail-fast, and timeout
+cancel workers cooperatively; executor error cleanup cancels and joins them before
+releasing leases. Other tasks and service probes continue while saves run.
+
+Cache preparation and restoration still execute on the scheduler. Their filesystem
+calls, manifest serialization, output cleanup, and output replacement can delay
+unrelated tasks. Restoration finishes or rolls back replacement once started.
+Moving these remaining operations off the scheduler is still necessary. This is
+cooperative cancellation, not a hard real-time deadline; individual filesystem
+calls can block even on a background worker.
 
 Native package providers and the PureScript host SDK are available below.
 Remote workers, remote artifact storage, and the remaining SDKs are follow-up
