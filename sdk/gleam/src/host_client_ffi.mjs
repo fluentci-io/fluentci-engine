@@ -29,7 +29,7 @@ async function read_body(response) {
   }
 }
 
-async function perform(config, method, id, suffix, body, key, ok, error) {
+async function perform(config, method, id, suffix, body, key, ok, error, trace = {}) {
   const controller = new AbortController();
   let timer, response, payload, problem = "invalid client configuration";
   try {
@@ -46,7 +46,7 @@ async function perform(config, method, id, suffix, body, key, ok, error) {
     response = await fetch(new URL(`/v1/runs${submission ? "" : `/${id}${suffix}`}`, base), {
       method,
       headers: { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json",
-        ...(key === "" ? {} : { "Idempotency-Key": key }) },
+        ...(key === "" ? {} : { "Idempotency-Key": key }), ...trace },
       body: body === "" ? undefined : body,
       signal: controller.signal,
       redirect: "error",
@@ -95,4 +95,17 @@ export function events(config, id, cursor, ok, invalid, http_error, transport_er
     catch { return invalid(); }
     return ok(text, next);
   }, transport_error);
+}
+
+
+export function submit_request(config, body, key, traceparent, tracestate, ok, error) {
+  // Only the two propagation fields are forwarded. Do not accept arbitrary
+  // caller-controlled headers that could replace authorization or request keys.
+  if ([traceparent, tracestate].some(value => value.length > 512 || /[^\x20-\x7e]/.test(value)) ||
+      (traceparent === "" && tracestate !== "")) {
+    return Promise.resolve(error("invalid trace-context headers"));
+  }
+  const trace = traceparent === "" ? {} : { traceparent, ...(tracestate === "" ? {} : { tracestate }) };
+  return perform(config, "POST", "", "", body, key, (response, bytes) =>
+    ok(response.status, new TextDecoder().decode(bytes), response.headers.get("Idempotency-Key") ?? ""), error, trace);
 }

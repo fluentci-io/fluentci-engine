@@ -171,8 +171,31 @@ and increasing sequence numbers within each page. Unknown event variants fail wi
 Consumers can retain the last sequence number to detect accidental replay across
 pages. Journal log text is intended for display; use `get_logs` for exact bytes.
 
-History and outgoing trace-context propagation remain to be added to this Gleam
-adapter; existing event trace/span IDs are already decoded.
+### Link server runs to a caller trace
+
+Pass headers exported by your application's OpenTelemetry propagator explicitly:
+
+```gleam
+let context = client.TraceContext(traceparent, tracestate)
+client.submit_with_context(plan, config, Some("unique-build-attempt"), context)
+```
+
+Import `Some` from `gleam/option`; use `None` for an unkeyed submission. An empty
+`tracestate` omits that header. The adapter forwards only `traceparent` and
+`tracestate`, rejects empty explicit parents, control characters, non-ASCII values
+and headers longer than 512 bytes, and leaves trace-context semantics to the
+engine's propagator. Invalid semantic context may therefore start a new trace;
+use your tracing library's exported context. This does not create a caller span
+or forward baggage automatically.
+
+Configure the server's OpenTelemetry exporter to record/export run and step spans.
+Journal event trace/span IDs let your UI correlate execution with those spans.
+Replaying an existing idempotency key preserves the original run's trace even
+when the retry carries a different context. Tests use a local OTLP HTTP/protobuf
+collector and check journal correlation and exported run/step spans after server
+shutdown. They do not contact an external telemetry service.
+
+Run history remains to be added to this Gleam adapter.
 
 The existing APIs below use the legacy engine path. Verify host plans, local
 execution and server execution against a built release engine with:
@@ -189,7 +212,7 @@ architectures using pinned Gleam/Deno versions and Node 26. The engine fixture u
 checks cold/warm caching across workspaces, typed local success/failure, launch errors,
 cancellation cleanup, authenticated server execution, keyed replay, live binary
 output, service probe logs, typed journal events, resumable byte cursors and HTTP
-error paths. Tests perform no package installation.
+error paths, trace propagation and local OTLP export. Tests perform no package installation.
 
 ## Legacy API quick start
 

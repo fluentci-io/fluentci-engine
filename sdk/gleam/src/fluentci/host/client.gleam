@@ -111,7 +111,7 @@ pub fn submit(
   plan: host.Plan,
   config: Config,
 ) -> Promise(Result(RunState, Error)) {
-  submit_impl(plan, config, "")
+  submit_impl(plan, config, "", None)
 }
 
 /// Reuse the same nonempty key and plan to recover an ambiguous submission.
@@ -126,7 +126,7 @@ pub fn submit_with_key(
       promise.resolve(
         Error(TransportError("idempotency key must not be empty")),
       )
-    _ -> submit_impl(plan, config, key)
+    _ -> submit_impl(plan, config, key, None)
   }
 }
 
@@ -134,17 +134,21 @@ fn submit_impl(
   plan: host.Plan,
   config: Config,
   key: String,
+  context: Option(TraceContext),
 ) -> Promise(Result(RunState, Error)) {
+  let #(traceparent, tracestate) = case context {
+    None -> #("", "")
+    Some(TraceContext(traceparent, tracestate)) -> #(traceparent, tracestate)
+  }
   case host.compile(plan) {
     Error(error) -> promise.resolve(Error(InvalidPlan(error)))
     Ok(body) ->
-      request(
+      submit_request(
         config,
-        "POST",
-        "",
-        "",
         body,
         key,
+        traceparent,
+        tracestate,
         fn(code, body, acknowledged) {
           case code {
             202 ->
@@ -321,4 +325,41 @@ pub fn get_events(
     fn(code, body) { Error(HttpError(code, body)) },
     fn(message) { Error(TransportError(message)) },
   )
+}
+
+/// Trace-context headers exported by the caller's OpenTelemetry propagator.
+/// The engine's propagator interprets their semantics. No baggage is forwarded.
+pub type TraceContext {
+  TraceContext(traceparent: String, tracestate: String)
+}
+
+@external(javascript, "../../host_client_ffi.mjs", "submit_request")
+fn submit_request(
+  config: Config,
+  body: String,
+  key: String,
+  traceparent: String,
+  tracestate: String,
+  ok: fn(Int, String, String) -> Result(RunState, Error),
+  error: fn(String) -> Result(RunState, Error),
+) -> Promise(Result(RunState, Error))
+
+/// Submit with explicit parent trace context and an optional idempotency key.
+/// Replaying an existing key preserves its original run and trace association.
+pub fn submit_with_context(
+  plan: host.Plan,
+  config: Config,
+  key: Option(String),
+  context: TraceContext,
+) -> Promise(Result(RunState, Error)) {
+  case key, context.traceparent {
+    Some(""), _ ->
+      promise.resolve(
+        Error(TransportError("idempotency key must not be empty")),
+      )
+    _, "" ->
+      promise.resolve(Error(TransportError("traceparent must not be empty")))
+    None, _ -> submit_impl(plan, config, "", Some(context))
+    Some(key), _ -> submit_impl(plan, config, key, Some(context))
+  }
 }

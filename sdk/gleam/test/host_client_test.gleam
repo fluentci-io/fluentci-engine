@@ -269,3 +269,62 @@ fn event_transport_contract() -> Promise(Nil)
 pub fn event_cursor_validation_test() {
   event_transport_contract()
 }
+
+@external(javascript, "./host_client_test_ffi.mjs", "traced_fixture")
+fn traced_fixture(
+  run: fn(String, String, String) -> Promise(Nil),
+) -> Promise(Nil)
+
+@external(javascript, "./host_client_test_ffi.mjs", "trace_transport_contract")
+fn trace_transport_contract() -> Promise(Nil)
+
+pub fn trace_header_validation_test() {
+  trace_transport_contract()
+}
+
+pub fn traced_submission_reaches_events_and_exporter_test() {
+  traced_fixture(fn(base, token, root) {
+    let config = client.Config(base, token, 5000)
+    let trace = "1234567890abcdef1234567890abcdef"
+    let context =
+      client.TraceContext(
+        "00-" <> trace <> "-fedcba9876543210-01",
+        "vendor=gleam",
+      )
+    let task =
+      host.task("traced", "/bin/sh", root)
+      |> host.with_args(["-c", "printf executed >> output"])
+    let plan = host.plan([task])
+    use value <- promise.await(client.submit_with_context(
+      plan,
+      config,
+      Some("traced-key"),
+      context,
+    ))
+    let assert Ok(admitted) = value
+    use state <- promise.await(terminal(admitted.id, config, 200))
+    state.status |> should.equal(client.Succeeded)
+    let other =
+      client.TraceContext(
+        "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+        "vendor=other",
+      )
+    use value <- promise.await(client.submit_with_context(
+      plan,
+      config,
+      Some("traced-key"),
+      other,
+    ))
+    let assert Ok(replayed) = value
+    replayed.id |> should.equal(admitted.id)
+    use value <- promise.map(client.get_events(admitted.id, 0, config))
+    let assert Ok(page) = value
+    { page.events != [] } |> should.be_true
+    list.each(page.events, fn(event) {
+      event.trace_id |> should.equal(Some(trace))
+    })
+    let assert Ok(first) = list.first(page.events)
+    list.any(page.events, fn(event) { event.span_id != first.span_id })
+    |> should.be_true
+  })
+}

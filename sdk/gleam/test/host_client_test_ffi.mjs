@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -5,13 +6,13 @@ import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import process from 'node:process';
 import assert from 'node:assert/strict';
-import { request, logs, events } from './host_client_ffi.mjs';
+import { request, logs, events, submit_request } from './host_client_ffi.mjs';
 
 export const pause = () => new Promise(resolve => setTimeout(resolve, 25));
 const listen = server => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(server.address().port)));
 const close = server => new Promise(resolve => { server.close(resolve); server.closeAllConnections(); });
 
-export async function fixture(run) {
+export async function fixture(run, traced = false) {
   const binary = process.env.FLUENTCI_ENGINE_BIN;
   if (!binary) {
     if (process.env.FLUENTCI_REQUIRE_ENGINE === '1') throw Error('FLUENTCI_ENGINE_BIN required');
@@ -24,8 +25,21 @@ export async function fixture(run) {
   const port = await listen(reservation);
   await close(reservation);
   const base = `http://127.0.0.1:${port}`, token = 'gleam-integration-secret';
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('OTEL_')));
+  const payloads = [];
+  let collector;
+  if (traced) {
+    collector = createServer((req, res) => {
+      const chunks = [];
+      req.on('data', bytes => chunks.push(bytes));
+      req.on('end', () => { payloads.push(Buffer.concat(chunks)); res.writeHead(200); res.end(); });
+    });
+    const collectorPort = await listen(collector);
+    env.OTEL_EXPORTER_OTLP_ENDPOINT = `http://127.0.0.1:${collectorPort}/v1/traces`;
+    env.OTEL_EXPORTER_OTLP_PROTOCOL = 'http/protobuf';
+  }
   const child = spawn(binary, ['serve-runs', '--listen', `127.0.0.1:${port}`, '--data-dir', join(root, 'server'), '--max-runs', '2'], {
-    env: { ...process.env, FLUENTCI_RUN_TOKEN: token }, stdio: ['ignore', 'ignore', 'pipe'],
+    env: { ...env, FLUENTCI_RUN_TOKEN: token }, stdio: ['ignore', 'ignore', 'pipe'],
   });
   let diagnostics = '', launchError;
   child.stderr.on('data', value => { diagnostics = (diagnostics + value).slice(-8192); });
@@ -49,9 +63,20 @@ export async function fixture(run) {
   } finally {
     child.kill('SIGINT');
     await stopped;
+    if (collector) await close(collector);
     await rm(root, { recursive: true, force: true });
   }
+  if (traced) {
+    const exported = Buffer.concat(payloads);
+    assert.ok(exported.includes(Buffer.from('pipeline.run')));
+    assert.ok(exported.includes(Buffer.from('pipeline.step')));
+    assert.ok(exported.includes(Buffer.from('1234567890abcdef1234567890abcdef', 'hex')));
+    assert.ok(exported.includes(Buffer.from('fedcba9876543210', 'hex')));
+    assert.ok(exported.includes(Buffer.from('vendor=gleam')));
+  }
 }
+
+export const traced_fixture = run => fixture(run, true);
 
 export async function transport_contract() {
   let mode = 'ok', calls = 0;
@@ -168,5 +193,33 @@ export async function event_transport_contract() {
     const before = calls;
     for (const cursor of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1]) assert.equal(await read(cursor), 'transport-error');
     assert.equal(calls, before);
+  } finally { await close(server); }
+}
+
+
+export async function trace_transport_contract() {
+  const requests = [];
+  const server = createServer((req, res) => {
+    requests.push(req.headers);
+    res.writeHead(202, { 'Idempotency-Key': req.headers['idempotency-key'] ?? '' }); res.end('{}');
+  });
+  const port = await listen(server);
+  const config = { base_url: `http://127.0.0.1:${port}`, token: 'trace-token', timeout_ms: 5000 };
+  const parent = '00-1234567890abcdef1234567890abcdef-1234567890abcdef-01';
+  const send = (p, state) => submit_request(config, '{}', 'trace-key', p, state, () => 'ok', () => 'error');
+  try {
+    assert.equal(await send(parent, 'vendor=gleam'), 'ok');
+    assert.equal(requests[0].traceparent, parent);
+    assert.equal(requests[0].tracestate, 'vendor=gleam');
+    assert.equal(requests[0].authorization, 'Bearer trace-token');
+    assert.equal(requests[0]['idempotency-key'], 'trace-key');
+    assert.equal(await send('', ''), 'ok');
+    assert.equal(requests[1].traceparent, undefined);
+    assert.equal(requests[1].tracestate, undefined);
+    const count = requests.length;
+    for (const [p, state] of [[parent + '\r\nX-Extra: bad', ''], [parent, 'bad\nvalue'], [parent, 'x'.repeat(513)], ['', 'vendor=gleam'], [parent, 'é']]) {
+      assert.equal(await send(p, state), 'error');
+    }
+    assert.equal(requests.length, count);
   } finally { await close(server); }
 }
