@@ -3,23 +3,29 @@ use super::*;
 use std::sync::{mpsc, Mutex, OnceLock};
 
 type Gate = (mpsc::Sender<()>, mpsc::Receiver<()>);
-static GATES: OnceLock<Mutex<HashMap<PathBuf, Gate>>> = OnceLock::new();
+static GATES: OnceLock<Mutex<HashMap<(PathBuf, String), Gate>>> = OnceLock::new();
 fn gate(root: &Path) -> (mpsc::Receiver<()>, mpsc::Sender<()>) {
+    gate_for(root, "save")
+}
+fn gate_for(root: &Path, phase: &str) -> (mpsc::Receiver<()>, mpsc::Sender<()>) {
     let (started_tx, started_rx) = mpsc::channel();
     let (release_tx, release_rx) = mpsc::channel();
     GATES
         .get_or_init(Default::default)
         .lock()
         .unwrap()
-        .insert(root.into(), (started_tx, release_rx));
+        .insert((root.into(), phase.into()), (started_tx, release_rx));
     (started_rx, release_tx)
 }
 pub(super) fn pause_save(root: &Path, cancel: &Cancellation) -> Result<(), String> {
+    pause(root, "save", cancel)
+}
+pub(super) fn pause(root: &Path, phase: &str, cancel: &Cancellation) -> Result<(), String> {
     let gate = GATES
         .get_or_init(Default::default)
         .lock()
         .unwrap()
-        .remove(root);
+        .remove(&(root.into(), phase.into()));
     if let Some((started, release)) = gate {
         started.send(()).map_err(|e| e.to_string())?;
         loop {
@@ -170,4 +176,162 @@ fn journal_failure_joins_publication_and_releases_its_leases() {
         resources::acquire(&root.path().join("locks"), &["workspace".into()], &[]).unwrap(),
         resources::Attempt::Acquired(_)
     ));
+}
+
+#[test]
+fn lookup_workers_allow_timeouts_without_releasing_dependencies_or_log_cursors() {
+    for phase in ["prepare", "restore"] {
+        let root = tempfile::tempdir().unwrap();
+        let mut p = plan(root.path(), 2);
+        p.tasks[0].args[1].push_str("; printf verified-log");
+        if phase == "restore" {
+            assert!(p
+                .execute(&root.path().join("cold"), &Cancellation::default())
+                .unwrap()
+                .success());
+            fs::remove_file(root.path().join("output")).unwrap();
+            fs::remove_file(root.path().join("dependent")).unwrap();
+        }
+        let mut independent = p.tasks[1].clone();
+        independent.id = "independent".into();
+        independent.needs.clear();
+        independent.args[1] = "/bin/sleep 5".into();
+        independent.timeout_ms = Some(100);
+        p.tasks.push(independent);
+        let (started, release) = gate_for(root.path(), phase);
+        let run = root.path().join("run");
+        thread::scope(|scope| {
+            let release = release;
+            let handle = scope.spawn(|| p.execute(&run, &Cancellation::default()).unwrap());
+            started.recv_timeout(Duration::from_secs(3)).unwrap();
+            if phase == "restore" {
+                fs::write(run.join("0.stdout"), "tentative-log").unwrap();
+            }
+            wait_state(&run.join("events.jsonl"), "independent", "timed_out");
+            assert!(!root.path().join("output").exists());
+            assert!(!root.path().join("dependent").exists());
+            assert!(!fs::read_to_string(run.join("events.jsonl"))
+                .unwrap()
+                .contains("tentative-log"));
+            assert!(matches!(
+                resources::acquire(&root.path().join("locks"), &["workspace".into()], &[]).unwrap(),
+                resources::Attempt::Busy(_)
+            ));
+            release.send(()).unwrap();
+            let result = handle.join().unwrap();
+            assert_eq!(result.tasks[0].status, Status::Succeeded);
+            assert_eq!(result.tasks[1].status, Status::Succeeded);
+            assert_eq!(result.tasks[2].status, Status::TimedOut);
+            assert_eq!(
+                result.tasks[0].cache.outcome,
+                if phase == "restore" { "hit" } else { "stored" }
+            );
+            assert!(fs::read_to_string(run.join("events.jsonl"))
+                .unwrap()
+                .contains("verified-log"));
+        });
+    }
+}
+
+#[test]
+fn lookup_cancellation_and_timeout_never_start_the_command() {
+    for phase in ["prepare", "restore"] {
+        for external_cancel in [true, false] {
+            let root = tempfile::tempdir().unwrap();
+            let mut p = plan(root.path(), 1);
+            p.tasks[0].timeout_ms = Some(200);
+            let (started, _release) = gate_for(root.path(), phase);
+            let cancel = Cancellation::default();
+            thread::scope(|scope| {
+                let handle = scope.spawn(|| p.execute(&root.path().join("run"), &cancel).unwrap());
+                started.recv_timeout(Duration::from_secs(3)).unwrap();
+                if external_cancel {
+                    cancel.cancel();
+                }
+                let result = handle.join().unwrap();
+                assert_eq!(
+                    result.tasks[0].status,
+                    if external_cancel {
+                        Status::Cancelled
+                    } else {
+                        Status::TimedOut
+                    }
+                );
+                assert!(!root.path().join("output").exists());
+                assert!(!root.path().join("dependent").exists());
+                assert!(matches!(
+                    resources::acquire(&root.path().join("locks"), &["workspace".into()], &[])
+                        .unwrap(),
+                    resources::Attempt::Acquired(_)
+                ));
+            });
+        }
+    }
+}
+
+#[test]
+fn action_lock_retries_do_not_reset_the_preparation_deadline() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = plan(root.path(), 1);
+    p.tasks[0].timeout_ms = Some(100);
+    let _owner = cache::prepare(&root.path().join("cache"), &p.tasks[0], &[])
+        .unwrap()
+        .unwrap();
+    let cancel = Cancellation::default();
+    let (done, completion) = mpsc::channel();
+    thread::scope(|scope| {
+        let watcher_cancel = cancel.clone();
+        scope.spawn(move || {
+            if completion.recv_timeout(Duration::from_secs(2)).is_err() {
+                watcher_cancel.cancel();
+            }
+        });
+        let result = p.execute(&root.path().join("run"), &cancel).unwrap();
+        done.send(()).unwrap();
+        assert_eq!(result.tasks[0].status, Status::TimedOut);
+        assert!(!root.path().join("output").exists());
+    });
+}
+
+#[test]
+fn service_health_probes_continue_during_each_cache_phase() {
+    for phase in ["prepare", "restore", "save"] {
+        let root = tempfile::tempdir().unwrap();
+        let mut p = plan(root.path(), 2);
+        if phase == "restore" {
+            assert!(p
+                .execute(&root.path().join("cold"), &Cancellation::default())
+                .unwrap()
+                .success());
+        }
+        let service: Task = serde_json::from_value(serde_json::json!({
+            "id":"service", "program":"/bin/sh", "args":["-c","while :; do /bin/sleep 1; done"], "cwd":root.path(),
+            "service":{"readiness":{"program":"/bin/sh", "args":["-c","echo probe >> probes"], "interval_ms":20,"timeout_ms":500},"startup_timeout_ms":2000,"shutdown_timeout_ms":100}
+        })).unwrap();
+        let consumer: Task = serde_json::from_value(serde_json::json!({
+            "id":"consumer", "program":"/bin/sleep", "args":["5"], "cwd":root.path(),
+            "needs":["service"], "timeout_ms":200
+        }))
+        .unwrap();
+        p.tasks.extend([service, consumer]);
+        let (started, release) = gate_for(root.path(), phase);
+        let run = root.path().join("run");
+        thread::scope(|scope| {
+            let release = release;
+            let handle = scope.spawn(|| p.execute(&run, &Cancellation::default()).unwrap());
+            started.recv_timeout(Duration::from_secs(3)).unwrap();
+            wait_state(&run.join("events.jsonl"), "consumer", "timed_out");
+            assert!(
+                fs::read_to_string(root.path().join("probes"))
+                    .unwrap()
+                    .lines()
+                    .count()
+                    > 1
+            );
+            release.send(()).unwrap();
+            let result = handle.join().unwrap();
+            assert_eq!(result.tasks[0].status, Status::Succeeded);
+            assert_eq!(result.tasks[3].status, Status::TimedOut);
+        });
+    }
 }

@@ -386,6 +386,8 @@ pub(crate) fn prepare_cancellable(
     dependency_keys: &[String],
     cancel: &Cancellation,
 ) -> Result<Option<Prepared>, String> {
+    #[cfg(all(test, unix))]
+    crate::cache_worker_tests::pause(&task.cwd, "prepare", cancel)?;
     check_cancel(cancel)?;
     let policy = task.cache.as_ref().ok_or("missing cache policy")?;
     policy.validate()?;
@@ -473,6 +475,46 @@ pub(crate) fn prepare_cancellable(
         root: root.into(),
         cancel: cancel.clone(),
         _lock: lock,
+    }))
+}
+
+pub(crate) struct Lookup {
+    pub action: Prepared,
+    pub hit: bool,
+    pub reason: String,
+}
+
+/// Run entirely on an owned worker while the scheduler retains resource leases.
+pub(crate) fn lookup(
+    root: &Path,
+    task: &Task,
+    dependencies: &[String],
+    stdout: &Path,
+    stderr: &Path,
+    cancel: &Cancellation,
+) -> Result<Option<Lookup>, String> {
+    let Some(action) = prepare_cancellable(root, task, dependencies, cancel)? else {
+        return Ok(None);
+    };
+    let (hit, reason) = match action.restore(task, stdout, stderr) {
+        Ok(true) => (true, "verified cached outputs restored".into()),
+        Ok(false) => (false, "no matching action".into()),
+        Err(error) => {
+            check_cancel(cancel)?;
+            (false, format!("cache rejected: {error}"))
+        }
+    };
+    check_cancel(cancel)?;
+    if !hit {
+        // Journal tailing is suspended for this task until lookup completes.
+        let _ = fs::remove_file(stdout);
+        let _ = fs::remove_file(stderr);
+        action.clean_outputs(task)?;
+    }
+    Ok(Some(Lookup {
+        action,
+        hit,
+        reason,
     }))
 }
 
@@ -566,6 +608,8 @@ impl Prepared {
     }
     /// Stage and validate every artifact before changing any workspace output.
     pub fn restore(&self, task: &Task, stdout: &Path, stderr: &Path) -> Result<bool, String> {
+        #[cfg(all(test, unix))]
+        crate::cache_worker_tests::pause(&task.cwd, "restore", &self.cancel)?;
         check_cancel(&self.cancel)?;
         let path = self.root.join("actions").join(format!("{}.json", self.key));
         let bytes = match fs::read(&path) {

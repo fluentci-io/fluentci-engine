@@ -112,6 +112,11 @@ impl Journal {
                 .into_iter()
                 .enumerate()
             {
+                // A rejected restore can replace/remove these files before spawn.
+                // Do not emit tentative logs or advance their cursors.
+                if result.cache.outcome == "preparing" {
+                    continue;
+                }
                 let mut file = match File::open(path.1) {
                     Ok(f) => f,
                     Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,

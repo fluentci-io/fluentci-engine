@@ -13,7 +13,7 @@ impl<T: Send + 'static> Worker<T> {
         let cancel = Cancellation::default();
         let token = cancel.clone();
         let handle = thread::Builder::new()
-            .name("fluentci-cache-save".into())
+            .name("fluentci-cache".into())
             .spawn(move || work(token))
             .map_err(|e| e.to_string())?;
         Ok(Self {

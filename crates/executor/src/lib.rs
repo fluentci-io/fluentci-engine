@@ -170,6 +170,14 @@ impl Drop for Running {
     }
 }
 
+struct Preparing {
+    index: usize,
+    started: Instant,
+    worker: worker::Worker<Option<cache::Lookup>>,
+    leases: Option<resources::Leases>,
+    stop: Option<Status>,
+}
+
 struct Saving {
     index: usize,
     started: Instant,
@@ -383,16 +391,104 @@ impl Plan {
         let mut remaining: Vec<_> = graph.dependencies.iter().map(Vec::len).collect();
         let mut running: Vec<Running> = Vec::new();
         let mut saving: Vec<Saving> = Vec::new();
+        let mut preparing: Vec<Preparing> = Vec::new();
         let mut resources = HashSet::new();
         let mut readers: HashMap<String, usize> = HashMap::new();
         let mut waiting_since: Vec<Option<Instant>> = vec![None; self.tasks.len()];
         let mut retry_at: Vec<Option<Instant>> = vec![None; self.tasks.len()];
+        let mut cache_started: Vec<Option<Instant>> = vec![None; self.tasks.len()];
         let mut failed = false;
         let mut stalled = false;
-        let mut prepared: Vec<Option<cache::Prepared>> =
-            (0..self.tasks.len()).map(|_| None).collect();
         loop {
             let stopping = stalled || cancel.is_cancelled() || (self.fail_fast && failed);
+            let mut lookup_index = 0;
+            while lookup_index < preparing.len() {
+                let lookup = &mut preparing[lookup_index];
+                let i = lookup.index;
+                results[i].duration_ms = lookup.started.elapsed().as_millis();
+                if lookup.stop.is_none() {
+                    if stopping {
+                        lookup.stop = Some(Status::Cancelled);
+                    } else if self.tasks[i]
+                        .timeout_ms
+                        .is_some_and(|ms| lookup.started.elapsed() >= Duration::from_millis(ms))
+                    {
+                        lookup.stop = Some(Status::TimedOut);
+                    }
+                    if lookup.stop.is_some() {
+                        lookup.worker.cancel();
+                    }
+                }
+                let Some(outcome) = lookup.worker.poll() else {
+                    lookup_index += 1;
+                    continue;
+                };
+                let mut lookup = preparing.swap_remove(lookup_index);
+                if let Some(status) = lookup.stop.take() {
+                    results[i].status = status;
+                    results[i].cache.outcome = "cancelled".into();
+                    results[i].cache.reason = "cache preparation interrupted".into();
+                    results[i].error = Some(results[i].cache.reason.clone());
+                    failed = true;
+                } else {
+                    match outcome {
+                        Ok(Some(found)) => {
+                            results[i].cache.key = Some(found.action.key.clone());
+                            results[i].cache.components = found.action.components.clone();
+                            results[i].cache.reason = found.reason;
+                            if found.hit {
+                                results[i].status = Status::Succeeded;
+                                results[i].exit_code = Some(0);
+                                results[i].cache.outcome = "hit".into();
+                                for &next in &graph.successors[i] {
+                                    remaining[next] -= 1;
+                                }
+                            } else if cancel.is_cancelled() || (self.fail_fast && failed) {
+                                results[i].status = Status::Cancelled;
+                                results[i].cache.outcome = "cancelled".into();
+                            } else {
+                                results[i].cache.outcome = "miss".into();
+                                match spawn(
+                                    &self.tasks[i],
+                                    &results[i],
+                                    &environment,
+                                    Some(&found.action.executable),
+                                ) {
+                                    Ok(child) => {
+                                        running.push(Running {
+                                            index: i,
+                                            child,
+                                            started: lookup.started,
+                                            leases: lookup.leases.take(),
+                                            action: Some(found.action),
+                                        });
+                                        continue;
+                                    }
+                                    Err(error) => {
+                                        results[i].status = Status::Failed;
+                                        results[i].error = Some(error.to_string());
+                                        failed = true;
+                                    }
+                                }
+                            }
+                        }
+                        Ok(None) => {
+                            results[i].status = Status::Pending;
+                            results[i].cache.outcome = "waiting".into();
+                            results[i].cache.reason = "another execution owns this action".into();
+                            retry_at[i] = Some(Instant::now() + Duration::from_millis(50));
+                        }
+                        Err(error) => {
+                            results[i].status = Status::Failed;
+                            results[i].error = Some(error.clone());
+                            results[i].cache.outcome = "error".into();
+                            results[i].cache.reason = error;
+                            failed = true;
+                        }
+                    }
+                }
+                release_resources(&self.tasks[i], &mut resources, &mut readers);
+            }
             // Cache publication retains both a job slot and resource leases.
             let mut publication = 0;
             while publication < saving.len() {
@@ -669,6 +765,15 @@ impl Plan {
                     results[i].status = Status::Skipped;
                 } else if stalled || cancel.is_cancelled() || (self.fail_fast && failed) {
                     results[i].status = Status::Cancelled;
+                } else if cache_started[i].is_some_and(|start| {
+                    self.tasks[i]
+                        .timeout_ms
+                        .is_some_and(|ms| start.elapsed() >= Duration::from_millis(ms))
+                }) {
+                    results[i].status = Status::TimedOut;
+                    results[i].cache.outcome = "cancelled".into();
+                    results[i].error = Some("cache preparation timeout".into());
+                    failed = true;
                 } else if remaining[i] == 0
                     && if self.tasks[i].service.is_some() {
                         running
@@ -682,6 +787,7 @@ impl Plan {
                             .filter(|r| self.tasks[r.index].service.is_none())
                             .count()
                             + saving.len()
+                            + preparing.len()
                             < self.jobs
                     }
                 {
@@ -741,6 +847,7 @@ impl Plan {
                         }
                     };
                     if self.tasks[i].cache.is_some() {
+                        let started = *cache_started[i].get_or_insert(started);
                         let dependency_keys: Vec<_> = graph.dependencies[i]
                             .iter()
                             .map(|&p| {
@@ -749,98 +856,46 @@ impl Plan {
                                 })
                             })
                             .collect();
-                        let action = match cache::prepare_cancellable(
-                            self.cache_dir.as_ref().expect("validated cache directory"),
-                            &self.tasks[i],
-                            &dependency_keys,
-                            cancel,
-                        ) {
-                            Ok(Some(action)) => action,
-                            Ok(None) => {
-                                results[i].cache.outcome = "waiting".into();
-                                results[i].cache.reason =
-                                    "another execution owns this action".into();
-                                continue;
+                        let task = self.tasks[i].clone();
+                        let root = self
+                            .cache_dir
+                            .as_ref()
+                            .expect("validated cache directory")
+                            .clone();
+                        let stdout = results[i].stdout.clone();
+                        let stderr = results[i].stderr.clone();
+                        match worker::Worker::spawn(move |token| {
+                            cache::lookup(&root, &task, &dependency_keys, &stdout, &stderr, &token)
+                        }) {
+                            Ok(worker) => {
+                                resources.extend(self.tasks[i].resources.iter().cloned());
+                                for resource in &self.tasks[i].shared_resources {
+                                    *readers.entry(resource.clone()).or_default() += 1;
+                                }
+                                preparing.push(Preparing {
+                                    index: i,
+                                    started,
+                                    worker,
+                                    leases: Some(task_leases),
+                                    stop: None,
+                                });
+                                results[i].status = Status::Running;
+                                results[i].cache.outcome = "preparing".into();
                             }
                             Err(error) => {
-                                results[i].status = if cancel.is_cancelled() {
-                                    Status::Cancelled
-                                } else {
-                                    Status::Failed
-                                };
-                                results[i].error = Some(error.clone());
-                                results[i].cache.outcome = if cancel.is_cancelled() {
-                                    "cancelled"
-                                } else {
-                                    "error"
-                                }
-                                .into();
-                                results[i].cache.reason = error;
+                                results[i].status = Status::Failed;
+                                results[i].error = Some(error);
+                                results[i].cache.outcome = "error".into();
                                 failed = true;
-                                continue;
-                            }
-                        };
-                        results[i].cache.key = Some(action.key.clone());
-                        results[i].cache.components = action.components.clone();
-                        match action.restore(&self.tasks[i], &results[i].stdout, &results[i].stderr)
-                        {
-                            Ok(true) => {
-                                results[i].status = Status::Succeeded;
-                                results[i].exit_code = Some(0);
-                                results[i].duration_ms = started.elapsed().as_millis();
-                                results[i].cache.outcome = "hit".into();
-                                results[i].cache.reason = "verified cached outputs restored".into();
-                                for &next in &graph.successors[i] {
-                                    remaining[next] -= 1;
-                                }
-                                continue;
-                            }
-                            Ok(false) => results[i].cache.reason = "no matching action".into(),
-                            Err(error) => {
-                                if cancel.is_cancelled() {
-                                    results[i].status = Status::Cancelled;
-                                    results[i].cache.outcome = "cancelled".into();
-                                    results[i].cache.reason = error;
-                                    continue;
-                                }
-                                results[i].cache.reason = format!("cache rejected: {error}")
                             }
                         }
-                        results[i].cache.outcome = "miss".into();
-                        // A failed restore may have written a log before an I/O error.
-                        // These are private, newly allocated paths for this task.
-                        let _ = fs::remove_file(&results[i].stdout);
-                        let _ = fs::remove_file(&results[i].stderr);
-                        if let Err(error) = action.clean_outputs(&self.tasks[i]) {
-                            results[i].status = if cancel.is_cancelled() {
-                                results[i].cache.outcome = "cancelled".into();
-                                Status::Cancelled
-                            } else {
-                                Status::Failed
-                            };
-                            results[i].error = Some(error);
-                            failed = true;
-                            continue;
-                        }
-                        prepared[i] = Some(action);
+                        continue;
                     }
                     if cancel.is_cancelled() {
                         results[i].status = Status::Cancelled;
-                        if prepared[i].is_some() {
-                            results[i].cache.outcome = "cancelled".into();
-                            results[i].cache.reason = "cancelled before command execution".into();
-                        }
-                        prepared[i] = None;
                         continue;
                     }
-                    match spawn(
-                        &self.tasks[i],
-                        &results[i],
-                        &environment,
-                        prepared[i]
-                            .as_ref()
-                            .map(|action| action.executable.as_path()),
-                    ) {
+                    match spawn(&self.tasks[i], &results[i], &environment, None) {
                         Ok(child) => {
                             resources.extend(self.tasks[i].resources.iter().cloned());
                             for resource in &self.tasks[i].shared_resources {
@@ -852,11 +907,10 @@ impl Plan {
                                 child,
                                 started,
                                 leases: Some(task_leases),
-                                action: prepared[i].take(),
+                                action: None,
                             });
                         }
                         Err(e) => {
-                            prepared[i].take();
                             results[i].status = Status::Failed;
                             results[i].error = Some(e.to_string());
                             failed = true;
@@ -866,7 +920,8 @@ impl Plan {
             }
             // A set of ready daemons can occupy all capacity/resources required by
             // their pending consumers. Fail with cleanup instead of waiting forever.
-            if saving.is_empty()
+            if preparing.is_empty()
+                && saving.is_empty()
                 && !running.is_empty()
                 && running
                     .iter()

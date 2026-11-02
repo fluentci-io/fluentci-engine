@@ -76,19 +76,25 @@ claim of benchmark-leading performance. It bounds process concurrency, not CPU
 or memory usage inside each command. Cache hashing and copying check run
 cancellation between 64 KiB chunks, and tree snapshots check between entries.
 Cancelled cache work stops the task without falling back to command execution.
-Successful commands save their cache entries on background workers. A saving task
-remains `running` with cache outcome `storing`, occupies a job slot, and retains
-its action/resource leases. Dependencies are released only after saving succeeds.
-The task timeout includes this save phase. Cancellation, fail-fast, and timeout
-cancel workers cooperatively; executor error cleanup cancels and joins them before
-releasing leases. Other tasks and service probes continue while saves run.
+Cache preparation, restoration, and saving run on owned background workers.
+A task is `running` with cache outcome `preparing` during lookup/restoration and
+`storing` during saving. Workers occupy job slots and retain resource leases;
+cache misses transfer their leases and action lock directly to the command.
+Dependencies are released only after a verified hit or successful cache save.
+Journal log tailing waits for preparation to finish, so a rejected restore cannot
+advance log cursors before command execution.
 
-Cache preparation and restoration still execute on the scheduler. Their filesystem
-calls, manifest serialization, output cleanup, and output replacement can delay
-unrelated tasks. Restoration finishes or rolls back replacement once started.
-Moving these remaining operations off the scheduler is still necessary. This is
-cooperative cancellation, not a hard real-time deadline; individual filesystem
-calls can block even on a background worker.
+For cached tasks, the timeout covers preparation, action-lock retries, command
+execution, and saving from the first admitted lookup. Busy action locks release
+resource leases and retry after 50 ms; retries do not reset that deadline.
+Cancellation, fail-fast, and timeout cancel workers cooperatively. Executor error
+cleanup cancels and joins workers before releasing leases. Unrelated task
+supervision and service probes continue during cache work. Restoration finishes
+or rolls back output replacement once it starts.
+
+This is not a hard real-time deadline: individual filesystem calls can block a
+worker and delay its cleanup. Plan validation, process spawning, resource-lock
+acquisition, and journal I/O still occur on the scheduler thread.
 
 Native package providers and the PureScript host SDK are available below.
 Remote workers, remote artifact storage, and the remaining SDKs are follow-up
