@@ -165,6 +165,15 @@ rejected restore falls back to normal execution, which cleans declared outputs.
 Corrupt entries trigger a miss; failed commands, missing outputs, and inputs
 modified during execution are never published as successful cache entries.
 
+Within a plan, overlapping declared cache paths require a direct or transitive
+`needs` relationship whenever either task writes the path. This includes nested
+paths and aliases of task working directories. Shared inputs are allowed. A
+single job slot or resource lock does not define dataflow order, so neither
+bypasses this check. Validation rejects conflicts before creating the run or
+starting commands. Undeclared accesses and conflicts between separate runs still
+require caller-managed workspace separation or shared resource leases; this
+validation does not provide filesystem isolation.
+
 `result.json` includes cache outcome, key, reason, and component hashes. Values
 of environment variables are not included in explanations. Cache logs/artifacts
 may still contain command output secrets; cache only appropriate tasks. Local

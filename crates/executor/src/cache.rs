@@ -138,6 +138,74 @@ pub fn validate_storage(task: &Task, storage: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// Declared writers must be ordered with every overlapping reader or writer.
+/// Resource exclusion alone does not specify which version a reader consumes.
+pub(crate) fn validate_workspace(
+    tasks: &[Task],
+    graph: &crate::graph::DependencyGraph,
+) -> Result<(), String> {
+    let mut paths: BTreeMap<PathBuf, Vec<(usize, bool)>> = BTreeMap::new();
+    for (index, task) in tasks.iter().enumerate() {
+        if let Some(policy) = &task.cache {
+            let cwd = fs::canonicalize(&task.cwd).map_err(|e| e.to_string())?;
+            for (declared, write) in [(&policy.inputs, false), (&policy.outputs, true)] {
+                for relative in declared {
+                    // Do not follow artifact symlinks into a different workspace.
+                    let path = checked_path(&cwd, relative)?;
+                    paths.entry(path).or_default().push((index, write));
+                }
+            }
+        }
+    }
+    let mut ordered = std::collections::HashSet::new();
+    for (path, accesses) in &paths {
+        for ancestor in path.ancestors() {
+            let Some(others) = paths.get(ancestor) else {
+                continue;
+            };
+            // Avoid a quadratic reader/reader comparison for shared source trees.
+            let writers: Vec<_> = others.iter().copied().filter(|(_, write)| *write).collect();
+            for &(a, write_a) in accesses {
+                let candidates = if write_a {
+                    others.as_slice()
+                } else {
+                    writers.as_slice()
+                };
+                for &(b, _) in candidates {
+                    if a == b {
+                        continue;
+                    }
+                    let pair = (a.min(b), a.max(b));
+                    if ordered.contains(&pair) {
+                        continue;
+                    }
+                    let reaches = |from: usize, target: usize| {
+                        let mut pending = vec![from];
+                        let mut seen = std::collections::HashSet::new();
+                        while let Some(node) = pending.pop() {
+                            if node == target {
+                                return true;
+                            }
+                            if seen.insert(node) {
+                                pending.extend(graph.dependencies[node].iter().copied());
+                            }
+                        }
+                        false
+                    };
+                    if !reaches(a, b) && !reaches(b, a) {
+                        return Err(format!(
+                            "unordered cache paths overlap between tasks {} and {} at {}; add a dependency or use separate output paths",
+                            tasks[a].id, tasks[b].id, path.display()
+                        ));
+                    }
+                    ordered.insert(pair);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 impl CachePolicy {
     pub fn validate(&self) -> Result<(), String> {
         if self.toolchain.is_empty() {

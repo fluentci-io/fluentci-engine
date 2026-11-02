@@ -191,11 +191,11 @@ fn inherited_environment_overlap_and_symlinks_are_rejected() {
     p.tasks[0].cache.as_mut().unwrap().outputs = vec!["output".into()];
     fs::remove_file(dir.path().join("input")).unwrap();
     symlink("/etc/hosts", dir.path().join("input")).unwrap();
-    let result = p
+    let error = p
         .execute(&dir.path().join("run"), &Cancellation::default())
-        .unwrap();
-    assert_eq!(result.tasks[0].status, Status::Failed);
-    assert!(result.tasks[0].error.as_ref().unwrap().contains("symlink"));
+        .unwrap_err();
+    assert!(error.contains("symlink"));
+    assert!(!dir.path().join("run").exists());
 }
 
 #[test]
@@ -238,4 +238,69 @@ fn relative_path_lookup_is_pinned_to_the_hashed_executable_in_task_cwd() {
         fs::read_to_string(dir.path().join("output")).unwrap(),
         "changed"
     );
+}
+
+#[test]
+fn unordered_declared_writers_are_rejected_before_run_creation() {
+    let dir = TempDir::new().unwrap();
+    let mut p = plan(dir.path());
+    let mut reader = p.tasks[0].clone();
+    reader.id = "reader".into();
+    reader.cache.as_mut().unwrap().inputs = vec!["output/nested".into()];
+    reader.cache.as_mut().unwrap().outputs = vec!["result".into()];
+    p.tasks.push(reader);
+    // Even jobs=1 or a common lock must not silently choose the dataflow order.
+    p.jobs = 1;
+    for task in &mut p.tasks {
+        task.resources.push("workspace".into());
+    }
+    let run_dir = dir.path().join("rejected");
+    let error = p.execute(&run_dir, &Cancellation::default()).unwrap_err();
+    assert!(error.contains("unordered cache paths overlap"), "{error}");
+    assert!(!run_dir.exists());
+    assert!(!dir.path().join("executions").exists());
+    p.tasks[1].needs.push("build".into());
+    p.validate().unwrap();
+}
+
+#[test]
+fn shared_inputs_and_transitively_ordered_writers_are_valid() {
+    let dir = TempDir::new().unwrap();
+    let mut p = plan(dir.path());
+    let mut other = p.tasks[0].clone();
+    other.id = "other".into();
+    other.cache.as_mut().unwrap().outputs = vec!["other-output".into()];
+    p.tasks.push(other);
+    p.validate().unwrap();
+    p.tasks[1].cache.as_mut().unwrap().outputs = vec!["output".into()];
+    assert!(p
+        .validate()
+        .unwrap_err()
+        .contains("unordered cache paths overlap"));
+    let mut middle = p.tasks[0].clone();
+    middle.id = "middle".into();
+    middle.cache = None;
+    middle.needs = vec!["build".into()];
+    p.tasks.push(middle);
+    p.tasks[1].needs = vec!["middle".into()];
+    p.validate().unwrap();
+}
+
+#[test]
+fn workspace_aliases_and_nested_working_directories_cannot_hide_conflicts() {
+    let dir = TempDir::new().unwrap();
+    let mut p = plan(dir.path());
+    fs::create_dir(dir.path().join("output")).unwrap();
+    let alias = dir.path().join("alias");
+    symlink(dir.path().join("output"), &alias).unwrap();
+    let mut nested = p.tasks[0].clone();
+    nested.id = "nested".into();
+    nested.cwd = alias;
+    nested.cache.as_mut().unwrap().inputs = vec![];
+    nested.cache.as_mut().unwrap().outputs = vec!["nested".into()];
+    p.tasks.push(nested);
+    assert!(p
+        .validate()
+        .unwrap_err()
+        .contains("unordered cache paths overlap"));
 }

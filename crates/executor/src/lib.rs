@@ -246,6 +246,7 @@ impl Plan {
                 .map(|t| t.needs.clone())
                 .collect::<Vec<_>>(),
         )?;
+        cache::validate_workspace(&self.tasks, &graph)?;
         let ancestors = service_ancestors(&graph, &self.tasks);
         for (i, parents) in ancestors.iter().enumerate() {
             for &p in parents {
