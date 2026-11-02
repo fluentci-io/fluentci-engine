@@ -1,4 +1,5 @@
 """Authenticated real HTTP run-server tests against the release CLI."""
+import concurrent.futures
 import http.server
 import json
 import os
@@ -92,6 +93,76 @@ class RunServer(unittest.TestCase):
                 return state
             time.sleep(0.02)
         self.fail("run did not reach terminal state")
+
+    def test_idempotent_submission_replays_conflicts_and_survives_restart(self):
+        headers = {"Idempotency-Key": "release-123"}
+        plan = self.plan("printf executed >> count")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+            replies = list(pool.map(lambda _: self.request("POST", "/v1/runs", plan, extra_headers=headers), range(8)))
+        self.assertTrue(all(reply[0] == 202 for reply in replies), replies)
+        locations = {reply[2]["Location"] for reply in replies}
+        self.assertEqual(len(locations), 1)
+        self.assertTrue(all(reply[2]["Idempotency-Key"] == "release-123" for reply in replies))
+        location = locations.pop()
+        self.assertEqual(self.terminal(location)["status"], "succeeded")
+        self.assertEqual((self.root / "count").read_text(), "executed")
+        conflict = self.request("POST", "/v1/runs", self.plan("touch duplicate"), extra_headers=headers)
+        self.assertEqual(conflict[0], 409)
+        self.assertFalse((self.root / "duplicate").exists())
+        self.stop()
+        self.start()
+        replay = self.request("POST", "/v1/runs", plan, extra_headers=headers)
+        self.assertEqual(replay[0], 202)
+        self.assertEqual(replay[2]["Location"], location)
+        self.assertEqual(json.loads(replay[1])["status"], "succeeded")
+        self.assertEqual((self.root / "count").read_text(), "executed")
+        # Simulate persisted state left by a crash before completion was recorded.
+        self.stop()
+        run_dir = self.root / "runs" / location.rsplit("/", 1)[1]
+        state = json.loads((run_dir / "state.json").read_text())
+        state["status"] = "running"
+        (run_dir / "state.json").write_text(json.dumps(state))
+        (run_dir / "execution/result.json").unlink()
+        self.start()
+        replay = self.request("POST", "/v1/runs", plan, extra_headers=headers)
+        self.assertEqual(replay[0], 202)
+        self.assertEqual(json.loads(replay[1])["status"], "interrupted")
+        self.assertEqual((self.root / "count").read_text(), "executed")
+        for invalid in ["", "../escape", "space key", "x" * 129]:
+            self.assertEqual(self.request("POST", "/v1/runs", plan, extra_headers={"Idempotency-Key":invalid})[0], 400)
+
+    def test_idempotency_keys_are_case_sensitive_and_accept_maximum_length(self):
+        plan = self.plan("printf executed >> key-count")
+        locations = []
+        for key in ["CaseSensitive", "casesensitive", "x" * 128]:
+            accepted = self.request("POST", "/v1/runs", plan, extra_headers={"Idempotency-Key":key})
+            self.assertEqual(accepted[0], 202)
+            location = accepted[2]["Location"]
+            self.assertEqual(self.terminal(location)["status"], "succeeded")
+            locations.append(location)
+        self.assertEqual(len(set(locations)), 3)
+        self.assertEqual((self.root / "key-count").read_text(), "executed" * 3)
+
+    def test_idempotent_replay_bypasses_capacity_and_revalidation(self):
+        work = self.root / "workspace"
+        work.mkdir()
+        plan = self.plan("printf done")
+        plan["tasks"][0]["cwd"] = str(work)
+        headers = {"Idempotency-Key":"completed-work"}
+        accepted = self.request("POST", "/v1/runs", plan, extra_headers=headers)
+        self.assertEqual(accepted[0], 202)
+        self.terminal(accepted[2]["Location"])
+        work.rmdir()
+        busy = [self.submit(self.plan("/bin/sleep 30")) for _ in range(2)]
+        replay = self.request("POST", "/v1/runs", plan, extra_headers=headers)
+        self.assertEqual(replay[0], 202)
+        self.assertEqual(replay[2]["Location"], accepted[2]["Location"])
+        self.assertEqual(self.request("POST", "/v1/runs", self.plan("exit 0"), extra_headers={"Idempotency-Key":"capacity-retry"})[0], 429)
+        for path in busy:
+            self.request("POST", path + "/cancel")
+            self.terminal(path)
+        admitted = self.request("POST", "/v1/runs", self.plan("exit 0"), extra_headers={"Idempotency-Key":"capacity-retry"})
+        self.assertEqual(admitted[0], 202)
 
     def test_auth_validation_and_single_store_owner(self):
         self.assertEqual(self.request("POST", "/v1/runs", self.plan("touch unexpected"), token=False)[0], 401)

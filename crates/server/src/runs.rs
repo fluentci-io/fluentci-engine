@@ -4,6 +4,7 @@ use fluentci_executor::{Cancellation, Plan};
 use opentelemetry::propagation::TextMapPropagator;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
     fs,
@@ -21,6 +22,11 @@ struct RunState {
     status: String,
     error: Option<String>,
 }
+#[derive(Serialize, Deserialize)]
+struct Submission {
+    run_id: String,
+}
+
 struct Active {
     cancel: Cancellation,
     worker: JoinHandle<()>,
@@ -39,6 +45,10 @@ fn save(path: &Path, value: &impl Serialize) -> Result<(), String> {
     file.flush().map_err(|e| e.to_string())?;
     file.as_file().sync_all().map_err(|e| e.to_string())?;
     file.persist(path).map_err(|e| e.to_string())?;
+    #[cfg(unix)]
+    fs::File::open(path.parent().unwrap())
+        .and_then(|dir| dir.sync_all())
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 impl Runs {
@@ -74,6 +84,20 @@ impl Runs {
                 return Err("another run server owns this data directory".into());
             }
         }
+        let submissions = root.join("submissions");
+        let mut index = fs::DirBuilder::new();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            index.mode(0o700);
+        }
+        if !submissions.exists() {
+            index.create(&submissions).map_err(|e| e.to_string())?;
+        }
+        #[cfg(unix)]
+        fs::File::open(&root)
+            .and_then(|dir| dir.sync_all())
+            .map_err(|e| e.to_string())?;
         // A previous process cannot own live runs in this store. Never silently
         // report them as running after a restart.
         for entry in fs::read_dir(&root).map_err(|e| e.to_string())? {
@@ -151,6 +175,47 @@ impl Drop for Runs {
     }
 }
 
+fn submission_path(runs: &Runs, key: &str) -> PathBuf {
+    let digest = Sha256::digest(key.as_bytes());
+    let name: String = digest.iter().map(|byte| format!("{byte:02x}")).collect();
+    runs.root.join("submissions").join(format!("{name}.json"))
+}
+
+fn replay(runs: &Runs, key: Option<&str>, plan: &Plan) -> Result<Option<RunState>, (u16, String)> {
+    let Some(key) = key else {
+        return Ok(None);
+    };
+    let bytes = match fs::read(submission_path(runs, key)) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(_) => return Err((500, "could not read submission record".into())),
+    };
+    let stored = (|| {
+        let record: Submission = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+        if Uuid::parse_str(&record.run_id).is_err() {
+            return Err("invalid stored run ID".into());
+        }
+        let root = runs.root.join(&record.run_id);
+        let original: Plan =
+            serde_json::from_slice(&fs::read(root.join("plan.json")).map_err(|e| e.to_string())?)
+                .map_err(|e| e.to_string())?;
+        let state: RunState =
+            serde_json::from_slice(&fs::read(root.join("state.json")).map_err(|e| e.to_string())?)
+                .map_err(|e| e.to_string())?;
+        let matches = serde_json::to_value(original).map_err(|e| e.to_string())?
+            == serde_json::to_value(plan).map_err(|e| e.to_string())?;
+        Ok::<_, String>((matches, state))
+    })()
+    .map_err(|_| (500, "could not recover recorded submission".into()))?;
+    if !stored.0 {
+        return Err((
+            409,
+            "Idempotency-Key was already used with a different plan".into(),
+        ));
+    }
+    Ok(Some(stored.1))
+}
+
 async fn submit(
     request: HttpRequest,
     runs: web::Data<Runs>,
@@ -159,6 +224,27 @@ async fn submit(
     if !runs.authorized(&request) {
         return HttpResponse::Unauthorized().finish();
     }
+    if request.headers().get_all("Idempotency-Key").count() > 1 {
+        return HttpResponse::BadRequest().body("provide one Idempotency-Key header");
+    }
+    let key =
+        match request.headers().get("Idempotency-Key") {
+            None => None,
+            Some(value) => match value.to_str() {
+                Ok(value)
+                    if !value.is_empty()
+                        && value.len() <= 128
+                        && value
+                            .bytes()
+                            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_')) =>
+                {
+                    Some(value.to_owned())
+                }
+                _ => return HttpResponse::BadRequest().body(
+                    "Idempotency-Key requires 1-128 ASCII letters, digits, hyphens, or underscores",
+                ),
+            },
+        };
     let plan = plan.into_inner();
     if plan.inherit_env {
         return HttpResponse::BadRequest().body("server plans require inherit_env: false");
@@ -174,10 +260,19 @@ async fn submit(
         })
         .collect();
     let parent = TraceContextPropagator::new().extract(&headers);
-    match tokio::task::spawn_blocking(move || admit(&runs, plan, parent)).await {
-        Ok(Ok(state)) => HttpResponse::Accepted()
-            .insert_header(("Location", format!("/v1/runs/{}", state.id)))
-            .json(state),
+    let admission_key = key.clone();
+    match tokio::task::spawn_blocking(move || admit(&runs, plan, parent, admission_key.as_deref()))
+        .await
+    {
+        Ok(Ok(state)) => {
+            let mut response = HttpResponse::Accepted();
+            if let Some(key) = key {
+                response.insert_header(("Idempotency-Key", key));
+            }
+            response
+                .insert_header(("Location", format!("/v1/runs/{}", state.id)))
+                .json(state)
+        }
         Ok(Err((status, error))) => {
             let mut response =
                 HttpResponse::build(actix_web::http::StatusCode::from_u16(status).unwrap());
@@ -193,6 +288,7 @@ fn admit(
     runs: &Runs,
     plan: Plan,
     parent: opentelemetry::Context,
+    key: Option<&str>,
 ) -> Result<RunState, (u16, String)> {
     if plan.jobs > 64 || plan.max_services > 32 || plan.tasks.len() > 10_000 {
         return Err((
@@ -200,10 +296,17 @@ fn admit(
             "plan exceeds server limits (64 jobs, 32 services, 10000 tasks)".into(),
         ));
     }
+    if let Some(existing) = replay(runs, key, &plan)? {
+        return Ok(existing);
+    }
     if let Err(error) = plan.validate() {
         return Err((400, error));
     }
     let mut active = runs.active.lock().unwrap();
+    // Validation ran outside the admission lock; another request may have won.
+    if let Some(existing) = replay(runs, key, &plan)? {
+        return Ok(existing);
+    }
     active.retain(|_, run| !run.worker.is_finished());
     if active.len() >= runs.max_runs {
         return Err((429, "run capacity reached".into()));
@@ -224,9 +327,30 @@ fn admit(
         }
         dir.create(&path).map_err(|e| e.to_string())?;
         save(&path.join("plan.json"), &plan)?;
-        save(&path.join("state.json"), &state)
+        save(&path.join("state.json"), &state)?;
+        #[cfg(unix)]
+        fs::File::open(&runs.root)
+            .and_then(|dir| dir.sync_all())
+            .map_err(|e| e.to_string())?;
+        // Persist the association before executing any command. A restart replays
+        // interrupted state instead of re-running possibly completed side effects.
+        if let Some(key) = key {
+            save(
+                &submission_path(runs, key),
+                &Submission { run_id: id.clone() },
+            )?;
+        }
+        Ok::<_, String>(())
     })();
     if preparation.is_err() {
+        let _ = save(
+            &path.join("state.json"),
+            &RunState {
+                id: id.clone(),
+                status: "failed".into(),
+                error: Some("could not persist run".into()),
+            },
+        );
         return Err((500, "could not persist run".into()));
     }
     let cancel = Cancellation::default();

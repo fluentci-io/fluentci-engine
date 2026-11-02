@@ -356,8 +356,23 @@ Admission is bounded by `--max-runs`; excess submissions return 429 with
 `Retry-After: 1`. Each plan is limited to 64 ordinary jobs, 32 service slots,
 10,000 tasks, and a 1 MiB JSON body. Plan validation and durable admission run on
 blocking workers, leaving HTTP workers available for status and log requests.
-There is currently no durable waiting queue or submission idempotency key: clients
-must not blindly retry submissions after an ambiguous connection failure.
+There is no durable waiting queue. `POST /v1/runs` accepts an optional
+`Idempotency-Key` header (1–128 ASCII letters, digits, hyphens, or underscores).
+The server records the key before executing commands. Retrying with the same key
+and plan (after applying field defaults; object-key order is ignored, array order
+is significant) returns `202`, the original `Location`, and its current state,
+even when capacity is full or the original workspace no longer exists. Reusing a
+key for another plan returns `409`. Accepted keyed responses echo `Idempotency-Key`
+so clients can detect older servers that ignore the header.
+
+Keys are case-sensitive, scoped to the data directory, survive restart, and have
+no automatic expiry. Their storage filenames use SHA-256, including on
+case-insensitive filesystems. Use a unique key per intended execution and retain both that key and the
+immutable plan for retries. Interrupted or failed runs are returned as-is; a retry
+does not restart them. This prevents duplicate admission, not duplicate effects
+inside task commands or guaranteed completion after a crash. Capacity/validation
+rejections do not reserve keys. Without a key, clients must not blindly retry an
+ambiguous submission. Do not remove submission records while callers may retry.
 
 Plans and state files are atomically replaced in private run directories. A Unix
 file lock prevents two servers from opening the same store. Graceful server shutdown
