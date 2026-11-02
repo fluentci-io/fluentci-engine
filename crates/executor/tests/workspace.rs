@@ -156,3 +156,75 @@ fn cancelled_setup_does_not_create_a_run() {
     assert!(empty.execute(&root.path().join("empty"), &cancel).is_err());
     assert!(!root.path().join("empty").exists());
 }
+
+#[test]
+fn relocatable_workspace_cache_restores_outputs_logs_and_invalidates_inputs() {
+    let root = tempfile::tempdir().unwrap();
+    let source = source(root.path());
+    let mut p = plan(&source);
+    p.tasks.truncate(1);
+    p.tasks[0].program = "/bin/sh".into();
+    // The marker is deliberately outside the cache contract, solely to observe
+    // whether the fixture process ran. Its output otherwise depends only on input.
+    let marker = root.path().join("executions");
+    p.tasks[0]
+        .env
+        .insert("MARKER".into(), marker.to_string_lossy().into());
+    p.tasks[0].args = vec![
+        "-c".into(),
+        "/bin/cat input > output; printf run >> \"$MARKER\"; printf log; printf error >&2".into(),
+    ];
+    p.tasks[0].cache = Some(
+        serde_json::from_value(json!({
+            "inputs":["input"], "outputs":["output"], "toolchain":"relocatable-fixture",
+            "relocatable":true
+        }))
+        .unwrap(),
+    );
+    p.cache_dir = Some(root.path().join("cache"));
+    let (a, b) = thread::scope(|scope| {
+        let first = scope.spawn(|| {
+            p.execute(&root.path().join("a"), &Cancellation::default())
+                .unwrap()
+        });
+        let second = scope.spawn(|| {
+            p.execute(&root.path().join("b"), &Cancellation::default())
+                .unwrap()
+        });
+        (first.join().unwrap(), second.join().unwrap())
+    });
+    assert!(a.success() && b.success(), "{a:?} {b:?}");
+    let mut outcomes = [
+        a.tasks[0].cache.outcome.as_str(),
+        b.tasks[0].cache.outcome.as_str(),
+    ];
+    outcomes.sort();
+    assert_eq!(outcomes, ["hit", "stored"]);
+    assert_eq!(a.tasks[0].cache.key, b.tasks[0].cache.key);
+    assert_eq!(fs::read_to_string(&marker).unwrap(), "run");
+    assert_eq!(fs::read_to_string(&b.tasks[0].stdout).unwrap(), "log");
+    assert_eq!(fs::read_to_string(&b.tasks[0].stderr).unwrap(), "error");
+    assert_eq!(
+        fs::read_to_string(root.path().join("b/workspace/output")).unwrap(),
+        "original"
+    );
+    fs::write(source.join("input"), "changed").unwrap();
+    let c = p
+        .execute(&root.path().join("c"), &Cancellation::default())
+        .unwrap();
+    assert!(c.success());
+    assert_eq!(c.tasks[0].cache.outcome, "stored");
+    assert_ne!(b.tasks[0].cache.key, c.tasks[0].cache.key);
+    assert_eq!(
+        fs::read_to_string(root.path().join("c/workspace/output")).unwrap(),
+        "changed"
+    );
+    assert_eq!(fs::read_to_string(&marker).unwrap(), "runrun");
+    p.tasks[0].cache.as_mut().unwrap().relocatable = false;
+    let d = p
+        .execute(&root.path().join("d"), &Cancellation::default())
+        .unwrap();
+    assert!(d.success());
+    assert_eq!(d.tasks[0].cache.outcome, "stored");
+    assert_ne!(c.tasks[0].cache.key, d.tasks[0].cache.key);
+}

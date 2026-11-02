@@ -76,9 +76,8 @@ Separate runs have separate copies, while tasks within a run share their workspa
 and still need dependencies or resource coordination for shared writes. This is
 filesystem layout separation, not an OS sandbox: absolute paths, HOME, network,
 and package installations still access host resources. Cache keys retain the
-physical working directory, so fresh workspaces currently miss across runs even
-with identical inputs. Safe relocatable caching requires a further explicit
-contract; path-dependent outputs must not be reused silently.
+physical working directory by default, so fresh workspaces miss across runs even
+with identical inputs unless the task explicitly declares relocatability.
 
 ## Functional SDK contract
 
@@ -566,3 +565,35 @@ PATH selects that exact binary, then exercises the legacy extension adapter.
 These jobs are configured; successful remote execution is still required before
 claiming native backend coverage. Do not run these installation steps on a normal
 development host.
+
+## Relocatable action caches
+
+Set `cache.relocatable: true` only when the command's outputs **and stdout/stderr**
+are independent of its physical working directory. It defaults to false. This
+explicit contract enables cache hits and action-lock deduplication across copied
+run workspaces and across distinct checkouts:
+
+```json
+"cache": {
+  "inputs": ["input"],
+  "outputs": ["output"],
+  "toolchain": "my-complete-toolchain-v1",
+  "relocatable": true
+}
+```
+
+Only the working-directory component of the key changes: it becomes a fixed
+relocatable identity. Inputs, output paths, executable contents/mode, exact argv,
+environment, platform, toolchain, and dependency keys still participate. Default
+path-sensitive keys retain their existing identity and cannot collide with this
+mode. Absolute paths in arguments/environment are not rewritten; they may still
+prevent reuse. A path-sensitive predecessor's key can also prevent cross-run hits.
+
+The engine cannot infer or verify relocatability for arbitrary host commands.
+Commands using `pwd`, embedding source paths in binaries/debug information, reading
+undeclared sibling files, or logging absolute paths do not meet this contract
+without appropriate toolchain configuration. Restored logs are the original bytes,
+not rewritten for the new run. Cacheable commands must not require side effects
+outside declared outputs. Keep the default for path-dependent commands; declaring
+relocatability incorrectly can return incorrect artifacts. This is an explicit
+extension to the existing declared-input/toolchain contract, not hermetic execution.

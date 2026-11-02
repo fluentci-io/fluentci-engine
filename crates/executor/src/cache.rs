@@ -17,6 +17,13 @@ pub struct CachePolicy {
     pub outputs: Vec<PathBuf>,
     /// Caller-provided identity for the complete toolchain/runtime, not just the launcher.
     pub toolchain: String,
+    /// Caller guarantees outputs and logs do not depend on the physical cwd.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub relocatable: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+    !value
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -442,7 +449,11 @@ pub(crate) fn prepare_cancellable(
     components.insert("outputs".into(), encoded_digest(&policy.outputs)?);
     components.insert(
         "working_directory".into(),
-        encoded_digest(&fs::canonicalize(&task.cwd).map_err(|e| e.to_string())?)?,
+        if policy.relocatable {
+            digest(b"fluentci-relocatable-working-directory-v1")
+        } else {
+            encoded_digest(&fs::canonicalize(&task.cwd).map_err(|e| e.to_string())?)?
+        },
     );
     components.insert("dependencies".into(), encoded_digest(&dependency_keys)?);
     components.insert(
