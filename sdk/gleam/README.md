@@ -67,7 +67,9 @@ FLUENTCI_ENGINE_BIN=/absolute/path/to/target/release/fluentci-engine gleam test 
 ```
 
 Without that environment variable, serialization tests run and engine integration
-is explicitly reported as skipped. The engine fixture uses temporary directories,
+is explicitly reported as skipped. Set `FLUENTCI_REQUIRE_ENGINE=1` to make a missing
+engine configuration fail instead; host CI requires this on Linux and both macOS
+architectures using pinned Gleam/Deno versions and Node 26. The engine fixture uses temporary directories,
 checks cold/warm caching across workspaces, and performs no package installation.
 
 ## Legacy API quick start

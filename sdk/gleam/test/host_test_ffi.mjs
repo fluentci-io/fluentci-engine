@@ -23,6 +23,7 @@ export function inspect(encoded) {
 export function execute_fixture(build) {
   const executable = process.env.FLUENTCI_ENGINE_BIN;
   if (!executable) {
+    if (process.env.FLUENTCI_REQUIRE_ENGINE === "1") throw Error("FLUENTCI_ENGINE_BIN is required for engine integration");
     console.error("Gleam release-engine integration skipped: set FLUENTCI_ENGINE_BIN");
     return true;
   }
