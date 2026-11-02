@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
     ffi::OsString,
+    fs::OpenOptions,
+    io::Write,
+    path::PathBuf,
     process::{Command, Stdio},
     time::{Duration, Instant},
 };
@@ -66,6 +69,12 @@ impl Service {
     }
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub struct ProbeLogs {
+    pub stdout: PathBuf,
+    pub stderr: PathBuf,
+}
+
 pub(crate) enum Health {
     Waiting,
     Ready,
@@ -76,14 +85,16 @@ pub(crate) struct Supervisor {
     next: Instant,
     failures: usize,
     pub ready: bool,
+    logs: ProbeLogs,
 }
 impl Supervisor {
-    pub fn new() -> Self {
+    pub fn new(logs: ProbeLogs) -> Self {
         Self {
             probe: None,
             next: Instant::now(),
             failures: 0,
             ready: false,
+            logs,
         }
     }
     pub fn stop(&mut self) {
@@ -128,6 +139,16 @@ impl Supervisor {
                 }
             }
         } else if Instant::now() >= self.next {
+            let phase = if self.ready { "health" } else { "readiness" };
+            let open = |path: &PathBuf| -> Result<_, std::io::Error> {
+                let mut file = OpenOptions::new().create(true).append(true).open(path)?;
+                writeln!(file, "--- {phase} probe ---")?;
+                Ok(file)
+            };
+            let (stdout, stderr) = match (open(&self.logs.stdout), open(&self.logs.stderr)) {
+                (Ok(stdout), Ok(stderr)) => (stdout, stderr),
+                _ => return Health::Failed("could not open service probe logs".into()),
+            };
             let mut command = Command::new(&check.program);
             command
                 .args(&check.args)
@@ -136,8 +157,8 @@ impl Supervisor {
                 .envs(inherited)
                 .envs(&task.env)
                 .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null());
+                .stdout(Stdio::from(stdout))
+                .stderr(Stdio::from(stderr));
             #[cfg(unix)]
             {
                 use std::os::unix::process::CommandExt;

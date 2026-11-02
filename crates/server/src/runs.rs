@@ -522,7 +522,12 @@ async fn logs(
         return HttpResponse::Unauthorized().finish();
     }
     let (id, index, stream) = route.into_inner();
-    if index >= 10_000 || !matches!(stream.as_str(), "stdout" | "stderr") {
+    if index >= 10_000
+        || !matches!(
+            stream.as_str(),
+            "stdout" | "stderr" | "probe_stdout" | "probe_stderr"
+        )
+    {
         return HttpResponse::NotFound().finish();
     }
     let path = match runs.path(&id) {

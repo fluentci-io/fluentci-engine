@@ -338,3 +338,36 @@ fn separate_health_timeout_kills_probe_and_cancels_consumers() {
         assert!(invalid.validate().is_err());
     }
 }
+
+#[test]
+fn failed_health_probes_retain_binary_output_separately_from_service_logs() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut db = service("db", DAEMON, "printf startup-probe; test -f ready", &[]);
+    db["service"]["health"] = json!({"program":"/bin/sh", "args":["-c", r"printf '\377'; printf health-diagnostic >&2; exit 1"], "interval_ms":10, "timeout_ms":100});
+    let p = plan(dir.path(), vec![db, task("consumer", "sleep 20", &["db"])]);
+    let result = p
+        .execute(&dir.path().join("run"), &Cancellation::default())
+        .unwrap();
+    assert_eq!(result.tasks[0].status, Status::Failed, "{result:?}");
+    assert_eq!(result.tasks[1].status, Status::Cancelled);
+    let logs = result.tasks[0].probe_logs.as_ref().unwrap();
+    let stdout = fs::read(&logs.stdout).unwrap();
+    assert_eq!(stdout.iter().filter(|&&byte| byte == 255).count(), 2);
+    assert!(stdout
+        .windows(b"startup-probe".len())
+        .any(|bytes| bytes == b"startup-probe"));
+    let stderr = fs::read_to_string(&logs.stderr).unwrap();
+    assert_eq!(stderr.matches("health-diagnostic").count(), 2);
+    assert_eq!(stderr.matches("--- health probe ---").count(), 2);
+    assert!(!fs::read_to_string(&result.tasks[0].stderr)
+        .unwrap()
+        .contains("health-diagnostic"));
+    assert!(result.tasks[1].probe_logs.is_none());
+    let report: Value =
+        serde_json::from_slice(&fs::read(dir.path().join("run/result.json")).unwrap()).unwrap();
+    assert_eq!(
+        report["tasks"][0]["probe_logs"]["stdout"],
+        logs.stdout.to_str().unwrap()
+    );
+    assert!(report["tasks"][1].get("probe_logs").is_none());
+}

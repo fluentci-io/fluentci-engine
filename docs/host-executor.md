@@ -628,3 +628,21 @@ case. A changed dependency digest identifies upstream invalidation but does not
 recursively explain that dependency; compare its task entry as well. Only digests
 are stored, so this command cannot name individual changed input files or reveal
 which environment variable changed.
+
+## Service probe diagnostics
+
+Service results include `probe_logs` with `stdout` and `stderr` paths under the
+run directory (`<index>.probe_stdout` and `<index>.probe_stderr`). Both readiness
+and recurring health attempts append their raw output, preceded by a short
+`--- readiness probe ---` or `--- health probe ---` marker. Non-service results
+omit this field. Files are created when the first probe is attempted; services
+cancelled or skipped before probing may have no probe log files.
+
+The authenticated raw log endpoint accepts `probe_stdout` and `probe_stderr` in
+addition to `stdout` and `stderr`. It uses the same byte cursor and 1 MiB response
+limit; append-only files allow resuming while checks continue. These files are
+separate from the daemon's output. Probe processes write directly to disk, avoiding
+scheduler pipe-draining work and unbounded in-memory output buffers. As with task
+logs, total disk usage is not capped yet. Probe output is not currently streamed
+through the execution journal/TUI or attached to OpenTelemetry spans; inspect the
+files or fetch these raw streams when diagnosing readiness/health failures.

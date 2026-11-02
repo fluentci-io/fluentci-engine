@@ -135,6 +135,8 @@ pub struct TaskResult {
     pub duration_ms: u128,
     pub stdout: PathBuf,
     pub stderr: PathBuf,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub probe_logs: Option<service::ProbeLogs>,
     pub cache: cache::CacheResult,
     pub wait_reason: Option<String>,
 }
@@ -394,16 +396,19 @@ impl Plan {
                 duration_ms: 0,
                 stdout: run_dir.join(format!("{i}.stdout")),
                 stderr: run_dir.join(format!("{i}.stderr")),
+                probe_logs: t.service.as_ref().map(|_| service::ProbeLogs {
+                    stdout: run_dir.join(format!("{i}.probe_stdout")),
+                    stderr: run_dir.join(format!("{i}.probe_stderr")),
+                }),
                 cache: cache::CacheResult::disabled(),
                 wait_reason: None,
             })
             .collect();
         let mut journal = events::Journal::new(&run_dir.join("events.jsonl"), &self.tasks)?;
         let ancestors = service_ancestors(&graph, &self.tasks);
-        let mut supervisors: Vec<_> = self
-            .tasks
+        let mut supervisors: Vec<_> = results
             .iter()
-            .map(|t| t.service.as_ref().map(|_| service::Supervisor::new()))
+            .map(|result| result.probe_logs.clone().map(service::Supervisor::new))
             .collect();
         let mut shutdowns: Vec<Option<service::Shutdown>> =
             (0..self.tasks.len()).map(|_| None).collect();
