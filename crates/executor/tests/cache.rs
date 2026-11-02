@@ -11,11 +11,11 @@ use tempfile::TempDir;
 
 fn plan(root: &Path) -> Plan {
     fs::write(root.join("input"), "hello").unwrap();
-    Plan { version: 1, max_services: 8, jobs: 2, fail_fast: true, inherit_env: false,
+    Plan { version: 1, resource_dir: None, max_services: 8, jobs: 2, fail_fast: true, inherit_env: false,
         cache_dir: Some(root.join("cache")), tasks: vec![Task {
             id: "build".into(), needs: vec![], program: "/bin/sh".into(),
             args: vec!["-c".into(), "/bin/cat input > output; printf executed >> executions; printf log; printf error >&2".into()],
-            cwd: root.into(), env: BTreeMap::new(), resources: vec![], timeout_ms: Some(3000),
+            cwd: root.into(), env: BTreeMap::new(), resources: vec![], resource_wait_timeout_ms: None, timeout_ms: Some(3000),
             service: None, cache: Some(CachePolicy { inputs: vec!["input".into()], outputs: vec!["output".into()], toolchain: "fixture-v1".into() })
         }] }
 }

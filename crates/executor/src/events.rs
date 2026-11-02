@@ -32,6 +32,8 @@ pub enum EventKind {
         status: Status,
         cache: String,
         reason: String,
+        #[serde(default)]
+        wait_reason: Option<String>,
         error: Option<String>,
         duration_ms: u64,
     },
@@ -51,7 +53,7 @@ pub(crate) struct Journal {
     writer: BufWriter<File>,
     started: Instant,
     sequence: u64,
-    states: Vec<(Status, String)>,
+    states: Vec<(Status, String, Option<String>)>,
     offsets: Vec<[u64; 2]>,
 }
 impl Journal {
@@ -72,7 +74,7 @@ impl Journal {
             writer: BufWriter::new(file),
             started: Instant::now(),
             sequence: 0,
-            states: vec![(Status::Pending, String::new()); count],
+            states: vec![(Status::Pending, String::new(), None); count],
             offsets: vec![[0, 0]; count],
         };
         journal.emit(EventKind::RunStarted { tasks: count })?;
@@ -138,7 +140,11 @@ impl Journal {
                     }
                 }
             }
-            let state = (result.status.clone(), result.cache.outcome.clone());
+            let state = (
+                result.status.clone(),
+                result.cache.outcome.clone(),
+                result.wait_reason.clone(),
+            );
             if state != self.states[i] {
                 self.telemetry.update(i, result);
                 self.states[i] = state;
@@ -147,6 +153,7 @@ impl Journal {
                     status: result.status.clone(),
                     cache: result.cache.outcome.clone(),
                     reason: result.cache.reason.clone(),
+                    wait_reason: result.wait_reason.clone(),
                     error: result.error.clone(),
                     duration_ms: result.duration_ms.min(u64::MAX as u128) as u64,
                 })?;
@@ -173,6 +180,7 @@ mod tests {
                 status: Status::Running,
                 cache: "miss".into(),
                 reason: "new action".into(),
+                wait_reason: None,
                 error: None,
                 duration_ms: 12,
             },

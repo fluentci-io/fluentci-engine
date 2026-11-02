@@ -21,6 +21,11 @@ async fn execute_inner(path: &str, run_dir: &str, progress: &str) -> Result<(), 
             *cache_dir = base.join(&cache_dir);
         }
     }
+    if let Some(root) = &mut plan.resource_dir {
+        if root.is_relative() {
+            *root = base.join(&root);
+        }
+    }
     for task in &mut plan.tasks {
         if task.cwd.is_relative() {
             task.cwd = base.join(&task.cwd);

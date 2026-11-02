@@ -19,6 +19,7 @@ enum Mode {
 struct Row {
     status: Status,
     cache: String,
+    wait_reason: Option<String>,
     duration_ms: u128,
     started_ms: Option<u128>,
 }
@@ -67,6 +68,7 @@ impl Progress {
                         Row {
                             status: Status::Pending,
                             cache: "disabled".into(),
+                            wait_reason: None,
                             duration_ms: 0,
                             started_ms: None,
                         },
@@ -130,6 +132,7 @@ impl Progress {
                 status,
                 cache,
                 reason,
+                wait_reason,
                 error,
                 duration_ms,
             } => {
@@ -139,6 +142,7 @@ impl Progress {
                     }
                     row.status = status.clone();
                     row.cache = cache.clone();
+                    row.wait_reason = wait_reason.clone();
                     row.duration_ms = u128::from(duration_ms);
                 }
                 if self.mode == Mode::Plain {
@@ -147,7 +151,12 @@ impl Progress {
                         clean(&id),
                         status,
                         cache,
-                        clean(error.as_deref().unwrap_or(&reason))
+                        clean(
+                            error
+                                .as_deref()
+                                .or(wait_reason.as_deref())
+                                .unwrap_or(&reason)
+                        )
                     );
                 } else if let Some(error) = error {
                     self.push_log(format!("{}: {}", id, error));
@@ -243,7 +252,11 @@ impl Progress {
                 clean(id),
                 row.status,
                 duration as f64 / 1000.0,
-                if row.cache == "hit" { "CACHED" } else { "" }
+                if row.cache == "hit" {
+                    "CACHED".into()
+                } else {
+                    clean(row.wait_reason.as_deref().unwrap_or(""))
+                }
             ));
         }
         if ids.len() > max_rows {

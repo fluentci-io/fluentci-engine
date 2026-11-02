@@ -3,6 +3,7 @@
 pub mod cache;
 pub mod events;
 pub mod graph;
+mod resources;
 pub mod service;
 mod telemetry;
 
@@ -38,6 +39,8 @@ pub struct Task {
     #[serde(default)]
     pub resources: Vec<String>,
     #[serde(default)]
+    pub resource_wait_timeout_ms: Option<u64>,
+    #[serde(default)]
     pub timeout_ms: Option<u64>,
     #[serde(default)]
     pub cache: Option<cache::CachePolicy>,
@@ -62,6 +65,8 @@ pub struct Plan {
     pub inherit_env: bool,
     #[serde(default)]
     pub cache_dir: Option<PathBuf>,
+    #[serde(default)]
+    pub resource_dir: Option<PathBuf>,
 }
 fn default_services() -> usize {
     8
@@ -119,6 +124,7 @@ pub struct TaskResult {
     pub stdout: PathBuf,
     pub stderr: PathBuf,
     pub cache: cache::CacheResult,
+    pub wait_reason: Option<String>,
 }
 #[derive(Debug, Serialize)]
 pub struct RunResult {
@@ -134,6 +140,8 @@ struct Running {
     index: usize,
     child: Child,
     started: Instant,
+    leases: Option<resources::Leases>,
+    action: Option<cache::Prepared>,
 }
 impl Running {
     /// Children share a dedicated Unix process group so cancellation includes subprocesses.
@@ -161,7 +169,15 @@ impl Plan {
         if self.jobs == 0 || self.max_services == 0 {
             return Err("jobs must be greater than zero".into());
         }
+        if self.resource_dir.as_ref().is_some_and(|p| !p.is_absolute()) {
+            return Err("resource_dir must be absolute".into());
+        }
         for task in &self.tasks {
+            if task.resources.iter().any(|r| r.is_empty())
+                || task.resource_wait_timeout_ms == Some(0)
+            {
+                return Err("resource names and wait limits must be nonempty/positive".into());
+            }
             if let Some(service) = &task.service {
                 service.validate()?;
                 if task.cache.is_some() {
@@ -234,8 +250,8 @@ impl Plan {
     }
 
     /// Run in a fresh caller-selected directory. All output is spooled to disk.
-    /// Cancellation and timeouts are observed at most one polling interval (10 ms)
-    /// after the scheduler regains control. Resource locks are local to this run.
+    /// Cancellation and process timeouts are observed at most one polling interval (10 ms)
+    /// after the scheduler regains control. Resource leases coordinate runs sharing a resource directory.
     pub fn execute(&self, run_dir: &Path, cancel: &Cancellation) -> Result<RunResult, String> {
         let graph = self.validate()?;
         let absolute_run_dir = if run_dir.is_absolute() {
@@ -250,6 +266,18 @@ impl Plan {
                 cache::validate_storage(task, &absolute_run_dir)?;
             }
         }
+        let resource_dir = if self.tasks.iter().any(|t| !t.resources.is_empty()) {
+            let root = resources::directory(self.resource_dir.as_deref())?;
+            for task in &self.tasks {
+                if task.cache.is_some() {
+                    cache::validate_storage(task, &root)?;
+                }
+            }
+            resources::initialize(&root)?;
+            Some(root)
+        } else {
+            None
+        };
         let mut directory = fs::DirBuilder::new();
         #[cfg(unix)]
         {
@@ -278,6 +306,7 @@ impl Plan {
                 stdout: run_dir.join(format!("{i}.stdout")),
                 stderr: run_dir.join(format!("{i}.stderr")),
                 cache: cache::CacheResult::disabled(),
+                wait_reason: None,
             })
             .collect();
         let mut journal = events::Journal::new(&run_dir.join("events.jsonl"), &self.tasks)?;
@@ -292,6 +321,8 @@ impl Plan {
         let mut remaining: Vec<_> = graph.dependencies.iter().map(Vec::len).collect();
         let mut running: Vec<Running> = Vec::new();
         let mut resources = HashSet::new();
+        let mut waiting_since: Vec<Option<Instant>> = vec![None; self.tasks.len()];
+        let mut retry_at: Vec<Option<Instant>> = vec![None; self.tasks.len()];
         let mut failed = false;
         let mut stalled = false;
         let mut prepared: Vec<Option<cache::Prepared>> =
@@ -453,11 +484,13 @@ impl Plan {
                     results[i].error = error;
                     results[i].duration_ms = elapsed.as_millis();
                     // Stop background descendants before capturing output artifacts.
+                    let completed_leases = running[n].leases.take();
+                    let completed_action = running[n].action.take();
                     running.swap_remove(n);
                     if let Some(supervisor) = &mut supervisors[i] {
                         supervisor.stop();
                     }
-                    if let Some(action) = prepared[i].take() {
+                    if let Some(action) = completed_action {
                         if results[i].status == Status::Succeeded {
                             match action.save(
                                 &self.tasks[i],
@@ -474,6 +507,7 @@ impl Plan {
                             }
                         }
                     }
+                    drop(completed_leases);
                     if results[i].status == Status::Succeeded {
                         if self.tasks[i].service.is_none() {
                             for &next in &graph.successors[i] {
@@ -519,12 +553,52 @@ impl Plan {
                             .count()
                             < self.jobs
                     }
-                    && self.tasks[i]
-                        .resources
-                        .iter()
-                        .all(|r| !resources.contains(r))
                 {
+                    if retry_at[i].is_some_and(|next| Instant::now() < next) {
+                        continue;
+                    }
                     let started = Instant::now();
+                    let acquired = if let Some(root) = &resource_dir {
+                        if let Some(name) = self.tasks[i]
+                            .resources
+                            .iter()
+                            .find(|r| resources.contains(*r))
+                        {
+                            Ok(resources::Attempt::Busy(name.clone()))
+                        } else {
+                            resources::acquire(root, &self.tasks[i].resources)
+                        }
+                    } else {
+                        resources::acquire(Path::new(""), &[])
+                    };
+                    let task_leases = match acquired {
+                        Ok(resources::Attempt::Acquired(leases)) => {
+                            results[i].wait_reason = None;
+                            waiting_since[i] = None;
+                            retry_at[i] = None;
+                            leases
+                        }
+                        Ok(resources::Attempt::Busy(name)) => {
+                            let since = *waiting_since[i].get_or_insert_with(Instant::now);
+                            results[i].wait_reason = Some(format!("resource: {name}"));
+                            if self.tasks[i].resource_wait_timeout_ms.is_some_and(|limit| {
+                                since.elapsed() >= Duration::from_millis(limit)
+                            }) {
+                                results[i].status = Status::TimedOut;
+                                results[i].error = Some("resource wait timeout".into());
+                                failed = true;
+                            } else {
+                                retry_at[i] = Some(Instant::now() + Duration::from_millis(50));
+                            }
+                            continue;
+                        }
+                        Err(error) => {
+                            results[i].status = Status::Failed;
+                            results[i].error = Some(format!("resource lease: {error}"));
+                            failed = true;
+                            continue;
+                        }
+                    };
                     if self.tasks[i].cache.is_some() {
                         let dependency_keys: Vec<_> = graph.dependencies[i]
                             .iter()
@@ -603,6 +677,8 @@ impl Plan {
                                 index: i,
                                 child,
                                 started,
+                                leases: Some(task_leases),
+                                action: prepared[i].take(),
                             });
                         }
                         Err(e) => {

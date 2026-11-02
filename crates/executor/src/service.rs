@@ -136,6 +136,8 @@ impl Supervisor {
                         index: usize::MAX,
                         child,
                         started: Instant::now(),
+                        leases: None,
+                        action: None,
                     })
                 }
                 Err(_) => return Health::Failed("could not spawn service health probe".into()),

@@ -116,6 +116,13 @@ impl Telemetry {
                 )],
             );
         }
+        span.set_attribute(KeyValue::new(
+            "pipeline.resource.waiting",
+            result.wait_reason.is_some(),
+        ));
+        if result.wait_reason.is_some() && result.status == Status::Pending {
+            span.add_event("resource.wait", Vec::new());
+        }
         if result.status.terminal() {
             span.set_attribute(KeyValue::new(
                 "pipeline.execution.duration_ms",

@@ -12,6 +12,7 @@ fn task(id: &str, script: &str, cwd: &Path, needs: &[&str]) -> Task {
         cwd: cwd.into(),
         env: BTreeMap::new(),
         resources: vec![],
+        resource_wait_timeout_ms: None,
         timeout_ms: Some(3000),
         cache: None,
         service: None,
@@ -20,6 +21,7 @@ fn task(id: &str, script: &str, cwd: &Path, needs: &[&str]) -> Task {
 fn plan(tasks: Vec<Task>) -> Plan {
     Plan {
         version: 1,
+        resource_dir: None,
         max_services: 8,
         tasks,
         jobs: 2,
