@@ -58,7 +58,7 @@ fn save(path: &Path, value: &impl Serialize) -> Result<(), String> {
 }
 // A torn, malformed, or incomplete report is not evidence of completion. Leave
 // it on disk for diagnosis, but do not let it prevent unrelated runs recovering.
-fn recovered_success(path: &Path) -> Option<bool> {
+fn recovered_outcome(path: &Path) -> Option<&'static str> {
     let plan: Plan = serde_json::from_slice(&fs::read(path.join("plan.json")).ok()?).ok()?;
     let report: serde_json::Value =
         serde_json::from_slice(&fs::read(path.join("execution/result.json")).ok()?).ok()?;
@@ -77,7 +77,15 @@ fn recovered_success(path: &Path) -> Option<bool> {
             _ => return None,
         }
     }
-    Some(success)
+    match report.get("outcome") {
+        None => Some(if success { "succeeded" } else { "failed" }),
+        Some(value) => match value.as_str()? {
+            "succeeded" if success => Some("succeeded"),
+            "failed" if !success => Some("failed"),
+            "cancelled" if !success => Some("cancelled"),
+            _ => None,
+        },
+    }
 }
 
 impl Runs {
@@ -139,9 +147,9 @@ impl Runs {
                 let mut state: RunState =
                     serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
                 if state.status == "running" {
-                    match recovered_success(&entry.path()) {
-                        Some(success) => {
-                            state.status = if success { "succeeded" } else { "failed" }.into();
+                    match recovered_outcome(&entry.path()) {
+                        Some(outcome) => {
+                            state.status = outcome.into();
                             state.error = None;
                         }
                         None => {
@@ -411,9 +419,7 @@ fn admit(
                 plan.execute(&worker_path.join("execution"), &worker_cancel)
             }));
             let (status, error) = match outcome {
-                Ok(Ok(result)) if result.success() => ("succeeded", None),
-                Ok(Ok(_)) if worker_cancel.is_cancelled() => ("cancelled", None),
-                Ok(Ok(_)) => ("failed", None),
+                Ok(Ok(result)) => (result.outcome.as_str(), None),
                 Ok(Err(error)) if worker_cancel.is_cancelled() => ("cancelled", Some(error)),
                 Ok(Err(error)) => ("failed", Some(error)),
                 Err(_) => ("failed", Some("executor panicked".into())),

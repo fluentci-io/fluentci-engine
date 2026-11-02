@@ -672,10 +672,17 @@ On restart, a run still marked running is reconciled only from a report with the
 same ordered task IDs/count as its saved plan and terminal statuses for every task.
 A missing, truncated, malformed, mismatched, or nonterminal report marks that run
 interrupted and does not prevent other runs recovering or new work being admitted.
-Reports are retained for diagnosis, and recovery never reruns commands. A complete
-report recovers as succeeded only if every task succeeded; otherwise it recovers
-as failed. The report does not yet persist the external cancellation cause, so
-recovery of the narrow result-written/state-not-written window cannot distinguish
-external cancellation from other unsuccessful outcomes. These recovery tests seed
-persisted crash-window states; they do not establish independent orphan-process
-cleanup after an actual hard server crash.
+Reports are retained for diagnosis, and recovery never reruns commands. New reports
+persist `outcome` as `succeeded`, `failed`, or `cancelled`. The executor captures it
+once before publication: all successful tasks mean succeeded; otherwise an observed
+external cancellation means cancelled; other unsuccessful runs mean failed. A
+fail-fast run remains failed even when it cancels sibling tasks. The live server
+and restart recovery use the same published outcome. Late cancellation requests do
+not rewrite it. Recovery rejects unknown outcomes or outcomes inconsistent with
+whether all tasks succeeded.
+
+Older reports without `outcome` remain readable: recovery reports succeeded when
+all tasks succeeded and failed otherwise, since those reports cannot distinguish
+external cancellation. These recovery tests seed persisted crash-window states;
+they do not establish independent orphan-process cleanup after an actual hard
+server crash.

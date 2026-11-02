@@ -141,8 +141,25 @@ pub struct TaskResult {
     pub cache: cache::CacheResult,
     pub wait_reason: Option<String>,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RunOutcome {
+    Succeeded,
+    Failed,
+    Cancelled,
+}
+impl RunOutcome {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Succeeded => "succeeded",
+            Self::Failed => "failed",
+            Self::Cancelled => "cancelled",
+        }
+    }
+}
 #[derive(Debug, Serialize)]
 pub struct RunResult {
+    pub outcome: RunOutcome,
     pub tasks: Vec<TaskResult>,
 }
 impl RunResult {
@@ -981,7 +998,19 @@ impl Plan {
             }
             wake.wait(Duration::from_millis(10));
         }
-        let result = RunResult { tasks: results };
+        // Capture the terminal outcome once; later cancellation requests must not
+        // change how a published report is interpreted by the server or recovery.
+        let outcome = if results.iter().all(|task| task.status == Status::Succeeded) {
+            RunOutcome::Succeeded
+        } else if cancel.is_cancelled() {
+            RunOutcome::Cancelled
+        } else {
+            RunOutcome::Failed
+        };
+        let result = RunResult {
+            outcome,
+            tasks: results,
+        };
         journal.finish(result.success())?;
         // Readers and restart recovery see a complete report or no report.
         let mut report = tempfile::NamedTempFile::new_in(&run_dir).map_err(|e| e.to_string())?;

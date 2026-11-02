@@ -186,12 +186,14 @@ fn failure_cancels_running_sibling_and_timeout_is_distinct() {
         .execute(&dir.path().join("fail"), &Cancellation::default())
         .unwrap();
     assert_eq!(result.tasks[1].status, Status::Cancelled);
+    assert_eq!(result.outcome.as_str(), "failed");
     let mut t = task("timeout", "sleep 60", dir.path(), &[]);
     t.timeout_ms = Some(30);
     let result = plan(vec![t])
         .execute(&dir.path().join("timeout"), &Cancellation::default())
         .unwrap();
     assert_eq!(result.tasks[0].status, Status::TimedOut);
+    assert_eq!(result.outcome.as_str(), "failed");
 }
 
 #[test]
@@ -213,7 +215,9 @@ fn external_cancellation_terminates_process_group() {
             thread::sleep(Duration::from_millis(5));
         }
         cancel.cancel();
-        assert_eq!(run.join().unwrap().tasks[0].status, Status::Cancelled);
+        let result = run.join().unwrap();
+        assert_eq!(result.tasks[0].status, Status::Cancelled);
+        assert_eq!(result.outcome.as_str(), "cancelled");
     });
     let pid: i32 = fs::read_to_string(dir.path().join("child.pid"))
         .unwrap()

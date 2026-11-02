@@ -110,7 +110,7 @@ class RunServer(unittest.TestCase):
         self.assertFalse((self.root / "output").exists())
 
     def test_restart_recovers_complete_reports_and_isolates_invalid_reports(self):
-        cases = ["success", "failure", "torn", "missing", "empty", "wrong-id", "nonterminal", "bad-plan"]
+        cases = ["success", "failure", "torn", "missing", "empty", "wrong-id", "nonterminal", "bad-plan", "legacy-success", "contradictory", "unknown-outcome"]
         locations = {}
         for case in cases:
             location = self.submit(self.plan("printf x >> recovery-count; exit " + ("1" if case == "failure" else "0")))
@@ -124,7 +124,13 @@ class RunServer(unittest.TestCase):
             (directory / "state.json").write_text(json.dumps(state))
             path = directory / "execution/result.json"
             report = json.loads(path.read_text())
-            if case == "torn":
+            if case in ["legacy-success", "contradictory", "unknown-outcome"]:
+                if case == "legacy-success":
+                    report.pop("outcome")
+                else:
+                    report["outcome"] = "failed" if case == "contradictory" else "running"
+                path.write_text(json.dumps(report))
+            elif case == "torn":
                 path.write_text('{"tasks":[')
             elif case == "missing":
                 path.unlink()
@@ -141,7 +147,7 @@ class RunServer(unittest.TestCase):
         self.start()
         for case, location in locations.items():
             state = self.terminal(location)
-            expected = {"success":"succeeded", "failure":"failed"}.get(case, "interrupted")
+            expected = {"success":"succeeded", "failure":"failed", "legacy-success":"succeeded"}.get(case, "interrupted")
             self.assertEqual(state["status"], expected, case)
             if expected == "interrupted":
                 self.assertIn("complete result", state["error"])
@@ -149,6 +155,23 @@ class RunServer(unittest.TestCase):
                 self.assertIsNone(state["error"])
         self.assertEqual((self.root / "recovery-count").read_text(), "x" * len(cases))
         self.assertEqual(self.terminal(self.submit(self.plan("exit 0")))["status"], "succeeded")
+
+    def test_restart_preserves_published_cancelled_outcome(self):
+        location = self.submit(self.plan("touch cancellation-started; while :; do /bin/sleep 0.02; done"))
+        deadline = time.monotonic() + 5
+        while not (self.root / "cancellation-started").exists():
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(0.01)
+        self.assertEqual(self.request("POST", location + "/cancel")[0], 202)
+        self.assertEqual(self.terminal(location)["status"], "cancelled")
+        self.assertEqual(json.loads(self.request("GET", location + "/result")[1])["outcome"], "cancelled")
+        self.stop()
+        path = self.root / "runs" / location.rsplit("/", 1)[1] / "state.json"
+        state = json.loads(path.read_text())
+        state["status"] = "running"
+        path.write_text(json.dumps(state))
+        self.start()
+        self.assertEqual(self.terminal(location)["status"], "cancelled")
 
     def test_idempotent_submission_replays_conflicts_and_survives_restart(self):
         headers = {"Idempotency-Key": "release-123"}
