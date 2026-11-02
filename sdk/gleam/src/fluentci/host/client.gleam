@@ -227,3 +227,60 @@ pub fn cancel(id: String, config: Config) -> Promise(Result(Nil, Error)) {
     fn(message) { Error(TransportError(message)) },
   )
 }
+
+pub type LogStream {
+  Stdout
+  Stderr
+  ProbeStdout
+  ProbeStderr
+}
+
+pub type LogPage {
+  LogPage(bytes: BitArray, next_cursor: Int)
+}
+
+@external(javascript, "../../host_client_ffi.mjs", "logs")
+fn logs_impl(
+  config: Config,
+  id: String,
+  index: Int,
+  stream: String,
+  cursor: Int,
+  ok: fn(Dynamic, Int) -> Result(LogPage, Error),
+  invalid: fn() -> Result(LogPage, Error),
+  http_error: fn(Int, String) -> Result(LogPage, Error),
+  transport_error: fn(String) -> Result(LogPage, Error),
+) -> Promise(Result(LogPage, Error))
+
+/// Read up to 1 MiB of raw output from a zero-based task index and byte cursor.
+/// Preserve next_cursor for reconnection. An empty page is not proof of run completion.
+/// Probe streams can return HTTP 404 until the first probe starts.
+pub fn get_logs(
+  id: String,
+  index: Int,
+  stream: LogStream,
+  cursor: Int,
+  config: Config,
+) -> Promise(Result(LogPage, Error)) {
+  let stream = case stream {
+    Stdout -> "stdout"
+    Stderr -> "stderr"
+    ProbeStdout -> "probe_stdout"
+    ProbeStderr -> "probe_stderr"
+  }
+  logs_impl(
+    config,
+    id,
+    index,
+    stream,
+    cursor,
+    fn(data, next_cursor) {
+      dynamic.bit_array(data)
+      |> result.map_error(fn(_) { DecodeError })
+      |> result.map(fn(bytes) { LogPage(bytes:, next_cursor:) })
+    },
+    fn() { Error(DecodeError) },
+    fn(code, body) { Error(HttpError(code, body)) },
+    fn(message) { Error(TransportError(message)) },
+  )
+}

@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import process from 'node:process';
 import assert from 'node:assert/strict';
-import { request } from './host_client_ffi.mjs';
+import { request, logs } from './host_client_ffi.mjs';
 
 export const pause = () => new Promise(resolve => setTimeout(resolve, 25));
 const listen = server => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(server.address().port)));
@@ -104,4 +104,37 @@ export async function mock_fixture(run) {
   const port = await listen(server);
   try { await run(`http://127.0.0.1:${port}`); }
   finally { await close(server); }
+}
+
+
+export async function log_transport_contract() {
+  let header = "4", body = new Uint8Array([0, 255, 195, 169]), calls = 0;
+  const server = createServer((req, res) => {
+    calls++;
+    assert.equal(req.url, '/v1/runs/00000000-0000-0000-0000-000000000001/logs/0/stdout?cursor=0');
+    res.writeHead(200, header === null ? {} : { 'X-Next-Cursor': header });
+    res.end(body);
+  });
+  const port = await listen(server);
+  const config = { base_url: `http://127.0.0.1:${port}`, token: 'log-token', timeout_ms: 5000 };
+  const id = '00000000-0000-0000-0000-000000000001';
+  const ok = (bytes, next) => ({ bytes, next });
+  const invalid = () => 'decode-error';
+  const httpError = () => 'http-error';
+  const transport = () => 'transport-error';
+  const read = (index = 0, cursor = 0) => logs(config, id, index, 'stdout', cursor, ok, invalid, httpError, transport);
+  try {
+    assert.deepEqual(await read(), { bytes: body, next: 4 });
+    for (const malformed of [null, '', '3', '5', '-1', '4.0', '04', '9007199254740992', 'NaN']) {
+      header = malformed;
+      assert.equal(await read(), 'decode-error');
+    }
+    body = new Uint8Array(1024 * 1024 + 1);
+    header = String(body.length);
+    assert.equal(await read(), 'decode-error');
+    const before = calls;
+    for (const cursor of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1]) assert.equal(await read(0, cursor), 'transport-error');
+    for (const index of [-1, 0.5, 10000]) assert.equal(await read(index), 'transport-error');
+    assert.equal(calls, before, 'invalid arguments must not reach the server');
+  } finally { await close(server); }
 }

@@ -142,8 +142,22 @@ a deadline covering headers and body reads, plus a 16 MiB decoded response limit
 Transport failures are separate from `HttpError`, malformed response `DecodeError`,
 and invalid plan errors. HTTP error bodies come from the server. Promises do not
 provide an independent request-abort handle; the configured timeout bounds them.
-History, live events/raw logs, and trace-context propagation remain to be added to
-this Gleam adapter.
+Use `get_logs(id, task_index, stream, cursor, config)` to follow raw output while
+execution continues or after completion. Task indices are zero-based positions in
+the submitted plan. Streams are `Stdout`, `Stderr`, `ProbeStdout`, and `ProbeStderr`.
+Each response contains a `BitArray` and `next_cursor`; start at zero and persist the
+returned cursor to resume without replaying already-read bytes. Responses contain
+at most 1 MiB. The client rejects missing, unsafe or inconsistent cursor headers.
+
+An empty page means no more bytes are available **yet**. Poll run state separately
+to decide whether execution is terminal, then drain remaining output. A probe log
+can return HTTP 404 before its first probe. Keep raw bytes when saving logs;
+individual pages may split UTF-8 characters, so use a streaming decoder for text
+presentation. `gleam/bit_array.to_string` is suitable only when the bytes being
+decoded form a complete UTF-8 sequence.
+
+History, structured live events, and trace-context propagation remain to be added
+to this Gleam adapter.
 
 The existing APIs below use the legacy engine path. Verify host plans, local
 execution and server execution against a built release engine with:
@@ -158,8 +172,8 @@ is explicitly reported as skipped. Set `FLUENTCI_REQUIRE_ENGINE=1` to make a mis
 engine configuration fail instead; host CI requires this on Linux and both macOS
 architectures using pinned Gleam/Deno versions and Node 26. The engine fixture uses temporary directories,
 checks cold/warm caching across workspaces, typed local success/failure, launch errors,
-cancellation cleanup, authenticated server execution, keyed replay and HTTP error
-paths. Tests perform no package installation.
+cancellation cleanup, authenticated server execution, keyed replay, live binary
+output, service probe logs, resumable byte cursors and HTTP error paths. Tests perform no package installation.
 
 ## Legacy API quick start
 
