@@ -542,9 +542,18 @@ impl Plan {
                             ) {
                                 Ok(()) => results[i].cache.outcome = "stored".into(),
                                 Err(e) => {
-                                    results[i].status = Status::Failed;
+                                    results[i].status = if cancel.is_cancelled() {
+                                        Status::Cancelled
+                                    } else {
+                                        Status::Failed
+                                    };
                                     results[i].error = Some(e.clone());
-                                    results[i].cache.outcome = "error".into();
+                                    results[i].cache.outcome = if cancel.is_cancelled() {
+                                        "cancelled"
+                                    } else {
+                                        "error"
+                                    }
+                                    .into();
                                     results[i].cache.reason = e;
                                 }
                             }
@@ -661,10 +670,11 @@ impl Plan {
                                 })
                             })
                             .collect();
-                        let action = match cache::prepare(
+                        let action = match cache::prepare_cancellable(
                             self.cache_dir.as_ref().expect("validated cache directory"),
                             &self.tasks[i],
                             &dependency_keys,
+                            cancel,
                         ) {
                             Ok(Some(action)) => action,
                             Ok(None) => {
@@ -674,9 +684,18 @@ impl Plan {
                                 continue;
                             }
                             Err(error) => {
-                                results[i].status = Status::Failed;
+                                results[i].status = if cancel.is_cancelled() {
+                                    Status::Cancelled
+                                } else {
+                                    Status::Failed
+                                };
                                 results[i].error = Some(error.clone());
-                                results[i].cache.outcome = "error".into();
+                                results[i].cache.outcome = if cancel.is_cancelled() {
+                                    "cancelled"
+                                } else {
+                                    "error"
+                                }
+                                .into();
                                 results[i].cache.reason = error;
                                 failed = true;
                                 continue;
@@ -699,6 +718,12 @@ impl Plan {
                             }
                             Ok(false) => results[i].cache.reason = "no matching action".into(),
                             Err(error) => {
+                                if cancel.is_cancelled() {
+                                    results[i].status = Status::Cancelled;
+                                    results[i].cache.outcome = "cancelled".into();
+                                    results[i].cache.reason = error;
+                                    continue;
+                                }
                                 results[i].cache.reason = format!("cache rejected: {error}")
                             }
                         }
@@ -708,12 +733,26 @@ impl Plan {
                         let _ = fs::remove_file(&results[i].stdout);
                         let _ = fs::remove_file(&results[i].stderr);
                         if let Err(error) = action.clean_outputs(&self.tasks[i]) {
-                            results[i].status = Status::Failed;
+                            results[i].status = if cancel.is_cancelled() {
+                                results[i].cache.outcome = "cancelled".into();
+                                Status::Cancelled
+                            } else {
+                                Status::Failed
+                            };
                             results[i].error = Some(error);
                             failed = true;
                             continue;
                         }
                         prepared[i] = Some(action);
+                    }
+                    if cancel.is_cancelled() {
+                        results[i].status = Status::Cancelled;
+                        if prepared[i].is_some() {
+                            results[i].cache.outcome = "cancelled".into();
+                            results[i].cache.reason = "cancelled before command execution".into();
+                        }
+                        prepared[i] = None;
+                        continue;
                     }
                     match spawn(
                         &self.tasks[i],

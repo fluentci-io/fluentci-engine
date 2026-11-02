@@ -1,6 +1,6 @@
 //! Opt-in local action cache. Cacheability is a contract: all consumed inputs and
 //! produced outputs must be declared. This is not a filesystem/network sandbox.
-use crate::Task;
+use crate::{Cancellation, Task};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -67,6 +67,7 @@ pub struct Prepared {
     pub(crate) executable: PathBuf,
     pub components: BTreeMap<String, String>,
     root: PathBuf,
+    cancel: Cancellation,
     // Process-scoped advisory lock; released on drop, including crashes.
     _lock: File,
 }
@@ -74,11 +75,51 @@ pub struct Prepared {
 fn digest(bytes: &[u8]) -> String {
     hex::encode(Sha256::digest(bytes))
 }
-fn file_digest(path: &Path) -> Result<String, String> {
+fn check_cancel(cancel: &Cancellation) -> Result<(), String> {
+    if cancel.is_cancelled() {
+        Err("cache operation cancelled".into())
+    } else {
+        Ok(())
+    }
+}
+
+fn copy_stream(
+    source: &mut impl Read,
+    destination: &mut impl Write,
+    cancel: &Cancellation,
+) -> Result<(), String> {
+    let mut buffer = [0u8; 65536];
+    loop {
+        check_cancel(cancel)?;
+        let count = source.read(&mut buffer).map_err(|e| e.to_string())?;
+        if count == 0 {
+            return Ok(());
+        }
+        destination
+            .write_all(&buffer[..count])
+            .map_err(|e| e.to_string())?;
+    }
+}
+
+fn copy_file(source: &Path, destination: &Path, cancel: &Cancellation) -> Result<(), String> {
+    check_cancel(cancel)?;
+    let mut input = File::open(source).map_err(|e| e.to_string())?;
+    let mut output = File::create(destination).map_err(|e| e.to_string())?;
+    copy_stream(&mut input, &mut output, cancel)?;
+    fs::set_permissions(
+        destination,
+        input.metadata().map_err(|e| e.to_string())?.permissions(),
+    )
+    .map_err(|e| e.to_string())
+}
+
+fn file_digest(path: &Path, cancel: &Cancellation) -> Result<String, String> {
+    check_cancel(cancel)?;
     let mut file = File::open(path).map_err(|e| format!("read {}: {e}", path.display()))?;
     let mut hasher = Sha256::new();
     let mut buffer = [0u8; 65536];
     loop {
+        check_cancel(cancel)?;
         let n = file.read(&mut buffer).map_err(|e| e.to_string())?;
         if n == 0 {
             break;
@@ -287,12 +328,14 @@ fn set_mode(path: &Path, value: u32) -> Result<(), String> {
     }
     Ok(())
 }
-fn snapshot(base: &Path, paths: &[PathBuf]) -> Result<Vec<Entry>, String> {
+fn snapshot(base: &Path, paths: &[PathBuf], cancel: &Cancellation) -> Result<Vec<Entry>, String> {
     fn visit(
         base: &Path,
         relative: &Path,
         entries: &mut BTreeMap<PathBuf, Entry>,
+        cancel: &Cancellation,
     ) -> Result<(), String> {
+        check_cancel(cancel)?;
         let path = checked_path(base, relative)?;
         let meta = fs::symlink_metadata(&path)
             .map_err(|e| format!("declared path {}: {e}", path.display()))?;
@@ -306,7 +349,7 @@ fn snapshot(base: &Path, paths: &[PathBuf]) -> Result<Vec<Entry>, String> {
                 directory: meta.is_dir(),
                 mode: mode(&meta),
                 digest: if meta.is_file() {
-                    Some(file_digest(&path)?)
+                    Some(file_digest(&path, cancel)?)
                 } else {
                     None
                 },
@@ -315,14 +358,14 @@ fn snapshot(base: &Path, paths: &[PathBuf]) -> Result<Vec<Entry>, String> {
         if meta.is_dir() {
             for item in fs::read_dir(&path).map_err(|e| e.to_string())? {
                 let item = item.map_err(|e| e.to_string())?;
-                visit(base, &relative.join(item.file_name()), entries)?;
+                visit(base, &relative.join(item.file_name()), entries, cancel)?;
             }
         }
         Ok(())
     }
     let mut entries = BTreeMap::new();
     for path in paths {
-        visit(base, path, &mut entries)?;
+        visit(base, path, &mut entries, cancel)?;
     }
     Ok(entries.into_values().collect())
 }
@@ -334,6 +377,16 @@ pub fn prepare(
     task: &Task,
     dependency_keys: &[String],
 ) -> Result<Option<Prepared>, String> {
+    prepare_cancellable(root, task, dependency_keys, &Cancellation::default())
+}
+
+pub(crate) fn prepare_cancellable(
+    root: &Path,
+    task: &Task,
+    dependency_keys: &[String],
+    cancel: &Cancellation,
+) -> Result<Option<Prepared>, String> {
+    check_cancel(cancel)?;
     let policy = task.cache.as_ref().ok_or("missing cache policy")?;
     policy.validate()?;
     let executable = if Path::new(&task.program).is_absolute() {
@@ -363,7 +416,7 @@ pub fn prepare(
         "command".into(),
         encoded_digest(&(&task.program, &task.args))?,
     );
-    components.insert("executable".into(), file_digest(&executable)?);
+    components.insert("executable".into(), file_digest(&executable, cancel)?);
     components.insert(
         "executable_mode".into(),
         encoded_digest(&mode(
@@ -372,7 +425,7 @@ pub fn prepare(
     );
     components.insert(
         "inputs".into(),
-        encoded_digest(&snapshot(&task.cwd, &policy.inputs)?)?,
+        encoded_digest(&snapshot(&task.cwd, &policy.inputs, cancel)?)?,
     );
     components.insert("environment".into(), encoded_digest(&task.env)?);
     components.insert("toolchain".into(), digest(policy.toolchain.as_bytes()));
@@ -418,6 +471,7 @@ pub fn prepare(
         executable,
         components,
         root: root.into(),
+        cancel: cancel.clone(),
         _lock: lock,
     }))
 }
@@ -431,14 +485,14 @@ impl Prepared {
     }
     fn store_blob(&self, source: &Path, expected: &str) -> Result<(), String> {
         let destination = self.blob(expected)?;
-        if destination.exists() && file_digest(&destination)? == expected {
+        if destination.exists() && file_digest(&destination, &self.cancel)? == expected {
             return Ok(());
         }
         let mut staging =
             tempfile::NamedTempFile::new_in(self.root.join("blobs")).map_err(|e| e.to_string())?;
         let mut file = File::open(source).map_err(|e| e.to_string())?;
-        std::io::copy(&mut file, &mut staging).map_err(|e| e.to_string())?;
-        if file_digest(staging.path())? != expected {
+        copy_stream(&mut file, &mut staging, &self.cancel)?;
+        if file_digest(staging.path(), &self.cancel)? != expected {
             return Err(format!("file changed while caching: {}", source.display()));
         }
         staging.as_file().sync_all().map_err(|e| e.to_string())?;
@@ -448,6 +502,7 @@ impl Prepared {
     /// Cacheable tasks start with clean declared outputs, so stale files cannot
     /// accidentally enter an action result. Inputs and outputs cannot overlap.
     pub fn clean_outputs(&self, task: &Task) -> Result<(), String> {
+        check_cancel(&self.cancel)?;
         for root in &task.cache.as_ref().ok_or("missing cache policy")?.outputs {
             let output = checked_path(&task.cwd, root)?;
             if output.is_dir() {
@@ -461,21 +516,23 @@ impl Prepared {
 
     pub fn save(&self, task: &Task, stdout: &Path, stderr: &Path) -> Result<(), String> {
         let policy = task.cache.as_ref().ok_or("missing cache policy")?;
-        if file_digest(&self.executable)? != self.components["executable"] {
+        if file_digest(&self.executable, &self.cancel)? != self.components["executable"] {
             return Err("executable changed during execution; action was not cached".into());
         }
         // Never publish under the old key if declared inputs changed during execution.
-        if encoded_digest(&snapshot(&task.cwd, &policy.inputs)?)? != self.components["inputs"] {
+        if encoded_digest(&snapshot(&task.cwd, &policy.inputs, &self.cancel)?)?
+            != self.components["inputs"]
+        {
             return Err("declared inputs changed during execution; action was not cached".into());
         }
-        let entries = snapshot(&task.cwd, &policy.outputs)?;
+        let entries = snapshot(&task.cwd, &policy.outputs, &self.cancel)?;
         for entry in &entries {
             if let Some(hash) = &entry.digest {
                 self.store_blob(&checked_path(&task.cwd, &entry.path)?, hash)?;
             }
         }
-        let stdout_digest = file_digest(stdout)?;
-        let stderr_digest = file_digest(stderr)?;
+        let stdout_digest = file_digest(stdout, &self.cancel)?;
+        let stderr_digest = file_digest(stderr, &self.cancel)?;
         self.store_blob(stdout, &stdout_digest)?;
         self.store_blob(stderr, &stderr_digest)?;
         let manifest = Manifest {
@@ -494,6 +551,7 @@ impl Prepared {
         serde_json::to_writer(&mut staging, &record).map_err(|e| e.to_string())?;
         staging.flush().map_err(|e| e.to_string())?;
         staging.as_file().sync_all().map_err(|e| e.to_string())?;
+        check_cancel(&self.cancel)?;
         staging
             .persist(self.root.join("actions").join(format!("{}.json", self.key)))
             .map_err(|e| e.to_string())?;
@@ -501,6 +559,7 @@ impl Prepared {
     }
     /// Stage and validate every artifact before changing any workspace output.
     pub fn restore(&self, task: &Task, stdout: &Path, stderr: &Path) -> Result<bool, String> {
+        check_cancel(&self.cancel)?;
         let path = self.root.join("actions").join(format!("{}.json", self.key));
         let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,
@@ -546,8 +605,8 @@ impl Prepared {
                 if let Some(parent) = destination.parent() {
                     fs::create_dir_all(parent).map_err(|e| e.to_string())?;
                 }
-                fs::copy(self.blob(hash)?, &destination).map_err(|e| e.to_string())?;
-                if file_digest(&destination)? != *hash {
+                copy_file(&self.blob(hash)?, &destination, &self.cancel)?;
+                if file_digest(&destination, &self.cancel)? != *hash {
                     return Err("cache blob failed integrity verification".into());
                 }
                 set_mode(&destination, entry.mode)?;
@@ -566,8 +625,8 @@ impl Prepared {
             (&manifest.stdout, &staged_stdout),
             (&manifest.stderr, &staged_stderr),
         ] {
-            fs::copy(self.blob(hash)?, target).map_err(|e| e.to_string())?;
-            if file_digest(target)? != *hash {
+            copy_file(&self.blob(hash)?, target, &self.cancel)?;
+            if file_digest(target, &self.cancel)? != *hash {
                 return Err("cached log failed integrity verification".into());
             }
         }
@@ -575,8 +634,9 @@ impl Prepared {
             set_mode(&artifacts.join(&entry.path), entry.mode)?;
         }
         // A log write failure must not occur after workspace publication.
-        fs::copy(staged_stdout, stdout).map_err(|e| e.to_string())?;
-        fs::copy(staged_stderr, stderr).map_err(|e| e.to_string())?;
+        copy_file(&staged_stdout, stdout, &self.cancel)?;
+        copy_file(&staged_stderr, stderr, &self.cancel)?;
+        check_cancel(&self.cancel)?;
         publish_outputs(&task.cwd, &artifacts, &policy.outputs)?;
         Ok(true)
     }
@@ -696,5 +756,89 @@ mod publication_tests {
             fs::read_to_string(workspace.path().join("second")).unwrap(),
             "original"
         );
+    }
+}
+
+#[cfg(test)]
+mod cancellation_tests {
+    use super::*;
+
+    #[test]
+    fn streaming_copy_stops_between_chunks() {
+        struct CancelAfterRead {
+            cancel: Cancellation,
+            reads: usize,
+        }
+        impl Read for CancelAfterRead {
+            fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+                self.reads += 1;
+                buffer.fill(42);
+                self.cancel.cancel();
+                Ok(buffer.len())
+            }
+        }
+        let cancel = Cancellation::default();
+        let mut source = CancelAfterRead {
+            cancel: cancel.clone(),
+            reads: 0,
+        };
+        let mut destination = Vec::new();
+        assert!(copy_stream(&mut source, &mut destination, &cancel)
+            .unwrap_err()
+            .contains("cancelled"));
+        assert_eq!(source.reads, 1);
+        assert_eq!(destination.len(), 65536);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cancelled_cache_work_does_not_publish_or_replace_outputs() {
+        let root = tempfile::tempdir().unwrap();
+        let task: Task = serde_json::from_value(serde_json::json!({
+            "id": "build", "program": "/bin/sh", "cwd": root.path(),
+            "cache": {"inputs": [], "outputs": ["output"], "toolchain": "test"}
+        }))
+        .unwrap();
+        let cache = root.path().join("cache");
+        let output = root.path().join("output");
+        let stdout = root.path().join("stdout");
+        let stderr = root.path().join("stderr");
+        fs::write(&output, "cached").unwrap();
+        fs::write(&stdout, "log").unwrap();
+        fs::write(&stderr, "").unwrap();
+        let cancel = Cancellation::default();
+        let prepared = prepare_cancellable(&cache, &task, &[], &cancel)
+            .unwrap()
+            .unwrap();
+        cancel.cancel();
+        assert!(prepared
+            .save(&task, &stdout, &stderr)
+            .unwrap_err()
+            .contains("cancelled"));
+        assert!(!cache
+            .join("actions")
+            .join(format!("{}.json", prepared.key))
+            .exists());
+        drop(prepared);
+        let cancel = Cancellation::default();
+        let prepared = prepare_cancellable(&cache, &task, &[], &cancel)
+            .unwrap()
+            .unwrap();
+        prepared.save(&task, &stdout, &stderr).unwrap();
+        fs::write(&output, "preserved").unwrap();
+        cancel.cancel();
+        assert!(prepared
+            .restore(&task, &stdout, &stderr)
+            .unwrap_err()
+            .contains("cancelled"));
+        assert!(prepared
+            .clean_outputs(&task)
+            .unwrap_err()
+            .contains("cancelled"));
+        assert_eq!(fs::read_to_string(output).unwrap(), "preserved");
+        assert!(
+            matches!(prepare_cancellable(&root.path().join("unused"), &task, &[], &cancel), Err(e) if e.contains("cancelled"))
+        );
+        assert!(!root.path().join("unused").exists());
     }
 }

@@ -73,9 +73,18 @@ Task stdin is closed; this execution path is intended for noninteractive CI.
 
 The scheduler polls children every 10 ms. This is a correctness baseline, not a
 claim of benchmark-leading performance. It bounds process concurrency, not CPU
-or memory usage inside each command. Environment-provider preparation, remote
-workers, remote artifact storage, and SDK integration
-remain follow-up milestones.
+or memory usage inside each command. Cache hashing and copying check run
+cancellation between 64 KiB chunks, and tree snapshots check between entries.
+Cancelled cache work stops the task without falling back to command execution.
+Filesystem calls, manifest serialization, output cleanup, and output publication
+can still delay the scheduler; publication finishes or rolls back once started.
+This is cooperative cancellation, not a hard real-time deadline. Moving cache
+work off the scheduler remains necessary to keep unrelated task timeouts and
+service probes responsive during large cache operations.
+
+Native package providers and the PureScript host SDK are available below.
+Remote workers, remote artifact storage, and the remaining SDKs are follow-up
+milestones.
 
 ## Homebrew and MacPorts extensions
 
