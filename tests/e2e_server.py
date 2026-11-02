@@ -143,6 +143,31 @@ class RunServer(unittest.TestCase):
             self.assertEqual(self.terminal(path)["status"], "cancelled")
             self.assertEqual(self.request("GET", path + "/result")[0], 200)
 
+    def test_resource_leases_coordinate_server_and_local_cli(self):
+        holder = self.plan("touch holding; while :; do /bin/sleep 0.02; done")
+        holder["resource_dir"] = str(self.root / "locks")
+        holder["tasks"][0]["resources"] = ["shared-workspace"]
+        path = self.submit(holder)
+        deadline = time.monotonic() + 3
+        while not (self.root / "holding").exists():
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(0.01)
+        contender = self.plan("touch acquired")
+        contender["resource_dir"] = holder["resource_dir"]
+        contender["tasks"][0].update(resources=["shared-workspace"], resource_wait_timeout_ms=100)
+        plan_file = self.root / "local.json"
+        plan_file.write_text(json.dumps(contender))
+        def execute(name):
+            return subprocess.run([str(BINARY), "execute", str(plan_file), "--run-dir", str(self.root / name), "--progress", "json"], capture_output=True, timeout=10)
+        blocked = execute("blocked")
+        self.assertNotEqual(blocked.returncode, 0)
+        self.assertEqual(json.loads((self.root / "blocked/result.json").read_text())["tasks"][0]["status"], "timed_out")
+        self.assertFalse((self.root / "acquired").exists())
+        self.request("POST", path + "/cancel")
+        self.assertEqual(self.terminal(path)["status"], "cancelled")
+        self.assertEqual(execute("admitted").returncode, 0)
+        self.assertTrue((self.root / "acquired").exists())
+
     def test_remote_trace_context_and_export_flush(self):
         self.stop()
         payloads = []

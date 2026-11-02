@@ -34,6 +34,35 @@ class HostExecution(unittest.TestCase):
     def command(self, plan, run="run", progress="json"):
         return [str(BINARY), "execute", str(plan), "--run-dir", str(self.root / run), "--progress", progress]
 
+    def test_resources_coordinate_separate_cli_processes(self):
+        holder = self.task("holder", "touch holding; while :; do sleep 0.02; done")
+        holder["resources"] = ["shared-checkout"]
+        plan = self.plan([holder], resource_dir=str(self.root / "locks"))
+        process = subprocess.Popen(self.command(plan, "holder"), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            deadline = time.monotonic() + 3
+            while not (self.root / "holding").exists():
+                self.assertLess(time.monotonic(), deadline)
+                time.sleep(0.01)
+            contender = self.task("contender", "touch acquired")
+            contender.update(resources=["shared-checkout"], resource_wait_timeout_ms=100)
+            plan = self.plan([contender], resource_dir=str(self.root / "locks"))
+            blocked = subprocess.run(self.command(plan, "blocked"), capture_output=True, text=True, timeout=10)
+            self.assertNotEqual(blocked.returncode, 0)
+            result = json.loads((self.root / "blocked/result.json").read_text())
+            self.assertEqual(result["tasks"][0]["status"], "timed_out")
+            self.assertFalse((self.root / "acquired").exists())
+            self.assertTrue(any(e.get("wait_reason") == "resource: shared-checkout" for e in map(json.loads, blocked.stdout.splitlines())))
+            process.send_signal(signal.SIGINT)
+            process.wait(timeout=5)
+            admitted = subprocess.run(self.command(plan, "admitted"), capture_output=True, text=True, timeout=10)
+            self.assertEqual(admitted.returncode, 0, admitted.stderr)
+            self.assertTrue((self.root / "acquired").exists())
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+
     def test_service_readiness_and_cleanup_with_single_job(self):
         daemon = "import http.server, pathlib, os; s=http.server.HTTPServer(('127.0.0.1',0),http.server.SimpleHTTPRequestHandler); pathlib.Path('port').write_text(str(s.server_port)); pathlib.Path('pid').write_text(str(os.getpid())); print('service-ready', flush=True); s.serve_forever()"
         probe = "import pathlib, urllib.request; urllib.request.urlopen('http://127.0.0.1:'+pathlib.Path('port').read_text()+'/health', timeout=0.2).read()"
