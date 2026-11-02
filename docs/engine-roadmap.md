@@ -1,0 +1,64 @@
+# Host-native engine implementation ledger
+
+The product goal is a Dagger alternative for non-containerized pipelines, with
+functional SDKs and excellent local/server CI/CD DX. Work remains active; these
+milestones do not establish a claim of being the fastest engine.
+
+## Implemented in this worktree
+
+- Explicit versioned plans with dependency validation, bounded parallel tasks,
+  task-local environments, timeouts, process-group cancellation, resource names,
+  disk-backed logs, and structured results.
+- Legacy graph dependency/order/output regression fixes; legacy APIs remain
+  sequential pending migration to the explicit plan runtime.
+- Opt-in local content-addressed action cache, verified artifact restoration,
+  invalidation components, and Unix action-lock deduplication.
+- Durable JSON execution events and unified live CLI TUI, plain CI output, and
+  machine-readable event output.
+- Rust extension adapters for Homebrew (macOS ARM64/Linux x86_64), MacPorts
+  (macOS; native or macports-rs), FreeBSD pkg, NetBSD pkgin, OpenBSD pkg_add.
+- Local fixture, executor, cache, CLI e2e, and PTY tests. GitHub native-host/VM
+  workflows are configured but not remotely executed/verified yet.
+
+## Required follow-through
+
+1. Integrate environment providers with the new plan runtime and all public
+   entry points. Package installation must be explicit and coordinated per prefix.
+2. Provide pure immutable plan builders/handles in TypeScript, PureScript, Gleam,
+   and Elixir. Keep execution as an explicit effect and errors as typed results.
+   Existing APIs need a documented compatibility/migration path.
+3. Add server run submission, status, cancellation, persisted results, and live
+   event transport using the same plan schema as local execution. Remove global
+   current-pipeline semantics from the new server path.
+4. Add cross-run workspace/resource coordination, isolated workspaces, and
+   explicit declared I/O semantics beyond the current user-supplied cache contract.
+5. Extend cache support with contained symlinks, remote storage, cache inspection
+   and explanation commands, retention/GC, and scalable hashing/transfer scheduling.
+6. Validate the GitHub matrix on actual remote runners. Add native provisioning
+   and integration jobs for MacPorts and macports-rs, and Homebrew install tests.
+   BSD kernel/package-manager tests do not prove Wasmtime/legacy server portability.
+7. Benchmark orchestration, cold/warm cache, large logs/artifacts, cancellation,
+   and independent task scaling. Optimize based on measured bottlenecks.
+8. Improve UX for local/server workflows: concise actionable errors, attach to
+   running jobs, inspect task logs/results, explain cache decisions, and sensible
+   zero-daemon local defaults.
+
+Current boundaries and commands are documented in [host-executor.md](host-executor.md).
+Do not mark the overall goal complete based only on the tests for one milestone.
+
+## Build policy
+
+Always build, run, test, and benchmark optimized release artifacts. Use
+`--release` for Cargo build/run/test/check/clippy commands; CLI e2e tests default
+to `target/release/fluentci-engine`. Do not report debug-profile timings.
+
+## Additional requested work
+
+- First-class long-running services: readiness-gated dependencies, bounded startup
+  and health probes, failure propagation to consumers, graceful shutdown followed
+  by process-group kill, teardown ordering, and cancellation/crash tests.
+- Per-step OpenTelemetry is implemented for host tasks with correlated journal
+  events and exporter shutdown. Extend this to service lifecycle spans, metrics,
+  remote propagation, and server execution. HTTP/protobuf export and failed-run
+  flushing are covered by a local receiver e2e test.
+- Keep changes in multiple conventional commits, including the Node 26 mise update.

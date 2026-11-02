@@ -40,6 +40,13 @@ FluentCI Engine is a programmable CI/CD engine (used by [FluentCI](https://githu
 - [x] [OpenTelemetry](https://opentelemetry.io/) tracing
 - [x] Plugin system in WebAssembly, see [examples](./examples)
 
+## Host execution plans
+
+An explicit host executor is available through `fluentci-engine execute`, with
+bounded parallelism, dependency validation, per-task environments, cancellation,
+and structured results. See [host execution plans](docs/host-executor.md) for the
+versioned plan format, functional SDK direction, and current limitations.
+
 ## 🚀 Quick Start
 
 ```bash
@@ -50,7 +57,7 @@ cd fluentci-engine
 # Install dependencies
 nix develop
 cd ./fixtures
-cargo run -p fluentci-engine -- serve
+cargo run --release -p fluentci-engine -- serve
 # Open the browser and go to http://localhost:6880/graphiql
 # See ./fixtures for some GraphQL queries examples
 ```
