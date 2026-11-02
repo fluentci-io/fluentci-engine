@@ -380,3 +380,78 @@ After building this engine with `cargo build --release -p fluentci-engine`, run
 to this release binary when the repositories are not siblings. This integration
 has been exercised locally; cross-repository CI and the other language adapters
 remain follow-through work.
+
+### Package installation and toolchain environments in plans
+
+Package installation is an explicit DAG task. For example:
+
+```json
+{
+  "id": "packages",
+  "cwd": "/workspace/app",
+  "package_install": {
+    "provider": { "manager": "homebrew" },
+    "packages": ["jq"]
+  }
+}
+```
+
+A consumer declares both the dependency and its environment:
+
+```json
+{
+  "id": "check",
+  "needs": ["packages"],
+  "cwd": "/workspace/app",
+  "program": "jq",
+  "args": ["--version"],
+  "package_environment": [{ "manager": "homebrew" }]
+}
+```
+
+Supported `manager` values are `homebrew`, `macports`, `freebsd`, `netbsd`, and
+`openbsd`. Homebrew is restricted to macOS ARM64 and Linux x86_64. MacPorts is
+macOS-only; select `"backend": "rust"` for macports-rs or `"native"` (the default).
+BSD providers require the matching BSD kernel. An optional absolute `executable`
+selects an explicitly provisioned manager binary, including custom macports-rs
+install locations; it does not change the conventional package installation prefix.
+
+The executor validates providers before executing commands and never bootstraps a
+manager or invokes sudo automatically. Install tasks use literal argv and appear
+as normal steps in logs, results, the TUI, and OpenTelemetry. Set `timeout_ms` and
+needed environment values such as `HOME` explicitly for your CI host.
+
+Provider environments prepend the manager executable's directory and conventional
+package `bin`/`sbin` directories to task-local PATH. Existing explicit task PATH is
+preserved as the suffix; an explicit-environment plan otherwise gets the system
+path `/usr/bin:/bin:/usr/sbin:/sbin`. Multiple providers use array order as PATH
+precedence. Homebrew also receives `HOMEBREW_PREFIX` and `NONINTERACTIVE=1`.
+Direct manager commands (`program: "port"`, for example) are pinned to the chosen
+binary. Arbitrary shell scripts are not rewritten; use absolute paths when calling
+custom-named manager executables from a shell. Keg-only formula paths and custom
+installation prefixes must be configured separately; this is not a general
+replacement for every manager-specific shell initialization hook.
+
+Installers automatically take an exclusive `package-prefix:<canonical-prefix>`
+lease. Consumers take a shared lease for that prefix, so they can run in parallel
+while coordinated updates wait. `shared_resources` also exposes shared leases for
+other explicitly declared read-only resources; an exclusive request for the same
+name wins when both are present. All cooperating runs must share `resource_dir`.
+Commands using `package_environment` must not mutate package prefixes; use an
+installation task or an explicit exclusive prefix lease for updates. Updates
+outside the engine's lease protocol are not coordinated.
+
+Install tasks are never action-cached and cannot also be command/service tasks.
+A consumer depending on an uncached installation receives a run-specific dependency
+key, so it does not claim a cross-run cache hit based on mutable package state.
+For cached consumers, provision a pinned toolchain separately, declare its identity
+in `cache.toolchain`, and use `package_environment` without an installation step in
+the cached dependency graph. Complete automatic package-state snapshots and verified
+toolchain identities remain follow-through work.
+
+Fixture tests exercise command selection, argv, failures, parallel readers, exclusive
+updates, child-local environments, and cached consumers. The native CI matrix now
+includes an opt-in `native_package_plan_install` test that installs `jq` and runs it
+through the provider environment on supported Homebrew and BSD hosts. These jobs
+are configured but have not yet been executed remotely. MacPorts provisioning and
+native macports-rs CI coverage remain pending.

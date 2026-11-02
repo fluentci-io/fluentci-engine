@@ -22,8 +22,11 @@ milestones do not establish a claim of being the fastest engine.
 
 ## Required follow-through
 
-1. Integrate environment providers with the new plan runtime and all public
-   entry points. Package installation must be explicit and coordinated per prefix.
+1. Homebrew, MacPorts/native-or-rust, and BSD providers now work in explicit local
+   and server plans and the PureScript SDK. Installation is an uncached DAG step;
+   shared consumers and exclusive installers coordinate per prefix. Complete other
+   SDK/legacy entry points, custom-prefix/shell-hook handling, and verified package
+   state snapshots for toolchain caching.
 2. The sibling PureScript SDK now provides pure immutable host plans, typed remote
    execution, and a direct Node adapter with Aff cancellation. Its end-to-end tests
    exercise this release engine. Implement equivalent TypeScript, Gleam, and Elixir
@@ -41,7 +44,8 @@ milestones do not establish a claim of being the fastest engine.
 5. Extend cache support with contained symlinks, remote storage, cache inspection
    and explanation commands, retention/GC, and scalable hashing/transfer scheduling.
 6. Validate the GitHub matrix on actual remote runners. Add native provisioning
-   and integration jobs for MacPorts and macports-rs, and Homebrew install tests.
+   and integration jobs for MacPorts and macports-rs. Homebrew and BSD native
+   package-plan installation tests are configured but await remote verification.
    BSD kernel/package-manager tests do not prove Wasmtime/legacy server portability.
 7. Benchmark orchestration, cold/warm cache, large logs/artifacts, cancellation,
    and independent task scaling. Optimize based on measured bottlenecks.
