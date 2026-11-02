@@ -29,8 +29,8 @@ Each task has:
 - `cwd`: existing working directory. The CLI resolves relative paths against the
   plan file's directory; the Rust library requires absolute paths.
 - `env`: task-local environment overrides. No process-wide environment mutation.
-- `resources`: names of exclusive resources within this run, such as a writable
-  checkout or package-manager prefix. Tasks sharing a resource cannot overlap.
+- `resources`: names of exclusive resources, such as a writable checkout or
+  package-manager prefix. Runs sharing a resource directory coordinate these names.
 - `timeout_ms`: optional positive timeout, measured from process launch.
 
 Unknown fields, missing dependencies, cycles, duplicate IDs, and invalid working
@@ -330,3 +330,37 @@ not automatically rerun. Run-store garbage collection is not yet implemented.
 `serve-runs` is separate from the existing GraphQL `serve` command. The legacy SDK
 server retains its existing semantics until the SDK compatibility path is migrated;
 the new run API does not share its mutable current-pipeline graph.
+
+
+### Cross-run resource leases
+
+On Unix, `resources` now use process-shared advisory file locks. The default
+coordination directory is `$HOME/.cache/fluentci/resources`; set the plan's
+`resource_dir` to an absolute private directory to use another namespace. Local
+CLI plans may use a relative `resource_dir`, resolved beside the plan file.
+CLI and server runs with the same directory coordinate with each other.
+
+A task acquires its complete sorted, deduplicated resource set before cache lookup,
+restoration, or execution. If any lease is busy, partial acquisition is released
+and retried without occupying an execution slot. Leases cover cache publication
+and child/service cleanup, including error unwinding. Different resource names
+can execute concurrently. This is coordination for cooperating processes, not
+filesystem isolation: all writers must declare the same names and namespace.
+
+Tasks may set `resource_wait_timeout_ms` to bound contention separately from
+execution `timeout_ms`. The default is no wait deadline. Cancellation remains
+available while waiting. JSON events/results expose `wait_reason`; plain/TUI
+output displays contention, and step spans record resource waiting. Retry cadence
+is 50 ms; ordering is not FIFO and starvation freedom is not guaranteed. Use a
+wait deadline when service dependencies across runs could form a cycle.
+
+The directory must be private (0700) and owned by the executing user. Resource
+names are hashed into stable file names; lock files must not be deleted while any
+run uses the namespace, because replacing an inode would create a separate lock.
+Do not put the namespace inside directories that tasks delete or overwrite.
+Cached tasks reject lock storage that overlaps declared inputs/outputs.
+
+These locks do not guarantee child termination after a hard engine kill or machine
+failure. The OS releases the engine's locks on death, but orphaned child commands
+may remain on some hosts. Use graceful cancellation/shutdown until independent
+crash supervision is implemented; do not treat locks as a sandbox boundary.

@@ -32,8 +32,10 @@ milestones do not establish a claim of being the fastest engine.
    trace context. Follow through with SDK migration, idempotent submission, durable
    admission queues, history indexing, and run-store retention. The legacy GraphQL
    server remains separate.
-4. Add cross-run workspace/resource coordination, isolated workspaces, and
-   explicit declared I/O semantics beyond the current user-supplied cache contract.
+4. Cross-run resource leases now coordinate declared resource names across local
+   and server processes. Add isolated workspaces, cross-run deadlock/fairness policy,
+   independent crash supervision, and explicit declared I/O semantics beyond the
+   current user-supplied cache contract.
 5. Extend cache support with contained symlinks, remote storage, cache inspection
    and explanation commands, retention/GC, and scalable hashing/transfer scheduling.
 6. Validate the GitHub matrix on actual remote runners. Add native provisioning
