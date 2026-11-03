@@ -121,7 +121,7 @@ pub fn valid_name(name: &str) -> bool {
         && name != "."
         && name != ".."
 }
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Attempt {
     pub number: usize,
     pub status: Status,
@@ -129,7 +129,7 @@ pub struct Attempt {
     pub duration_ms: u128,
     pub error: Option<String>,
 }
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Artifact {
     pub path: PathBuf,
     pub size: u64,

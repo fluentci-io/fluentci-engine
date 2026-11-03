@@ -70,7 +70,14 @@ pub async fn run(command: &str) -> Result<(), Error> {
     }
     let status = status?;
     if !status.success() {
-        return Err(anyhow::anyhow!("session command failed ({status})"));
+        let (exit_code, signal) = fluentci_executor::diagnostics::process_exit(&status);
+        return Err(fluentci_executor::diagnostics::ExecutionFailure {
+            exit_code,
+            message: format!(
+                "session command failed (exit code {exit_code}, signal {signal:?}): {status}"
+            ),
+        }
+        .into());
     }
     Ok(())
 }

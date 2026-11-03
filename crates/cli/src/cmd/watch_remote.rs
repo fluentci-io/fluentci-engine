@@ -98,6 +98,17 @@ impl Remote {
         }
         Ok(Page { bytes, length })
     }
+    async fn failure(&self) -> Option<Error> {
+        let endpoint = Url::parse(&format!(
+            "{}/result",
+            self.run.as_str().trim_end_matches('/')
+        ))
+        .ok()?;
+        let response = self.get(endpoint).await.ok()?;
+        let bytes = body(response, 16 * 1024 * 1024).await.ok()?;
+        let report: fluentci_executor::RunResult = serde_json::from_slice(&bytes).ok()?;
+        report.failure().map(Error::new)
+    }
     async fn state(&self) -> Result<String, Error> {
         let bytes = body(self.get(self.run.clone()).await?, 65536).await?;
         let value: serde_json::Value =
@@ -191,10 +202,16 @@ impl Remote {
             {
                 display.finish_display().map_err(|e| anyhow!(e))?;
                 if matches!(state.as_str(), "failed" | "cancelled" | "interrupted") {
-                    return Err(anyhow!("remote run {state}"));
+                    return Err(self
+                        .failure()
+                        .await
+                        .unwrap_or_else(|| anyhow!("remote run {state}")));
                 }
                 if display.completed() == Some(false) {
-                    return Err(anyhow!("remote pipeline failed or was cancelled"));
+                    return Err(self
+                        .failure()
+                        .await
+                        .unwrap_or_else(|| anyhow!("remote pipeline failed or was cancelled")));
                 }
                 if follow && display.completed() != Some(true) {
                     return Err(anyhow!("terminal remote run has no complete finish event"));

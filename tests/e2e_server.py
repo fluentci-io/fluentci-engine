@@ -101,6 +101,15 @@ class RunServer(unittest.TestCase):
         return [str(BINARY), "watch", path.rsplit("/", 1)[1], "--server", self.base,
                 "--progress", "json", *args]
 
+    def test_remote_watch_preserves_failed_process_code_and_message(self):
+        path = self.submit(self.plan("printf 'REMOTE-PROCESS-ERROR\\n' >&2; exit 29"))
+        self.assertEqual(self.terminal(path)["status"], "failed")
+        result = subprocess.run(self.watch_command(path), env={**os.environ, "FLUENTCI_RUN_TOKEN": TOKEN},
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 29, result.stderr)
+        self.assertIn("exit code 29", result.stderr)
+        self.assertIn("REMOTE-PROCESS-ERROR", result.stderr)
+
     def test_named_artifact_download_is_authenticated_and_recovery_keeps_optional_outcomes(self):
         plan = self.plan("printf artifact > artifact.txt; printf value > value.txt")
         plan["tasks"][0]["policy"] = {"artifacts": {"binary": "artifact.txt"}, "outputs": {"version": "value.txt"}}

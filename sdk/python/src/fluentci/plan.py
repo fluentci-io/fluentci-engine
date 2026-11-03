@@ -118,6 +118,7 @@ class TaskResult:
     attempts: tuple[Attempt, ...] = ()
     allowed_failure: bool = False
     condition_skipped: bool = False
+    signal: int | None = None
 
 @dataclass(frozen=True, slots=True)
 class RunResult:
@@ -161,5 +162,5 @@ class Plan:
                 MappingProxyType(dict(row.get("outputs", {}))),
                 MappingProxyType({name: Artifact(**artifact) for name, artifact in row.get("artifacts", {}).items()}),
                 tuple(Attempt(**attempt) for attempt in row.get("attempts", [])),
-                row.get("allowed_failure", False), row.get("condition_skipped", False)))
+                row.get("allowed_failure", False), row.get("condition_skipped", False), row.get("signal")))
         return RunResult(raw["outcome"], tuple(tasks))

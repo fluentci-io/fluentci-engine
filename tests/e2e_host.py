@@ -278,9 +278,26 @@ s.serve_forever()
             self.assertTrue(any(e["id"] == parent and e["status"] == "succeeded" for e in states[:joined]))
         self.assertEqual(json.loads((self.root / "run/result.json").read_text())["tasks"][-1]["status"], "succeeded")
 
+    def test_process_error_and_exit_code_reach_cli_events_and_saved_watch(self):
+        path = self.plan([self.task("compiler", "printf 'ACTUAL-PROCESS-ERROR\\n' >&2; exit 23")])
+        result = subprocess.run(self.command(path), capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 23, result.stderr)
+        self.assertIn("exit code 23", result.stderr)
+        self.assertIn("ACTUAL-PROCESS-ERROR", result.stderr)
+        report = json.loads((self.root / "run/result.json").read_text())
+        self.assertEqual(report["tasks"][0]["exit_code"], 23)
+        self.assertIn("ACTUAL-PROCESS-ERROR", report["tasks"][0]["error"])
+        events = [json.loads(line) for line in result.stdout.splitlines()]
+        failed = next(event for event in events if event["type"] == "task_state" and event["status"] == "failed")
+        self.assertEqual(failed["exit_code"], 23)
+        replay = subprocess.run(self.watch_command(), capture_output=True, text=True, timeout=10)
+        self.assertEqual(replay.returncode, 23, replay.stderr)
+        self.assertIn("ACTUAL-PROCESS-ERROR", replay.stderr)
+
     def test_failure_exit_code_and_skipped_dependency(self):
         result = subprocess.run(self.command(self.plan([self.task("bad", "exit 7"), self.task("skip", "touch unexpected", ["bad"])])), capture_output=True, text=True, timeout=15)
-        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 7)
+        self.assertIn("exit code 7", result.stderr)
         tasks = json.loads((self.root / "run/result.json").read_text())["tasks"]
         self.assertEqual(tasks[0]["exit_code"], 7)
         self.assertEqual(tasks[1]["status"], "skipped")

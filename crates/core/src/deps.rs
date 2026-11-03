@@ -275,7 +275,14 @@ impl Graph {
         self.enabled_services.clear();
         let completion = match result {
             Ok(output) => (output, 0),
-            Err(error) => (error.to_string(), 1),
+            Err(error) => {
+                let code = error
+                    .downcast_ref::<fluentci_executor::diagnostics::ExecutionFailure>()
+                    .and_then(|failure| usize::try_from(failure.exit_code).ok())
+                    .filter(|code| *code != 0)
+                    .unwrap_or(1);
+                (format!("{error:#}"), code)
+            }
         };
         let _ = self.tx.send(completion);
     }

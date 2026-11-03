@@ -109,7 +109,13 @@ host_fn!(pub stdout(user_data: State;) -> String {
   let state = state.lock().unwrap();
   let graph = state.graph.clone();
   let rx = state.rx.clone();
-  common::stdout(graph, rx)
+  let response = common::stdout(graph, rx);
+  if let Err(error) = &response {
+    if let Some(failure) = error.downcast_ref::<fluentci_executor::diagnostics::ExecutionFailure>() {
+      *state.execution_failure.lock().unwrap() = Some(failure.clone());
+    }
+  }
+  response
 });
 
 host_fn!(pub stderr(user_data: State;) -> String {
@@ -117,7 +123,13 @@ host_fn!(pub stderr(user_data: State;) -> String {
   let state = state.lock().unwrap();
   let graph = state.graph.clone();
   let rx = state.rx.clone();
-  common::stderr(graph, rx)
+  let response = common::stderr(graph, rx);
+  if let Err(error) = &response {
+    if let Some(failure) = error.downcast_ref::<fluentci_executor::diagnostics::ExecutionFailure>() {
+      *state.execution_failure.lock().unwrap() = Some(failure.clone());
+    }
+  }
+  response
 });
 
 host_fn!(pub zip(user_data: State; path: String) -> Json<File> {

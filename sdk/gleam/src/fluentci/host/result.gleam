@@ -33,6 +33,7 @@ pub type TaskResult {
     stdout: String,
     stderr: String,
     cache: Cache,
+    signal: Option(Int),
     attempts: List(Attempt),
     outputs: dict.Dict(String, String),
     artifacts: dict.Dict(String, Artifact),
@@ -127,6 +128,7 @@ fn task(data: Dynamic) -> Result(TaskResult, DecodeErrors) {
   use stdout <- result.try(dynamic.field("stdout", dynamic.string)(data))
   use stderr <- result.try(dynamic.field("stderr", dynamic.string)(data))
   use cache <- result.try(dynamic.field("cache", cache)(data))
+  use signal <- result.try(dynamic.optional_field("signal", dynamic.int)(data))
   use attempts <- result.try(dynamic.optional_field(
     "attempts",
     dynamic.list(attempt),
@@ -159,6 +161,7 @@ fn task(data: Dynamic) -> Result(TaskResult, DecodeErrors) {
         stdout:,
         stderr:,
         cache:,
+        signal:,
         attempts: option.unwrap(attempts, []),
         outputs: option.unwrap(outputs, dict.new()),
         artifacts: option.unwrap(artifacts, dict.new()),

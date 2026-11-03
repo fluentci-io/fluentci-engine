@@ -12,6 +12,7 @@ use opentelemetry_sdk::trace::config;
 use opentelemetry_sdk::Resource;
 use sha2::Sha256;
 
+pub use fluentci_executor::diagnostics::ExecutionFailure;
 pub mod deps;
 pub mod edge;
 mod legacy_plan;

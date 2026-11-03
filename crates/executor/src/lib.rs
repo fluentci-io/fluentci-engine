@@ -1,6 +1,7 @@
 //! Isolated, bounded host execution. Plans contain data, never a mutable "current" pipeline.
 //! Filesystem access is not sandboxed: callers must declare shared writable resources.
 pub mod cache;
+pub mod diagnostics;
 pub mod events;
 pub mod graph;
 pub mod matrix;
@@ -162,11 +163,13 @@ impl Status {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TaskResult {
     pub id: String,
     pub status: Status,
     pub exit_code: Option<i32>,
+    #[serde(default)]
+    pub signal: Option<i32>,
     pub error: Option<String>,
     pub duration_ms: u128,
     pub stdout: PathBuf,
@@ -175,10 +178,15 @@ pub struct TaskResult {
     pub probe_logs: Option<service::ProbeLogs>,
     pub cache: cache::CacheResult,
     pub wait_reason: Option<String>,
+    #[serde(default)]
     pub attempts: Vec<workflow::Attempt>,
+    #[serde(default)]
     pub outputs: BTreeMap<String, String>,
+    #[serde(default)]
     pub artifacts: BTreeMap<String, workflow::Artifact>,
+    #[serde(default)]
     pub condition_skipped: bool,
+    #[serde(default)]
     pub allowed_failure: bool,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -197,7 +205,7 @@ impl RunOutcome {
         }
     }
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RunResult {
     pub outcome: RunOutcome,
     pub tasks: Vec<TaskResult>,
@@ -500,6 +508,7 @@ impl Plan {
                 id: t.id.clone(),
                 status: Status::Pending,
                 exit_code: None,
+                signal: None,
                 error: None,
                 duration_ms: 0,
                 stdout: run_dir.join(format!("{i}.stdout")),
@@ -736,12 +745,14 @@ impl Plan {
                 let outcome = if let Some(config) = &self.tasks[i].service {
                     let child_exit = running[n].child.try_wait();
                     if let Ok(Some(exit)) = child_exit {
+                        let (code, signal) = diagnostics::process_exit(&exit);
+                        results[i].signal = signal;
                         if let Some(shutdown) = shutdowns[i].take() {
-                            Some((shutdown.status, exit.code(), shutdown.error))
+                            Some((shutdown.status, Some(code), shutdown.error))
                         } else {
                             Some((
                                 Status::Failed,
-                                exit.code(),
+                                Some(code),
                                 Some("service exited before shutdown".into()),
                             ))
                         }
@@ -862,15 +873,19 @@ impl Plan {
                     ))
                 } else {
                     match running[n].child.try_wait() {
-                        Ok(Some(status)) => Some((
-                            if status.success() {
-                                Status::Succeeded
-                            } else {
-                                Status::Failed
-                            },
-                            status.code(),
-                            None,
-                        )),
+                        Ok(Some(status)) => {
+                            let (code, signal) = diagnostics::process_exit(&status);
+                            results[i].signal = signal;
+                            Some((
+                                if status.success() {
+                                    Status::Succeeded
+                                } else {
+                                    Status::Failed
+                                },
+                                Some(code),
+                                None,
+                            ))
+                        }
                         Ok(None) => None,
                         Err(e) => Some((Status::Failed, None, Some(e.to_string()))),
                     }
@@ -880,6 +895,60 @@ impl Plan {
                     results[i].exit_code = code;
                     results[i].error = error;
                     results[i].duration_ms = elapsed.as_millis();
+                    if results[i].status == Status::TimedOut {
+                        results[i].exit_code = Some(124);
+                        let message = results[i].error.take().unwrap_or_else(|| {
+                            format!(
+                                "task timed out after {} ms",
+                                self.tasks[i].timeout_ms.unwrap_or(0)
+                            )
+                        });
+                        results[i].error = Some(diagnostics::with_process_output(
+                            format!("exit code 124: {message}"),
+                            &results[i].stderr,
+                            &results[i].stdout,
+                        ));
+                    } else if results[i].status == Status::Cancelled {
+                        results[i].exit_code = Some(130);
+                        results[i]
+                            .error
+                            .get_or_insert_with(|| "exit code 130: task cancelled".into());
+                    } else if results[i].status == Status::Failed {
+                        let message = results[i].error.take();
+                        results[i].error = Some(match message {
+                            Some(message) => diagnostics::with_process_output(
+                                format!(
+                                    "exit code {}: {message}",
+                                    results[i].exit_code.unwrap_or(1)
+                                ),
+                                &results[i].stderr,
+                                &results[i].stdout,
+                            ),
+                            None => diagnostics::process_error(
+                                &self.tasks[i].program,
+                                results[i].exit_code.unwrap_or(1),
+                                results[i].signal,
+                                &results[i].stderr,
+                                &results[i].stdout,
+                            ),
+                        });
+                    }
+                    if matches!(results[i].status, Status::Failed | Status::TimedOut) {
+                        if let Some(probes) = &results[i].probe_logs {
+                            let diagnostic = diagnostics::with_process_output(
+                                "probe output".into(),
+                                &probes.stderr,
+                                &probes.stdout,
+                            );
+                            if diagnostic != "probe output" {
+                                let message = results[i]
+                                    .error
+                                    .take()
+                                    .unwrap_or_else(|| "service failed".into());
+                                results[i].error = Some(format!("{message}\n{diagnostic}"));
+                            }
+                        }
+                    }
                     // Stop background descendants before capturing output artifacts.
                     let completed_leases = running[n].leases.take();
                     let completed_action = running[n].action.take();
@@ -893,7 +962,7 @@ impl Plan {
                         let attempt = workflow::Attempt {
                             number,
                             status: results[i].status.clone(),
-                            exit_code: code,
+                            exit_code: results[i].exit_code,
                             duration_ms: attempt_elapsed.as_millis(),
                             error: results[i].error.clone(),
                         };
@@ -901,6 +970,7 @@ impl Plan {
                     }
                     let retry = self.tasks[i].policy.retry.as_ref().filter(|policy| {
                         results[i].status == Status::Failed
+                            && results[i].signal.is_none()
                             && code.is_some_and(|code| {
                                 policy.exit_codes.is_empty() || policy.exit_codes.contains(&code)
                             })
@@ -1115,6 +1185,7 @@ impl Plan {
                         }
                     };
                     results[i].exit_code = None;
+                    results[i].signal = None;
                     results[i].error = None;
                     resolved_tasks[i] = match workflow::resolve(&self.tasks[i], &results) {
                         Ok(task) => task,

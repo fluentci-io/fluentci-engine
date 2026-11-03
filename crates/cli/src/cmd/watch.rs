@@ -66,7 +66,16 @@ pub async fn watch(
         if display.caught_up() && (!follow || display.completed().is_some()) {
             display.finish_display().map_err(|e| anyhow!(e))?;
             return if display.completed() == Some(false) {
-                Err(anyhow!("pipeline failed or was cancelled; see result.json"))
+                match std::fs::read(run.join("result.json"))
+                    .ok()
+                    .and_then(|bytes| {
+                        serde_json::from_slice::<fluentci_executor::RunResult>(&bytes).ok()
+                    })
+                    .and_then(|report| report.failure())
+                {
+                    Some(failure) => Err(failure.into()),
+                    None => Err(anyhow!("pipeline failed or was cancelled; see result.json")),
+                }
             } else {
                 Ok(())
             };

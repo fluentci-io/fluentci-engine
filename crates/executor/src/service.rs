@@ -69,7 +69,7 @@ impl Service {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ProbeLogs {
     pub stdout: PathBuf,
     pub stderr: PathBuf,

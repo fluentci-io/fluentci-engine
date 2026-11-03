@@ -29,10 +29,12 @@ pub fn call(module: &str, command: &str) -> Result<(), Error> {
     let graph = Graph::new(tx, Arc::new(Box::new(Runner::default())));
     let cancellation = graph.cancellation.clone();
     let _signals = fluentci_core::signals::CancellationSignals::new(cancellation.clone())?;
+    let execution_failure = Arc::new(Mutex::new(None));
     let user_data = UserData::new(State {
         graph: Arc::new(Mutex::new(graph)),
         rx: Arc::new(Mutex::new(rx)),
         runner: "default".into(),
+        execution_failure: execution_failure.clone(),
     });
 
     let module = match module.starts_with("http")
@@ -58,7 +60,15 @@ pub fn call(module: &str, command: &str) -> Result<(), Error> {
         .map(str::to_owned)
         .with_context(|| format!("Wasm export {func:?} failed"));
     fluentci_core::shutdown_tracer();
-    let response = response?;
+    let response = match response {
+        Ok(value) => value,
+        Err(error) => {
+            if let Some(failure) = execution_failure.lock().unwrap().clone() {
+                return Err(Error::new(failure).context(format!("{error:#}")));
+            }
+            return Err(error);
+        }
+    };
     if cancellation.is_cancelled() {
         return Err(anyhow::anyhow!("plugin execution was cancelled"));
     }

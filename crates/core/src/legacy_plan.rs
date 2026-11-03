@@ -466,38 +466,33 @@ pub(crate) fn execute(
                 .iter()
                 .find(|task| task.status != fluentci_executor::Status::Succeeded)
             {
-                bail!("{}", finalization_failure(task));
+                let mut failure = cleanup.failure().expect("failed finalizer");
+                failure.message = finalization_failure(task);
+                return Err(failure.into());
             }
         }
     }
 
     let result = result?;
-    if !result.success() {
-        let failed = result.tasks.iter().find(|t| {
-            matches!(
-                t.status,
-                fluentci_executor::Status::Failed
-                    | fluentci_executor::Status::TimedOut
-                    | fluentci_executor::Status::Cancelled
-            )
-        });
-        if let Some(task) = failed {
+    if let Some(mut failure) = result.failure() {
+        if let Some(task) = result.tasks.iter().find(|task| {
+            !task.allowed_failure
+                && matches!(
+                    task.status,
+                    fluentci_executor::Status::Failed
+                        | fluentci_executor::Status::TimedOut
+                        | fluentci_executor::Status::Cancelled
+                )
+        }) {
             let name = graph
                 .vertices
                 .iter()
                 .find(|vertex| vertex.id == task.id)
-                .map(|vertex| format!("{}: {}", vertex.label, vertex.command))
+                .map(|vertex| vertex.label.clone())
                 .unwrap_or_else(|| task.id.clone());
-            let status = task
-                .exit_code
-                .map(|code| format!("exit status {code}"))
-                .unwrap_or_else(|| format!("{:?}", task.status).to_lowercase());
-            bail!(
-                "Command failed ({status}): {name}: {}",
-                task.error.as_deref().unwrap_or("command failed")
-            );
+            failure.message = format!("Command failed: {name}: {}", failure.message);
         }
-        bail!("pipeline failed or was cancelled");
+        return Err(failure.into());
     }
     graph.work_dir = compiled.final_cwd.to_string_lossy().into_owned();
     let Some(target) = compiled.target else {

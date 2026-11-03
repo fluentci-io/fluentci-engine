@@ -90,3 +90,29 @@ uses the same bearer-token authorization as logs/results.
 Local file paths in result metadata refer to the engine host. Remote callers
 must use the authenticated download endpoint rather than interpreting those
 paths as files on their own machine.
+
+## Failure diagnostics and exit codes
+
+Every failed process records its exit code and an explicit error containing the
+captured stderr tail (up to 4 KiB; stdout is used if stderr is empty). Complete
+stdout/stderr files remain available. Service errors also retain the last probe
+output. Attempt records preserve earlier failures when a later retry succeeds.
+
+Task-state JSON events include `exit_code` and `signal`. Plain output and the TUI
+show the failure reason; a separate TUI failure panel keeps the process error
+visible after the recent-output tail rolls over. Results and SDK reports retain
+these same diagnostics.
+
+`execute`, local/remote `watch`, session commands and failed Wasm exports forward
+the selected native process code instead of replacing every failure with `1`.
+Successful handling of a returned failed report does not force a Wasm export to
+fail. On a failed export, the CLI includes the latest failed native execution's
+code and diagnostic alongside the plugin error. Allowed failures remain visible
+but do not make successful pipelines exit nonzero.
+
+Unix signal termination reports `128 + signal` and the signal number. Controlled
+timeouts use `124`, cancellation uses `130`, and failures before process creation
+use CLI status `1` with the original OS error; no process exit code is fabricated
+for commands that never started. When several jobs fail, the CLI selects the
+first non-tolerated failed task in plan order; every task's diagnostics remain in
+the result and journal.

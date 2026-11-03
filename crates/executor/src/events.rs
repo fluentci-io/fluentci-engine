@@ -35,6 +35,10 @@ pub enum EventKind {
         #[serde(default)]
         wait_reason: Option<String>,
         error: Option<String>,
+        #[serde(default)]
+        exit_code: Option<i32>,
+        #[serde(default)]
+        signal: Option<i32>,
         duration_ms: u64,
     },
     Log {
@@ -186,6 +190,8 @@ impl Journal {
                     reason: result.cache.reason.clone(),
                     wait_reason: result.wait_reason.clone(),
                     error: result.error.clone(),
+                    exit_code: result.exit_code,
+                    signal: result.signal,
                     duration_ms: result.duration_ms.min(u64::MAX as u128) as u64,
                 })?;
             }
@@ -213,6 +219,8 @@ mod tests {
                 reason: "new action".into(),
                 wait_reason: None,
                 error: None,
+                exit_code: None,
+                signal: None,
                 duration_ms: 12,
             },
             EventKind::Log {
@@ -257,6 +265,7 @@ mod polling_tests {
                 id: task.id.clone(),
                 status: Status::Pending,
                 exit_code: None,
+                signal: None,
                 error: None,
                 duration_ms: 0,
                 stdout: root.join(format!("{i}.stdout")),

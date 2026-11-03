@@ -22,6 +22,7 @@ async fn execute_inner(path: &str, run_dir: &str, progress: &str) -> Result<(), 
     let run_dir = PathBuf::from(run_dir);
     let mut display = super::progress::Progress::new(&plan, progress).map_err(|e| anyhow!(e))?;
     let event_path = run_dir.join("events.jsonl");
+    let result_path = run_dir.join("result.json");
     // Register before starting commands so early SDK cancellation cannot take
     // the default SIGINT action after a child has already been launched.
     #[cfg(unix)]
@@ -55,8 +56,8 @@ async fn execute_inner(path: &str, run_dir: &str, progress: &str) -> Result<(), 
     }?
     .map_err(|e| anyhow!(e))?;
     display.poll(&event_path, true).map_err(|e| anyhow!(e))?;
-    if !result.success() {
-        return Err(anyhow!("pipeline failed or was cancelled; see result.json"));
+    if let Some(failure) = result.failure() {
+        return Err(Error::new(failure).context(format!("see {}", result_path.display())));
     }
     Ok(())
 }

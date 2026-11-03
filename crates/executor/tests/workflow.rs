@@ -193,3 +193,57 @@ fn cached_products_are_republished_and_retry_uses_one_verified_action() {
         "version"
     );
 }
+
+#[test]
+fn process_failure_preserves_code_stderr_and_structured_event_diagnostics() {
+    let dir = tempfile::tempdir().unwrap();
+    let plan = p::plan(vec![command(
+        dir.path(),
+        "compiler",
+        "printf 'actual compiler error\\n' >&2; exit 23",
+    )]);
+    let report = plan
+        .execute(&dir.path().join("run"), &Cancellation::default())
+        .unwrap();
+    assert_eq!(report.tasks[0].exit_code, Some(23));
+    assert!(report.tasks[0]
+        .error
+        .as_deref()
+        .unwrap()
+        .contains("actual compiler error"));
+    assert_eq!(report.failure().unwrap().exit_code, 23);
+    let events = fs::read_to_string(dir.path().join("run/events.jsonl")).unwrap();
+    let failure = events
+        .lines()
+        .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+        .find(|event| event["type"] == "task_state" && event["status"] == "failed")
+        .unwrap();
+    assert_eq!(failure["exit_code"], 23);
+    assert!(failure["error"]
+        .as_str()
+        .unwrap()
+        .contains("actual compiler error"));
+    let decoded: fluentci_executor::RunResult =
+        serde_json::from_slice(&fs::read(dir.path().join("run/result.json")).unwrap()).unwrap();
+    assert_eq!(decoded.failure().unwrap().exit_code, 23);
+}
+#[test]
+fn signal_termination_reports_the_signal_and_is_not_retried() {
+    let dir = tempfile::tempdir().unwrap();
+    let report = p::plan(vec![p::retry(
+        command(dir.path(), "signal", "kill -TERM $$"),
+        3,
+        10,
+    )])
+    .execute(&dir.path().join("run"), &Cancellation::default())
+    .unwrap();
+    assert_eq!(report.tasks[0].signal, Some(15));
+    assert_eq!(report.tasks[0].exit_code, Some(143));
+    assert_eq!(report.tasks[0].attempts.len(), 1);
+    assert!(report.tasks[0]
+        .error
+        .as_deref()
+        .unwrap()
+        .contains("signal 15"));
+    assert_eq!(report.failure().unwrap().exit_code, 143);
+}

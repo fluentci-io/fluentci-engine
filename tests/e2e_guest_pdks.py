@@ -66,7 +66,8 @@ class PureScriptGuestContracts(unittest.TestCase):
 
     def test_failures_reach_the_plugin_error_boundary(self):
         result = self.call("failure", success=False)
-        self.assertIn("exit status 7", result.stderr)
+        self.assertEqual(result.returncode, 7, result.stderr)
+        self.assertIn("exit code 7", result.stderr)
         invalid = self.call("invalid", success=False)
         self.assertIn("Invalid argument (exec)", invalid.stderr)
 

@@ -163,10 +163,11 @@ pub fn stdout(
     let (stdout, code) = rx.recv().unwrap();
 
     if code != 0 {
-        return Err(Error::msg(format!(
-            "Failed to execute command `{}`",
-            stdout
-        )));
+        return Err(fluentci_core::ExecutionFailure {
+            exit_code: i32::try_from(code).unwrap_or(1),
+            message: format!("Failed to execute command (exit code {code}): {stdout}"),
+        }
+        .into());
     }
     Ok(stdout)
 }
@@ -181,10 +182,11 @@ pub fn stderr(
     let (stderr, code) = rx.recv().unwrap();
 
     if code != 0 {
-        return Err(Error::msg(format!(
-            "Failed to execute command `{}`",
-            stderr
-        )));
+        return Err(fluentci_core::ExecutionFailure {
+            exit_code: i32::try_from(code).unwrap_or(1),
+            message: format!("Failed to execute command (exit code {code}): {stderr}"),
+        }
+        .into());
     }
 
     Ok(stderr)

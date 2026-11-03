@@ -33,6 +33,8 @@ pub type Kind {
     reason: String,
     wait_reason: Option(String),
     error: Option(String),
+    exit_code: Option(Int),
+    signal: Option(Int),
     duration_ms: Int,
   )
   Log(id: String, stream: LogStream, text: String)
@@ -127,6 +129,13 @@ fn kind(data: Dynamic) -> Result(Kind, DecodeErrors) {
       use error <- result.try(dynamic.optional_field("error", dynamic.string)(
         data,
       ))
+      use exit_code <- result.try(dynamic.optional_field(
+        "exit_code",
+        dynamic.int,
+      )(data))
+      use signal <- result.try(dynamic.optional_field("signal", dynamic.int)(
+        data,
+      ))
       use duration_ms <- result.try(dynamic.field("duration_ms", natural)(data))
       Ok(TaskState(
         id:,
@@ -135,6 +144,8 @@ fn kind(data: Dynamic) -> Result(Kind, DecodeErrors) {
         reason:,
         wait_reason:,
         error:,
+        exit_code:,
+        signal:,
         duration_ms:,
       ))
     }

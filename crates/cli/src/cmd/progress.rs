@@ -22,6 +22,7 @@ struct Row {
     cache: String,
     wait_reason: Option<String>,
     error: Option<String>,
+    exit_code: Option<i32>,
     duration_ms: u128,
     started_ms: Option<u128>,
 }
@@ -34,6 +35,7 @@ impl Row {
             cache: "disabled".into(),
             wait_reason: None,
             error: None,
+            exit_code: None,
             duration_ms: 0,
             started_ms: None,
         }
@@ -256,7 +258,9 @@ impl Progress {
                 reason,
                 wait_reason,
                 error,
+                exit_code,
                 duration_ms,
+                ..
             } => {
                 if !self.rows.contains_key(&id) {
                     self.rows
@@ -271,6 +275,7 @@ impl Progress {
                     row.cache = cache.clone();
                     row.wait_reason = wait_reason.clone();
                     row.error = error.clone();
+                    row.exit_code = exit_code;
                     row.duration_ms = u128::from(duration_ms);
                 }
                 if self.mode == Mode::Plain {
@@ -449,8 +454,48 @@ impl Progress {
                 ids.len() - max_rows
             ));
         }
+        // Retain the actual process diagnostic independently of a rolling log
+        // tail. Reserve existing output space for up to two failing jobs.
+        for id in ids
+            .iter()
+            .copied()
+            .filter(|id| matches!(self.rows[*id].status, Status::Failed | Status::TimedOut))
+            .take(2)
+        {
+            let row = &self.rows[id];
+            let code = row.exit_code.map_or_else(
+                || "no process exit code".into(),
+                |code| format!("exit code {code}"),
+            );
+            lines.push(format!("Failure {} ({code}):", one_line(id)));
+            if let Some(error) = &row.error {
+                let detail = error
+                    .split_once("stderr:\n")
+                    .or_else(|| error.split_once("stdout:\n"))
+                    .map_or(error.as_str(), |(_, text)| text);
+                let mut tail: Vec<_> = detail
+                    .lines()
+                    .filter(|line| !line.trim().is_empty())
+                    .rev()
+                    .take(2)
+                    .collect();
+                tail.reverse();
+                for line in tail {
+                    let characters: Vec<_> = one_line(line).chars().collect();
+                    for chunk in characters.chunks(width.saturating_sub(2).max(1)).take(2) {
+                        lines.push(format!("  {}", chunk.iter().collect::<String>()));
+                    }
+                }
+            }
+        }
         lines.push("Recent output:".into());
-        lines.extend(self.tail.iter().cloned());
+        let available = usize::from(height.saturating_sub(1)).saturating_sub(lines.len());
+        lines.extend(
+            self.tail
+                .iter()
+                .skip(self.tail.len().saturating_sub(available))
+                .cloned(),
+        );
         lines.truncate(usize::from(height.saturating_sub(1)).max(1));
         let mut out = io::stdout().lock();
         if self.rendered_lines > 0 {

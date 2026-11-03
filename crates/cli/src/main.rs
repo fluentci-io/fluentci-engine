@@ -148,7 +148,22 @@ fn cli() -> Command<'static> {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Error> {
+async fn main() -> std::process::ExitCode {
+    match dispatch().await {
+        Ok(()) => std::process::ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("Error: {error:?}");
+            let code = error
+                .downcast_ref::<fluentci_executor::diagnostics::ExecutionFailure>()
+                .and_then(|failure| u8::try_from(failure.exit_code).ok())
+                .filter(|code| *code != 0)
+                .unwrap_or(1);
+            std::process::ExitCode::from(code)
+        }
+    }
+}
+
+async fn dispatch() -> Result<(), Error> {
     let matches = cli().get_matches();
     match matches.subcommand() {
         Some(("cache-diff", args)) => {

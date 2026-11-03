@@ -24,5 +24,10 @@ host_fn!(pub execute_plan(user_data: State; request: String) -> String {
         graph.cancellation.clone()
     };
     let report = fluentci_core::execute_plan(&request.plan, &request.run_dir, &cancellation)?;
+    if let Some(failure) = report.failure() {
+        let state = user_data.get()?;
+        let state = state.lock().unwrap();
+        *state.execution_failure.lock().unwrap() = Some(failure);
+    }
     Ok(serde_json::to_string(&report)?)
 });
