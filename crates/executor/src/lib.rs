@@ -4,6 +4,7 @@ pub mod cache;
 pub mod events;
 pub mod graph;
 pub mod packages;
+pub mod primitives;
 mod resources;
 pub mod service;
 mod telemetry;
@@ -95,14 +96,43 @@ fn default_true() -> bool {
     true
 }
 
+#[derive(Default)]
+struct CancellationState {
+    cancelled: AtomicBool,
+    active: std::sync::Mutex<usize>,
+    idle: std::sync::Condvar,
+}
 #[derive(Clone, Default)]
-pub struct Cancellation(Arc<AtomicBool>);
+pub struct Cancellation(Arc<CancellationState>);
+struct ActiveExecution<'a>(&'a CancellationState);
+impl Drop for ActiveExecution<'_> {
+    fn drop(&mut self) {
+        let mut active = self.0.active.lock().unwrap();
+        *active -= 1;
+        self.0.idle.notify_all();
+    }
+}
 impl Cancellation {
     pub fn cancel(&self) {
-        self.0.store(true, Ordering::Release);
+        self.0.cancelled.store(true, Ordering::Release);
     }
     pub fn is_cancelled(&self) -> bool {
-        self.0.load(Ordering::Acquire)
+        self.0.cancelled.load(Ordering::Acquire)
+    }
+    fn enter(&self) -> ActiveExecution<'_> {
+        *self.0.active.lock().unwrap() += 1;
+        ActiveExecution(&self.0)
+    }
+    /// Wait for owned executions to finish cleanup before shutting down a host.
+    /// Call `cancel` first to prevent subsequent admission from starting commands.
+    pub fn wait_idle(&self, timeout: Duration) -> bool {
+        let active = self.0.active.lock().unwrap();
+        let (active, _) = self
+            .0
+            .idle
+            .wait_timeout_while(active, timeout, |active| *active != 0)
+            .unwrap();
+        *active == 0
     }
 }
 
@@ -339,6 +369,7 @@ impl Plan {
     /// Cancellation and process timeouts are observed at most one polling interval (10 ms)
     /// after the scheduler regains control. Resource leases coordinate runs sharing a resource directory.
     pub fn execute(&self, run_dir: &Path, cancel: &Cancellation) -> Result<RunResult, String> {
+        let _active = cancel.enter();
         if let Some(workspace) = &self.workspace {
             return workspace.execute(self, run_dir, cancel);
         }
