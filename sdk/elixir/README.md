@@ -251,6 +251,8 @@ decoding errors contain no raw report values.
 
 ## Validation
 
+Use Elixir 1.18.4 for formatting, matching CI. Newer Elixir formatters can
+produce different layouts even when the code compiles on both versions.
 From the engine root, then the SDK directory:
 
 ```sh

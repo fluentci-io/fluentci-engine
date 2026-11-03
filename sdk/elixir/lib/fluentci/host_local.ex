@@ -278,7 +278,8 @@ defmodule FluentCI.Host.Local.Worker do
     do: {:stop, :normal, :ok, state}
 
   def handle_call(operation, _, %{result: result} = state)
-      when operation in [:await, :cancel] and not is_nil(result), do: {:reply, result, state}
+      when operation in [:await, :cancel] and not is_nil(result),
+      do: {:reply, result, state}
 
   def handle_call(operation, from, state) when operation in [:await, :cancel, :close] do
     case if(operation == :await, do: {:ok, state}, else: interrupt(state)) do
