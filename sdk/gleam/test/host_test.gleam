@@ -1,4 +1,5 @@
 import fluentci/host
+import gleam/string
 import gleeunit/should
 
 @external(javascript, "./host_test_ffi.mjs", "inspect")
@@ -52,11 +53,10 @@ pub fn release_engine_cache_and_workspace_contract_test() {
       host.task("build", "/bin/sh", ".")
       |> host.with_args(["-c", "printf '%s' \"$VALUE\" > artifact"])
       |> host.with_env("VALUE", "literal; $VALUE")
-      |> host.with_relocatable_cache(host.cache(
-        [],
-        ["artifact"],
-        "gleam-host-v1",
-      ))
+      |> host.with_relocatable_cache(
+        host.cache([], ["artifact"], "gleam-host-v1")
+        |> host.with_toolchain_files(["/bin/sh"]),
+      )
     let read =
       host.task("read", "/bin/sh", ".")
       |> host.with_args(["-c", "/bin/cat artifact > consumed"])
@@ -74,5 +74,15 @@ pub fn release_engine_cache_and_workspace_contract_test() {
       |> host.compile
     encoded
   })
+  |> should.be_true
+}
+
+pub fn verified_toolchain_files_compile_without_io_test() {
+  let cache =
+    host.cache([], ["output"], "compiler")
+    |> host.with_toolchain_files(["/not-installed/compiler"])
+  let task = host.task("build", "/bin/sh", ".") |> host.with_cache(cache)
+  let assert Ok(encoded) = host.compile(host.plan([task]))
+  string.contains(encoded, "\"toolchain_files\":[\"/not-installed/compiler\"]")
   |> should.be_true
 }

@@ -190,7 +190,7 @@ defmodule FluentCI.Host do
             inputs: {:list, :nonempty},
             outputs: {:nonempty_list, :nonempty},
             toolchain: :nonempty
-          }, %{relocatable: :boolean}},
+          }, %{relocatable: :boolean, toolchain_files: {:list, :nonempty}}},
        service:
          {:object, %{readiness: probe_schema()},
           %{

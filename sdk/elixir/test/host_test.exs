@@ -2,6 +2,18 @@ defmodule FluentCI.HostTest do
   use ExUnit.Case, async: true
   alias FluentCI.Host, as: H
 
+  test "cache file identities compile without reading the files" do
+    task =
+      H.task("build", "/bin/sh", ".")
+      |> H.cache([], ["output"], "compiler", toolchain_files: ["/not-installed/compiler"])
+
+    assert {:ok, encoded} = H.plan([task]) |> H.compile()
+
+    assert hd(JSON.decode!(encoded)["tasks"])["cache"]["toolchain_files"] == [
+             "/not-installed/compiler"
+           ]
+  end
+
   test "pipe builders preserve originals and compile explicit argv and environment" do
     original = H.task("echo", "/bin/echo", "/not-created-by-compilation")
     value = "quotes \" unicode 雪\n$(touch unexpected)"

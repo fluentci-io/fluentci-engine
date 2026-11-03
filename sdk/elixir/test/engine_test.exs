@@ -60,7 +60,10 @@ defmodule FluentCI.EngineTest do
       |> H.args(["-c", "/bin/cat input > output; printf '%s' \"$TEXT\""])
       |> H.env(%{"TEXT" => value})
       |> H.timeout_ms(5000)
-      |> H.cache(["input"], ["output"], "fixture", relocatable: true)
+      |> H.cache(["input"], ["output"], "fixture",
+        relocatable: true,
+        toolchain_files: ["/bin/cat"]
+      )
 
     consume =
       H.task("consume", "/bin/cat", ".")

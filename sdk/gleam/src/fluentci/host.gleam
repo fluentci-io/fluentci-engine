@@ -11,6 +11,7 @@ pub type Cache {
     outputs: List(String),
     toolchain: String,
     relocatable: Bool,
+    toolchain_files: List(String),
   )
 }
 
@@ -138,11 +139,16 @@ pub fn cache(
   outputs: List(String),
   toolchain: String,
 ) -> Cache {
-  Cache(inputs:, outputs:, toolchain:, relocatable: False)
+  Cache(inputs:, outputs:, toolchain:, relocatable: False, toolchain_files: [])
 }
 
 pub fn with_cache(task: Task, cache: Cache) -> Task {
   Task(..task, cache: Some(cache))
+}
+
+/// Verify the contents and permissions of absolute toolchain file paths.
+pub fn with_toolchain_files(cache: Cache, paths: List(String)) -> Cache {
+  Cache(..cache, toolchain_files: paths)
 }
 
 pub fn with_relocatable_cache(task: Task, cache: Cache) -> Task {
@@ -311,6 +317,10 @@ fn encode_cache(cache: Cache) -> String {
     #("outputs", strings(cache.outputs)),
     #("toolchain", quote(cache.toolchain)),
   ]
+  let base = case cache.toolchain_files {
+    [] -> base
+    paths -> list.append(base, [#("toolchain_files", strings(paths))])
+  }
   object(case cache.relocatable {
     True -> list.append(base, [#("relocatable", "true")])
     False -> base
