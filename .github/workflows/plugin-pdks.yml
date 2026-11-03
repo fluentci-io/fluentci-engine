@@ -1,0 +1,93 @@
+name: Plugin PDKs
+
+on:
+  push:
+    branches: [main]
+    paths: ['sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'tests/e2e_guest_pdks.py', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
+  pull_request:
+    paths: ['sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'tests/e2e_guest_pdks.py', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plugin-pdks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: '1.99.1'
+          targets: wasm32-unknown-unknown
+      - uses: ./.github/actions/rust-cache
+        with:
+          key: host-ubuntu-24.04
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '26'
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          version: '0.13.7'
+          enable-cache: true
+          cache-dependency-glob: sdk/python/uv.lock
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124
+        with:
+          otp-version: '29'
+          elixir-version: '1.20.4'
+          gleam-version: '1.19.2'
+          version-type: strict
+      - name: Install checksum-pinned guest compilers
+        run: bash .github/scripts/setup-plugin-pdks.sh
+      - name: Check canonical ABI and immutable guest primitives
+        run: |
+          python3 scripts/xtp_codegen.py --check
+          node --test tests/guest_pdks.test.mjs
+      - name: Typecheck, test, and compile Python guest
+        working-directory: sdk/python
+        run: |
+          uv sync --locked --python 3.12
+          uv run mypy
+          uv run python -m unittest discover -s tests -v
+          uv run fluentci-plugin demo/plugin.py -o dist/plugin.wasm
+      - name: Test Elixir DSL and compile its Wasm guest
+        run: |
+          (cd sdk/elixir && mix format --check-formatted && mix test --warnings-as-errors test/plugin_test.exs)
+          cd sdk/elixir/demo-plugin
+          mix deps.get
+          mix fluentci.plugin.build DemoPlugin --pdk-path ../../../crates/pdk --output dist/plugin.wasm
+      - name: Compile Gleam guest to Wasm
+        working-directory: sdk/gleam/demo-plugin
+        run: npm ci && npm run build
+      - name: Compile ReScript 12 guest to Wasm
+        run: |
+          (cd sdk/rescript && npm ci && npm run res:build)
+          (cd sdk/rescript/demo-plugin && npm ci && npm run build)
+      - name: Compile PureScript guest to Wasm
+        working-directory: sdk/purescript/demo-plugin
+        run: |
+          npm install --global purescript@0.15.16 spago@1.0.5
+          npm ci
+          npm run build
+      - name: Compile TypeScript guest to Wasm
+        working-directory: sdk/typescript/demo-plugin
+        run: npm ci && npm run build
+      - name: Build release engine and invoke every guest
+        run: |
+          cargo build --release --locked -p fluentci-engine
+          python3 tests/e2e_guest_pdks.py -v
+      - name: Preserve compiled guests and generated entry source
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: plugin-pdks
+          path: |
+            sdk/*/demo-plugin/dist/
+            sdk/python/dist/
+          if-no-files-found: ignore
+          retention-days: 7
