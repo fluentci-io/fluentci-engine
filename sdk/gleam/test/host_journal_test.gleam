@@ -33,6 +33,8 @@ pub fn typed_journal_variants_test() {
     "service",
     Some("readiness"),
     _,
+    _,
+    _,
     10,
   ) = state.kind
   log.kind
