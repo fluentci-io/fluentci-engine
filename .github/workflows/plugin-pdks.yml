@@ -83,6 +83,7 @@ jobs:
       - name: Build release engine and invoke every guest
         run: |
           cargo build --release --locked -p fluentci-engine
+          python3 tests/e2e_server.py RunServer.test_named_artifact_download_is_authenticated_and_recovery_keeps_optional_outcomes -v
           python3 tests/e2e_guest_pdks.py -v
           python3 tests/e2e_matrix.py -v
           python3 tests/e2e_workflow.py -v

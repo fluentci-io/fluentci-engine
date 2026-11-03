@@ -86,34 +86,6 @@ pub fn run(
     plan.execute(directory, cancellation)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn composition_preserves_argv_and_has_no_ambient_environment_or_effects() {
-        let original = exec(
-            "compile",
-            "/tool/not-installed",
-            vec![
-                "one argument with spaces".into(),
-                "$(do-not-execute)".into(),
-            ],
-            "/workspace/not-created",
-        );
-        let configured = env(
-            timeout(needs(original.clone(), vec!["fetch".into()]), 2_000),
-            BTreeMap::from([("MODE".into(), "release".into())]),
-        );
-        let pipeline = jobs(plan(vec![configured]), 4);
-        assert_eq!(pipeline.tasks[0].args, original.args);
-        assert!(original.needs.is_empty());
-        assert!(original.env.is_empty());
-        assert_eq!(pipeline.tasks[0].needs, vec!["fetch"]);
-        assert!(!pipeline.inherit_env);
-        assert_eq!(pipeline.jobs, 4);
-    }
-}
-
 /// Opt-in retries count the initial execution as attempt one. Nonzero exits only.
 pub fn retry(mut task: Task, max_attempts: u32, delay_ms: u64) -> Task {
     task.policy.retry = Some(crate::workflow::Retry {
@@ -171,4 +143,32 @@ pub fn resource(mut task: Task, name: impl Into<String>) -> Task {
         task.resources.push(name);
     }
     task
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn composition_preserves_argv_and_has_no_ambient_environment_or_effects() {
+        let original = exec(
+            "compile",
+            "/tool/not-installed",
+            vec![
+                "one argument with spaces".into(),
+                "$(do-not-execute)".into(),
+            ],
+            "/workspace/not-created",
+        );
+        let configured = env(
+            timeout(needs(original.clone(), vec!["fetch".into()]), 2_000),
+            BTreeMap::from([("MODE".into(), "release".into())]),
+        );
+        let pipeline = jobs(plan(vec![configured]), 4);
+        assert_eq!(pipeline.tasks[0].args, original.args);
+        assert!(original.needs.is_empty());
+        assert!(original.env.is_empty());
+        assert_eq!(pipeline.tasks[0].needs, vec!["fetch"]);
+        assert!(!pipeline.inherit_env);
+        assert_eq!(pipeline.jobs, 4);
+    }
 }
