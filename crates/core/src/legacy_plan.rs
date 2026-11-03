@@ -620,7 +620,7 @@ mod tests {
         graph.execute_graph(Output::Stdout);
         let (error, status) = rx.recv().unwrap();
         assert_eq!(status, 7);
-        assert!(error.contains("exit status 7"), "{error}");
+        assert!(error.contains("exit code 7"), "{error}");
         assert!(error.contains("legacy process error"), "{error}");
         assert!(!root.path().join("unexpected").exists());
         assert!(rx.try_recv().is_err());
