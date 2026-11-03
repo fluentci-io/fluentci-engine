@@ -294,3 +294,19 @@ jobs:
             cargo test --release --locked -p fluentci-ext --lib bsd
             cargo test --release --locked -p fluentci-ext --test native_packages native_bsd_package_install -- --ignored --exact
             cargo test --release --locked -p fluentci-executor --test packages native_package_plan_install -- --ignored --exact
+
+  flox-bootstrap:
+    name: Native Flox automatic provisioning
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: '1.99.1'
+      - name: Bootstrap Flox and activate jq through the extension
+        env:
+          FLOX_VERSION: '1.19.3'
+          FLOX_DISABLE_METRICS: '1'
+          FLUENTCI_REQUIRE_FLOX_BOOTSTRAP: '1'
+        run: cargo test --release --locked -p fluentci-ext --test native_packages native_flox_auto_provision -- --ignored --exact --nocapture

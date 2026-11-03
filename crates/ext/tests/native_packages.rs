@@ -53,3 +53,51 @@ fn native_macports_package_install() {
     adapter.install(vec!["jq"]).unwrap();
     verify(adapter);
 }
+
+#[test]
+#[ignore = "installs native Flox and jq; disposable Linux CI hosts only"]
+fn native_flox_auto_provision() {
+    use std::process::Command;
+    if std::env::var_os("FLUENTCI_REQUIRE_FLOX_BOOTSTRAP").is_some() {
+        let error = Command::new("flox")
+            .arg("--version")
+            .output()
+            .expect_err("CI must start without Flox to exercise automatic provisioning");
+        assert_eq!(error.kind(), std::io::ErrorKind::NotFound);
+    }
+    let mut flox = fluentci_ext::flox::Flox::default();
+    flox.setup().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let (tx, _rx) = mpsc::channel();
+    assert!(flox
+        .exec(
+            "true",
+            tx,
+            Output::Stdout,
+            true,
+            root.path().to_str().unwrap()
+        )
+        .unwrap()
+        .success());
+    assert!(Command::new("flox")
+        .args(["install", "jq"])
+        .current_dir(root.path())
+        .status()
+        .unwrap()
+        .success());
+    let (tx, rx) = mpsc::channel();
+    assert!(flox
+        .exec(
+            "jq --version",
+            tx,
+            Output::Stdout,
+            true,
+            root.path().to_str().unwrap()
+        )
+        .unwrap()
+        .success());
+    assert!(rx
+        .recv_timeout(Duration::from_secs(10))
+        .unwrap()
+        .contains("jq-"));
+}
