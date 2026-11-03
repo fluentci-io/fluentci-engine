@@ -775,3 +775,14 @@ run directories while it is open: external additions appear only after reopening
 and selected missing/malformed/mismatched states produce an error rather than a
 silently incomplete page. UUID directories are inspected without following directory
 symlinks during discovery. History uses the same bearer authentication as execution.
+
+
+## Elixir plan adapter
+
+[`sdk/elixir`](../sdk/elixir/README.md) builds immutable protocol-v1 plans with
+Elixir's `|>` operator. It supports explicit argv/env, dependency graphs, limits,
+resource leases, copied workspaces, caching, services with readiness/health probes,
+and all native package-provider variants. Compilation is pure and returns tagged
+results; execution remains an explicit CLI/API operation. Its release-engine tests
+exercise copied-workspace cache reuse, failed dependencies, and service lifecycle.
+An Elixir-managed execution client and result/event decoders are not yet included.

@@ -46,6 +46,8 @@ An explicit host executor is available through `fluentci-engine execute`, with
 bounded parallelism, dependency validation, per-task environments, cancellation,
 and structured results. See [host execution plans](docs/host-executor.md) for the
 versioned plan format, functional SDK direction, and current limitations.
+[Elixir host plans](sdk/elixir/README.md) provide immutable `|>` builders and pure
+JSON compilation; execution remains an explicit CLI or run-API operation.
 
 ## 🚀 Quick Start
 
