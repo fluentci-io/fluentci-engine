@@ -213,6 +213,7 @@ impl Supervisor {
                         index: usize::MAX,
                         child,
                         started: Instant::now(),
+                        attempt_started: Instant::now(),
                         leases: None,
                         action: None,
                     })

@@ -1,0 +1,28 @@
+name: Workflow primitives
+on:
+  push:
+    branches: [main]
+    paths: ['crates/executor/**', 'crates/server/src/runs.rs', '.github/workflows/workflow-primitives.yml']
+  pull_request:
+    paths: ['crates/executor/**', 'crates/server/src/runs.rs', '.github/workflows/workflow-primitives.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: workflow-primitives-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  executor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: '1.99.1'
+          components: clippy,rustfmt
+      - uses: ./.github/actions/rust-cache
+        with:
+          key: workflow-primitives
+      - run: cargo test --release --locked -p fluentci-executor --lib --tests
+      - run: cargo clippy --release --locked -p fluentci-executor --all-targets -- -D warnings

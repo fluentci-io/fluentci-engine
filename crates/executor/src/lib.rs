@@ -1229,11 +1229,6 @@ impl Plan {
         }
         // Capture the terminal outcome once; later cancellation requests must not
         // change how a published report is interpreted by the server or recovery.
-        for (i, started) in first_started.iter().enumerate() {
-            if let Some(started) = started {
-                results[i].duration_ms = started.elapsed().as_millis();
-            }
-        }
         let outcome = if results.iter().all(|task| {
             task.status == Status::Succeeded
                 || task.condition_skipped
