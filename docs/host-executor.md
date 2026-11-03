@@ -69,8 +69,17 @@ Symlinks and special files in selected trees are rejected.
 Copies preserve file contents and permission modes. Source and copied snapshots
 are compared before execution to detect changes during setup. Avoid modifying
 source inputs during setup: this is not an atomic filesystem snapshot. Copying
-checks cancellation between entries and 64 KiB chunks. Setup finishes before the
-task event journal and task spans begin; setup progress events are not yet emitted.
+prefers copy-on-write file clones on supported macOS/Linux filesystems, with
+streaming fallback on unsupported filesystems, cross-device copies, and other
+operating systems. Clones use distinct inodes; modifying either copy does not
+modify the other. macOS files with special flags or extended attributes other than
+OS-maintained provenance use streaming copies, preserving the existing content/mode
+contract. Timestamps, ACLs, extended attributes, and sparse allocation are not
+part of that contract or the snapshot identity.
+Both paths retain all source/destination content and mode verification. Copying
+checks cancellation between entries, before/after clone calls, and between 64 KiB
+streaming chunks; an in-progress kernel clone call cannot be interrupted by the
+cancellation token. Setup finishes before the task event journal and task spans begin; setup progress events are not yet emitted.
 
 Separate runs have separate copies, while tasks within a run share their workspace
 and still need dependencies or resource coordination for shared writes. This is

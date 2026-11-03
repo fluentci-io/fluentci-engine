@@ -110,7 +110,11 @@ impl Workspace {
                     if let Some(parent) = target.parent() {
                         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
                     }
-                    cache::copy_file(&cache::checked_path(&source, &entry.path)?, &target, cancel)?;
+                    crate::workspace_copy::copy(
+                        &cache::checked_path(&source, &entry.path)?,
+                        &target,
+                        cancel,
+                    )?;
                 }
             }
             for entry in before.iter().rev().filter(|entry| entry.directory) {

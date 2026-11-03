@@ -36,6 +36,11 @@ jobs:
           components: clippy
       - name: Executor, cache, server lifecycle, and legacy regression tests
         run: cargo test --release --locked -p fluentci-executor -p fluentci-core -p fluentci-server --lib --tests
+      - name: Require native workspace clones on APFS
+        if: runner.os == 'macOS'
+        env:
+          FLUENTCI_REQUIRE_WORKSPACE_CLONE: '1'
+        run: cargo test --release --locked -p fluentci-executor workspace_copy::tests::native_and_fallback_copies_preserve_bytes_modes_and_independent_writes
       - name: Package-manager fixture tests (no installation)
         run: |
           cargo test --release --locked -p fluentci-ext --lib homebrew

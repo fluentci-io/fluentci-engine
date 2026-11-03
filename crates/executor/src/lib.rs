@@ -9,6 +9,7 @@ pub mod service;
 mod telemetry;
 mod worker;
 pub mod workspace;
+mod workspace_copy;
 
 use graph::DependencyGraph;
 use serde::{Deserialize, Serialize};
