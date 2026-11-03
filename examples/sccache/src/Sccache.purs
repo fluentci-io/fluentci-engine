@@ -132,7 +132,7 @@ provision config = do
   installed <- case hash of
     Right actual | String.trim actual == artifact.checksum -> P.runPlan (config.run <> ".install") (installPlan config artifact stage)
     _ -> pure download
-  void $ P.runPlan (config.run <> ".stage-cleanup") (nativePlan [ task config "cleanup" "/bin/rm" [ "-rf", stage ] ])
+  cleanup <- P.runPlan (config.run <> ".stage-cleanup") (nativePlan [ task config "cleanup" "/bin/rm" [ "-rf", stage ] ])
   case hash of
     Right actual | String.trim actual == artifact.checksum -> do
       report <- require installed
@@ -195,7 +195,7 @@ buildProject input = do
   result <- P.runPlan config.run (buildPlan config binary socket arguments.cargo)
   -- Direct foreground services need no wrapper process. The executor reaps them.
   -- Remove the filesystem socket after either a successful or failed build.
-  void $ P.runPlan (config.run <> ".socket-cleanup") (nativePlan [ task config "remove-socket" "/bin/rm" [ "-f", socket ] ])
+  cleanup <- P.runPlan (config.run <> ".socket-cleanup") (nativePlan [ task config "remove-socket" "/bin/rm" [ "-f", socket ] ])
   report <- require result
   void $ ensureSucceeded config.run report
   cleaned <- require cleanup
