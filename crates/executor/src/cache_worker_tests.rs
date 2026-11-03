@@ -259,11 +259,14 @@ fn lookup_cancellation_and_timeout_never_start_the_command() {
                 );
                 assert!(!root.path().join("output").exists());
                 assert!(!root.path().join("dependent").exists());
-                assert!(matches!(
-                    resources::acquire(&root.path().join("locks"), &["workspace".into()], &[])
-                        .unwrap(),
-                    resources::Attempt::Acquired(_)
-                ));
+                assert!(
+                    matches!(
+                        resources::acquire(&root.path().join("locks"), &["workspace".into()], &[])
+                            .unwrap(),
+                        resources::Attempt::Acquired(_)
+                    ),
+                    "lease retained after {phase}: external_cancel={external_cancel}"
+                );
             });
         }
     }

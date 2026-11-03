@@ -8,7 +8,32 @@ use std::{
 };
 
 pub(crate) struct Leases {
-    _files: Vec<File>,
+    _files: Vec<Lock>,
+}
+// Closing one descriptor does not release flock while a duplicate (including a
+// concurrent fork's pre-exec descriptor) still references the open file. Release
+// explicitly when the owning lease ends, before closing its descriptor.
+pub(crate) struct Lock(File);
+impl Lock {
+    pub(crate) fn new(file: File) -> Self {
+        Self(file)
+    }
+}
+impl Drop for Lock {
+    fn drop(&mut self) {
+        #[cfg(unix)]
+        {
+            use std::os::fd::AsRawFd;
+            loop {
+                if unsafe { libc::flock(self.0.as_raw_fd(), libc::LOCK_UN) } == 0 {
+                    break;
+                }
+                if std::io::Error::last_os_error().kind() != std::io::ErrorKind::Interrupted {
+                    break;
+                }
+            }
+        }
+    }
 }
 pub(crate) enum Attempt {
     Acquired(Leases),
@@ -103,7 +128,58 @@ pub(crate) fn acquire(root: &Path, names: &[String], shared: &[String]) -> Resul
         {
             return Err("cross-run resource leases require Unix".into());
         }
-        files.push(file);
+        files.push(Lock::new(file));
     }
     Ok(Attempt::Acquired(Leases { _files: files }))
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dropping_a_lease_unlocks_even_with_a_duplicate_descriptor() {
+        let root = tempfile::tempdir().unwrap();
+        let names = ["workspace".into()];
+        let Attempt::Acquired(owner) = acquire(root.path(), &names, &[]).unwrap() else {
+            panic!("initial lease must be available");
+        };
+        let duplicate = owner._files[0].0.try_clone().unwrap();
+        assert!(matches!(
+            acquire(root.path(), &names, &[]).unwrap(),
+            Attempt::Busy(_)
+        ));
+        drop(owner);
+        let Attempt::Acquired(next) = acquire(root.path(), &names, &[]).unwrap() else {
+            panic!("duplicate descriptor must not extend the completed lease");
+        };
+        // Closing a stale duplicate must not release the next owner's lock.
+        drop(duplicate);
+        assert!(matches!(
+            acquire(root.path(), &names, &[]).unwrap(),
+            Attempt::Busy(_)
+        ));
+        drop(next);
+        assert!(matches!(
+            acquire(root.path(), &names, &[]).unwrap(),
+            Attempt::Acquired(_)
+        ));
+    }
+
+    #[test]
+    fn a_busy_resource_releases_the_partially_acquired_set() {
+        let root = tempfile::tempdir().unwrap();
+        let Attempt::Acquired(blocker) = acquire(root.path(), &["b".into()], &[]).unwrap() else {
+            panic!("initial lease must be available");
+        };
+        assert!(matches!(
+            acquire(root.path(), &["a".into(), "b".into()], &[]).unwrap(),
+            Attempt::Busy(_)
+        ));
+        assert!(matches!(
+            acquire(root.path(), &["a".into()], &[]).unwrap(),
+            Attempt::Acquired(_)
+        ));
+        drop(blocker);
+    }
 }

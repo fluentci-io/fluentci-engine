@@ -79,8 +79,8 @@ pub struct Prepared {
     pub components: BTreeMap<String, String>,
     root: PathBuf,
     cancel: Cancellation,
-    // Process-scoped advisory lock; released on drop, including crashes.
-    _lock: File,
+    // Explicitly released on drop; the OS also releases it on the last close.
+    _lock: crate::resources::Lock,
 }
 
 fn digest(bytes: &[u8]) -> String {
@@ -710,7 +710,7 @@ pub(crate) fn prepare_cancellable(
         components,
         root: root.into(),
         cancel: cancel.clone(),
-        _lock: lock,
+        _lock: crate::resources::Lock::new(lock),
     }))
 }
 
