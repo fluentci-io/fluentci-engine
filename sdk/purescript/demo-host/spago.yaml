@@ -1,0 +1,16 @@
+package:
+  name: demo-host
+  dependencies:
+    - aff
+    - console
+    - effect
+    - either
+    - fluentci
+    - prelude
+workspace:
+  packageSet:
+    registry: 81.11.0
+  extraPackages:
+    fluentci:
+      git: https://github.com/fluentci-io/purescript-fluentci.git
+      ref: 324a638224654b0df38f912b9e3e6f73485e4021

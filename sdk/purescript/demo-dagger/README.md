@@ -1,16 +1,5 @@
-# demo-dagger
+# Dagger bindings example
 
-To install dependencies:
-
-```bash
-bun install
-```
-
-To run:
-
-```bash
-spago build
-dagger run bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.1.22. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+Use PureScript 0.15.16 and Spago 1.0.5. Run `spago build`, then `bun install`.
+Execute with `dagger run bun run index.ts`. This example requires Dagger and a
+container runtime. See `../demo-host` for non-containerized host plans.
