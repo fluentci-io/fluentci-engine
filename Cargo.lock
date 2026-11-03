@@ -2635,6 +2635,7 @@ dependencies = [
  "extism-pdk",
  "fluentci-types",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -2697,10 +2698,12 @@ dependencies = [
  "fluentci-common",
  "fluentci-core",
  "fluentci-ext",
+ "fluentci-executor",
  "fluentci-extism-openbsd",
  "fluentci-secrets",
  "fluentci-types",
  "serde",
+ "serde_json",
  "uuid",
 ]
 

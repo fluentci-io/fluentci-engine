@@ -1,6 +1,8 @@
 //! Small value-producing functions for functional pipeline composition.
 //! Construction performs no filesystem, environment, provisioning or process IO.
 //! `run` is the effect boundary; it uses the same kernel as CLI and legacy adapters.
+pub use crate::matrix::{after, axis, exclude, include, matrix, named, parallel, product, Case};
+
 use crate::{cache::CachePolicy, service::Service, Cancellation, Plan, RunResult, Task};
 use std::{
     collections::BTreeMap,

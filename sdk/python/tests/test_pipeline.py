@@ -89,7 +89,7 @@ class PipelineTests(unittest.TestCase):
         result = entry_source(source, bindings)
         tree = ast.parse(result)
         imports = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name.startswith("_fluentci_") and node.name != "_fluentci_annotations"]
-        self.assertEqual(len(imports), 52)
+        self.assertEqual(len(imports), 53)
         self.assertIsInstance(tree.body[0], ast.ImportFrom)
         voids = [node for node in imports if node.name == "_fluentci_with_exec"]
         self.assertIsNone(voids[0].returns, "void imports must have zero Wasm results")

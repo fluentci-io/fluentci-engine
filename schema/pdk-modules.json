@@ -68,7 +68,8 @@
     "get_arch",
     "call",
     "add_secretmanager",
-    "set_secret"
+    "set_secret",
+    "execute_plan"
   ],
   "flox": [
     "set_runner",

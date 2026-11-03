@@ -12,6 +12,8 @@ version = "0.2.11"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+fluentci-executor = { path = "../executor", version = "0.1.1" }
+serde_json = "1.0"
 anyhow = "1.0.82"
 extism-pdk = { workspace = true }
 fluentci-common = {path = "../common", version = "0.2.11"}

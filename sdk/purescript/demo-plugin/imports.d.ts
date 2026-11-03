@@ -13,6 +13,7 @@ declare module "extism:host" { interface user {
   directory(value: I64): I64;
   entries(value: I64): I64;
   envhub(): I64;
+  execute_plan(value: I64): I64;
   file(value: I64): I64;
   flox(): I64;
   get_arch(): I64;

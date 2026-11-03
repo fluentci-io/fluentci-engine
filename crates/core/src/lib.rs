@@ -170,3 +170,12 @@ pub fn get_hmac(id: String, name: String) -> Result<String, Error> {
 pub fn shutdown_tracer() {
     global::shutdown_tracer_provider();
 }
+
+/// Execute an explicit plan with journal-backed live output and inherited trace context.
+pub fn execute_plan(
+    plan: &fluentci_executor::Plan,
+    directory: &std::path::Path,
+    cancellation: &fluentci_executor::Cancellation,
+) -> Result<fluentci_executor::RunResult, Error> {
+    legacy_plan::run(plan, directory, cancellation)
+}

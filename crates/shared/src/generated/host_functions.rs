@@ -89,6 +89,13 @@ pub fn register<'a>(
             crate::envhub::envhub,
         )
         .with_function(
+            "execute_plan",
+            [extism::PTR],
+            [extism::PTR],
+            data.clone(),
+            crate::execution::execute_plan,
+        )
+        .with_function(
             "file",
             [extism::PTR],
             [extism::PTR],

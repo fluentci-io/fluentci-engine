@@ -49,6 +49,10 @@ def entries(value: str) -> str:
 def envhub() -> str:
     raise RuntimeError("Compile this plugin with fluentci-plugin; these are guest imports")
 
+@extism.import_fn("extism:host/user", "execute_plan")
+def execute_plan(value: str) -> str:
+    raise RuntimeError("Compile this plugin with fluentci-plugin; these are guest imports")
+
 @extism.import_fn("extism:host/user", "file")
 def file(value: str) -> str:
     raise RuntimeError("Compile this plugin with fluentci-plugin; these are guest imports")

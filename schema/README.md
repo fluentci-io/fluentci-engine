@@ -4,7 +4,7 @@ The engine uses Extism **1.41.0** and the Rust PDK **1.4.1**, pinned once in the
 workspace dependencies. Plugins target `wasm32-unknown-unknown`; the engine also
 enables WASI for plugins that require it.
 
-`host.json` is the canonical XTP `v1-draft` description of the engine's 52 host
+`host.json` is the canonical XTP `v1-draft` description of the engine's 53 host
 imports and their JSON/text payloads. `plugins.json` defines example exports;
 `pdk-modules.json` selects imports for the existing fluent Rust API. Change these
 sources and regenerate:

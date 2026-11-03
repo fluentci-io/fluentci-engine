@@ -127,6 +127,17 @@
         "contentType": "application/json"
       }
     },
+    "execute_plan": {
+      "description": "Execute an independent host plan. Input is UTF-8 JSON {plan, run_dir}; output is the terminal RunResult as UTF-8 JSON. The caller owns the fresh run directory and retained logs.",
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
     "file": {
       "input": {
         "type": "string",

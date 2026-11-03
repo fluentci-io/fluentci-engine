@@ -26,4 +26,5 @@ extern "ExtismHost" {
     fn call(input: Json<Module>) -> String;
     fn add_secretmanager(input: Json<Provider>) -> String;
     fn set_secret(input: Json<Vec<String>>) -> String;
+    fn execute_plan(input: String) -> String;
 }

@@ -209,3 +209,11 @@ impl Client {
         })
     }
 }
+
+/// Execute a complete independent host plan, encoded as JSON, in a fresh run directory.
+/// Returns the terminal RunResult JSON; failed tasks are represented in that report.
+pub fn run_plan(plan_json: &str, run_directory: &str) -> Result<String, Error> {
+    let plan: serde_json::Value = serde_json::from_str(plan_json)?;
+    let request = serde_json::json!({ "plan": plan, "run_dir": run_directory });
+    unsafe { execute_plan(request.to_string()) }
+}

@@ -3,6 +3,7 @@
 pub mod cache;
 pub mod events;
 pub mod graph;
+pub mod matrix;
 pub mod packages;
 pub mod primitives;
 mod resources;
