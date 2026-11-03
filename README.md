@@ -416,10 +416,11 @@ jobs:
 ```
 
 Native plans also support [composable workflow primitives](docs/workflow-primitives.md):
-
-See [native file and env-file primitives](docs/file-primitives.md) for filesystem tasks, structured query results, and literal dotenv loading.
 retries, conditional tasks, bounded finalizers, named outputs and artifacts,
 resource leases and supervised services (matching source builds required).
+
+See [native file and env-file primitives](docs/file-primitives.md) for filesystem tasks,
+structured query results, and literal dotenv loading.
 
 ## ⚡ Caching
 
