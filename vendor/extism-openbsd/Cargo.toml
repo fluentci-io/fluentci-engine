@@ -13,7 +13,7 @@
 edition = "2021"
 name = "fluentci-extism-openbsd"
 exclude = ["Cargo.toml.orig"]
-version = "1.21.0"
+version = "1.21.1"
 authors = [
     "The Extism Authors",
     "oss@extism.org",

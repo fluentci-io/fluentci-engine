@@ -23,7 +23,7 @@ for ident in sorted(reachable):
         errors.append(f'{package["name"]} {package["version"]} requires Rust {required}')
 runtimes = {(packages[i]["name"], packages[i]["version"]) for i in reachable
             if packages[i]["name"] in {"extism", "fluentci-extism-openbsd", "wasmtime"}}
-if runtimes != {("fluentci-extism-openbsd", "1.21.0"), ("wasmtime", "41.0.4")}:
+if runtimes != {("fluentci-extism-openbsd", "1.21.1"), ("wasmtime", "41.0.4")}:
     errors.append(f"Unexpected OpenBSD runtimes: {sorted(runtimes)}")
 if errors:
     raise SystemExit("\n".join(errors))

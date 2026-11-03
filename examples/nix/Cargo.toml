@@ -1,4 +1,5 @@
 [package]
+publish = false
 edition = "2021"
 name = "nix"
 version = "0.1.3"
@@ -10,5 +11,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 extism-pdk = { workspace = true }
-fluentci-pdk = {path = "../../crates/pdk", version = "0.2.4"}
-fluentci-types = {path = "../../crates/types", version = "0.1.9"}
+fluentci-pdk = {path = "../../crates/pdk", version = "0.2.5"}
+fluentci-types = {path = "../../crates/types", version = "0.1.10"}

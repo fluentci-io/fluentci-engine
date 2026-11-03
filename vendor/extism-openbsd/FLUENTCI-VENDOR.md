@@ -26,3 +26,6 @@ before packaging. These source checks do not replace an actual OpenBSD build.
 Refresh from a checksum-verified published crate, preserve the license, repeat
 the Cargo package rename, and update both target selectors and the root lockfile.
 Move OpenBSD back to the current runtime when its native compiler can support it.
+
+The FluentCI fork is published as `fluentci-extism-openbsd` 1.21.1; its upstream
+base remains Extism 1.21.0.

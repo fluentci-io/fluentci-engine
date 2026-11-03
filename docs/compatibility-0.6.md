@@ -62,6 +62,11 @@ argument boundaries; explicit `shell` operations accept shell syntax. Legacy
 as a JSON array on the host ABI. Do not substitute legacy calls for literal-argv
 helpers when passing untrusted text.
 
+The NetBSD Wasmtime adjustment is a workspace patch. Cargo does not propagate a
+workspace's `[patch.crates-io]` overrides to downstream consumers. Use the source
+checkout or platform release artifacts when you need the patched BSD runtime;
+installing published library crates alone does not carry that workspace override.
+
 ## Release preparation
 
 The source engine, Nix package, and README download links target 0.6.0. Workflow

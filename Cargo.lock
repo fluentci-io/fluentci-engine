@@ -2468,7 +2468,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-common"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "anyhow",
  "dirs",
@@ -2483,7 +2483,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-core"
-version = "0.3.9"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2534,7 +2534,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-executor"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "hex",
  "libc",
@@ -2548,7 +2548,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-ext"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2575,7 +2575,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-extism-openbsd"
-version = "1.21.0"
+version = "1.21.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2600,7 +2600,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-graphql"
-version = "0.3.10"
+version = "0.3.11"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2619,7 +2619,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-logging"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "reqwest 0.12.5",
@@ -2630,7 +2630,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-pdk"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "extism-pdk",
  "fluentci-types",
@@ -2639,7 +2639,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-secrets"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2663,7 +2663,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-server"
-version = "0.3.10"
+version = "0.3.11"
 dependencies = [
  "actix-cors",
  "actix-web",
@@ -2689,7 +2689,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-shared"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "anyhow",
  "extism",
@@ -2706,7 +2706,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-superconsole"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anstyle-parse",
  "anyhow",
@@ -2730,7 +2730,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-types"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "serde",
  "serde_yaml",

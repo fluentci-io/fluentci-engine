@@ -2,7 +2,7 @@
 
 [package]
 name = "fluentci-superconsole"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Meta"]
 edition = "2024"
 description = "FluentCI BSD-compatible fork of Meta SuperConsole"
