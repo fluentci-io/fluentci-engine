@@ -248,6 +248,11 @@ symlinks and reject nonregular files. Nonblocking opens prevent substituted FIFO
 from trapping workers before cancellation checks. Cache roots and ancestor
 directories remain trusted; this is not protection against arbitrary concurrent
 filesystem mutation. Manifest reads check cancellation between chunks.
+Executable hashing also uses a nonblocking open and requires a regular target,
+while allowing symlinks to regular tools (including package-manager links).
+A FIFO, directory, or symlink to a FIFO produces a task error rather than trapping
+cache lookup or post-execution verification. Publication source reads reject
+nonregular files too, before replacing any destination content.
 Restoration verifies all staged artifacts and logs before replacing outputs.
 Output replacement keeps backups and rolls back earlier replacements if a later
 filesystem operation fails. If rollback itself fails, backups are retained and

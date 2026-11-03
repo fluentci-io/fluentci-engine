@@ -281,6 +281,37 @@ class HostExecution(unittest.TestCase):
                 proc.kill()
                 proc.wait()
 
+    @unittest.skipUnless(os.name == "posix", "Unix FIFO and executable links")
+    def test_cached_executable_rejects_nonregular_targets_without_hanging(self):
+        fifo = self.root / "tool-fifo"
+        os.mkfifo(fifo)
+        link = self.root / "tool-link"
+        link.symlink_to(fifo)
+        directory = self.root / "tool-directory"
+        directory.mkdir()
+        for index, program in enumerate([fifo, link, directory]):
+            with self.subTest(program=program.name):
+                task = self.task("cached", "printf artifact > output")
+                task["program"] = str(program)
+                task["cache"] = dict(inputs=[], outputs=["output"], toolchain="fixture")
+                plan = self.plan([task], inherit_env=False, cache_dir="cache")
+                result = subprocess.run(self.command(plan, f"invalid-{index}"),
+                                        capture_output=True, text=True, timeout=3)
+                self.assertNotEqual(result.returncode, 0)
+                report = json.loads((self.root / f"invalid-{index}/result.json").read_text())
+                self.assertEqual(report["tasks"][0]["status"], "failed")
+                self.assertIn("not a regular file", report["tasks"][0]["error"])
+        link.unlink()
+        link.symlink_to("/bin/sh")
+        task["program"] = str(link)
+        plan = self.plan([task], inherit_env=False, cache_dir="cache")
+        for index, outcome in enumerate(["stored", "hit"]):
+            result = subprocess.run(self.command(plan, f"valid-{index}"),
+                                    capture_output=True, text=True, timeout=5)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads((self.root / f"valid-{index}/result.json").read_text())
+            self.assertEqual(report["tasks"][0]["cache"]["outcome"], outcome)
+
     def test_cli_cache_restores_and_invalidates(self):
         (self.root / "input").write_text("first")
         task = self.task("build", "/bin/cat input > output")

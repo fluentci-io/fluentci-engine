@@ -114,7 +114,7 @@ pub(crate) fn copy_file(
     cancel: &Cancellation,
 ) -> Result<(), String> {
     check_cancel(cancel)?;
-    let mut input = File::open(source).map_err(|e| e.to_string())?;
+    let mut input = open_storage_file(source).map_err(|e| e.to_string())?;
     let mut output = File::create(destination).map_err(|e| e.to_string())?;
     copy_stream(&mut input, &mut output, cancel)?;
     fs::set_permissions(
@@ -126,7 +126,8 @@ pub(crate) fn copy_file(
 
 fn file_digest(path: &Path, cancel: &Cancellation) -> Result<String, String> {
     check_cancel(cancel)?;
-    let mut file = File::open(path).map_err(|e| format!("read {}: {e}", path.display()))?;
+    let mut file =
+        open_regular_file(path, true).map_err(|e| format!("read {}: {e}", path.display()))?;
     stream_digest(&mut file, cancel)
 }
 
@@ -147,18 +148,27 @@ fn stream_digest(file: &mut impl Read, cancel: &Cancellation) -> Result<String, 
 // descriptor so a substituted FIFO cannot trap a cache worker before cancellation.
 // This protects the final component; the cache root/ancestors remain trusted.
 fn open_storage_file(path: &Path) -> std::io::Result<File> {
+    open_regular_file(path, false)
+}
+
+// Executables may be package-manager symlinks, but their opened targets must
+// still be regular files. Checking the descriptor closes the stat/open gap and
+// O_NONBLOCK prevents a FIFO target from trapping the worker in open().
+fn open_regular_file(path: &Path, follow_links: bool) -> std::io::Result<File> {
+    #[cfg(not(unix))]
+    let _ = follow_links;
     let mut options = fs::OpenOptions::new();
     options.read(true);
     #[cfg(unix)]
     {
         use std::os::unix::fs::OpenOptionsExt;
-        options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+        options.custom_flags(libc::O_NONBLOCK | if follow_links { 0 } else { libc::O_NOFOLLOW });
     }
     let file = options.open(path)?;
     if !file.metadata()?.is_file() {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
-            "cache storage entry is not a regular file",
+            "cache source is not a regular file",
         ));
     }
     Ok(file)
@@ -721,7 +731,7 @@ impl Prepared {
         }
         let mut staging =
             tempfile::NamedTempFile::new_in(self.root.join("blobs")).map_err(|e| e.to_string())?;
-        let mut file = File::open(source).map_err(|e| e.to_string())?;
+        let mut file = open_storage_file(source).map_err(|e| e.to_string())?;
         copy_stream(&mut file, &mut staging, &self.cancel)?;
         if file_digest(staging.path(), &self.cancel)? != expected {
             return Err(format!("file changed while caching: {}", source.display()));
@@ -1038,6 +1048,51 @@ mod cancellation_tests {
             .contains("cancelled"));
         assert_eq!(source.reads, 1);
         assert_eq!(destination.len(), 65536);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cache_sources_reject_fifo_substitution_and_keep_regular_executable_links() {
+        use std::os::unix::fs::symlink;
+        let root = tempfile::tempdir().unwrap();
+        let tool = root.path().join("tool");
+        let target = root.path().join("target");
+        fs::copy("/bin/sh", &target).unwrap();
+        symlink(&target, &tool).unwrap();
+        let task: Task = serde_json::from_value(serde_json::json!({
+            "id": "build", "program": tool, "cwd": root.path(),
+            "cache": {"inputs": [], "outputs": ["output"], "toolchain": "test"}
+        }))
+        .unwrap();
+        let action = prepare(&root.path().join("cache"), &task, &[])
+            .unwrap()
+            .unwrap();
+        let output = root.path().join("output");
+        let stdout = root.path().join("stdout");
+        let stderr = root.path().join("stderr");
+        fs::write(&output, "artifact").unwrap();
+        fs::write(&stdout, "log").unwrap();
+        fs::write(&stderr, "").unwrap();
+        fs::remove_file(&target).unwrap();
+        let c_path = std::ffi::CString::new(target.as_os_str().as_encoded_bytes()).unwrap();
+        assert_eq!(unsafe { libc::mkfifo(c_path.as_ptr(), 0o600) }, 0);
+        assert!(action
+            .save(&task, &stdout, &stderr)
+            .unwrap_err()
+            .contains("not a regular file"));
+        assert!(!action
+            .root
+            .join("actions")
+            .join(format!("{}.json", action.key))
+            .exists());
+        assert!(action
+            .store_blob(&target, &digest(b"unused"))
+            .unwrap_err()
+            .contains("not a regular file"));
+        assert!(copy_file(&target, &output, &Cancellation::default())
+            .unwrap_err()
+            .contains("not a regular file"));
+        assert_eq!(fs::read(&output).unwrap(), b"artifact");
     }
 
     #[cfg(unix)]
