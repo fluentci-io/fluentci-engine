@@ -84,7 +84,7 @@ jobs:
         run: |
           cargo build --release --locked -p fluentci-engine
           python3 tests/e2e_server.py RunServer.test_named_artifact_download_is_authenticated_and_recovery_keeps_optional_outcomes RunServer.test_remote_watch_preserves_failed_process_code_and_message -v
-          python3 tests/e2e_host.py HostExecution.test_process_error_and_exit_code_reach_cli_events_and_saved_watch HostExecution.test_failure_exit_code_and_skipped_dependency HostExecution.test_signal_failure_and_timeout_report_explicit_exit_codes HostExecution.test_tui_keeps_failure_reason_after_output_tail_rolls_over -v
+          python3 tests/e2e_host.py HostExecution.test_process_error_and_exit_code_reach_cli_events_and_saved_watch HostExecution.test_failure_exit_code_and_skipped_dependency HostExecution.test_signal_failure_and_timeout_report_explicit_exit_codes HostExecution.test_tui_keeps_failure_reason_after_output_tail_rolls_over HostExecution.test_tui_keeps_process_error_and_exit_code_after_output_tail_rolls_over -v
           python3 tests/e2e_provider_worker.py -v
           python3 tests/e2e_guest_pdks.py -v
           python3 tests/e2e_matrix.py -v

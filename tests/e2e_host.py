@@ -717,6 +717,15 @@ s.serve_forever()
 
 
     def test_tui_keeps_failure_reason_after_output_tail_rolls_over(self):
+        failed = self.task("broken", "")
+        failed["program"] = str(self.root / "missing-program")
+        self.assert_tui_failure_survives_noise(failed, b"No such file", 1)
+
+    def test_tui_keeps_process_error_and_exit_code_after_output_tail_rolls_over(self):
+        failed = self.task("broken", "printf ACTUAL-TUI-PROCESS-ERROR >&2; exit 23")
+        self.assert_tui_failure_survives_noise(failed, b"ACTUAL-TUI-PROCESS-ERROR", 23)
+
+    def assert_tui_failure_survives_noise(self, failed, diagnostic, exit_code):
         import errno
         import fcntl
         import pty
@@ -726,8 +735,6 @@ s.serve_forever()
         master, slave = pty.openpty()
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 16, 160, 0, 0))
         tasks = [self.task(f"done-{i}", "true") for i in range(8)]
-        failed = self.task("broken", "")
-        failed["program"] = str(self.root / "missing-program")
         tasks += [failed, self.task("noisy", "sleep 0.15; i=0; while [ $i -lt 20 ]; do echo noise-$i; i=$((i+1)); done")]
         path = self.plan(tasks, fail_fast=False)
         proc = subprocess.Popen(self.command(path, progress="tui"), stdout=slave, stderr=slave,
@@ -749,14 +756,17 @@ s.serve_forever()
                     output.extend(chunk)
                 elif proc.poll() is not None:
                     break
-            self.assertNotEqual(proc.wait(timeout=2), 0)
-            final_frame = output.rsplit(b"\x1b[J", 1)[-1]
+            self.assertEqual(proc.wait(timeout=2), exit_code, output.decode(errors="replace"))
+            final_frame, summary = output.rsplit(b"\x1b[J", 1)[-1].split(b"\x1b[?25h", 1)
             rows, tail = final_frame.split(b"Recent output:", 1)
             self.assertIn(b"broken", rows)
             self.assertIn(b"Failed", rows)
-            self.assertIn(b"No such file", rows)
+            self.assertIn(diagnostic, rows)
+            self.assertIn(diagnostic, summary)
+            if exit_code == 23:
+                self.assertIn(b"exit code 23", rows)
             self.assertIn(b"noise-19", tail)
-            self.assertNotIn(b"No such file", tail)
+            self.assertNotIn(diagnostic, tail)
             self.assertIn(b"\x1b[?25h", output)
         finally:
             os.close(master)
