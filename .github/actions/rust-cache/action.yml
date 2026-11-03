@@ -10,15 +10,38 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Restore compiler disk cache
+      continue-on-error: true
+      uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
+      with:
+        path: .ci-cache/native-sccache
+        key: sccache-disk-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.key }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/*.rs') }}
+        restore-keys: |
+          sccache-disk-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.key }}-
     - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba
+      env:
+        SCCACHE_GHA_ENABLED: 'false'
+        SCCACHE_DIR: ${{ github.workspace }}/.ci-cache/native-sccache
+        SCCACHE_CACHE_SIZE: 1G
       with:
         version: v0.16.0
-    - name: Enable compiler cache
+    - name: Enable local compiler cache with startup fallback
       shell: bash
+      env:
+        SCCACHE_GHA_ENABLED: 'false'
+        SCCACHE_DIR: ${{ github.workspace }}/.ci-cache/native-sccache
+        SCCACHE_CACHE_SIZE: 1G
       run: |
-        echo "RUSTC_WRAPPER=$SCCACHE_PATH" >> "$GITHUB_ENV"
-        echo 'SCCACHE_GHA_ENABLED=true' >> "$GITHUB_ENV"
+        echo 'SCCACHE_GHA_ENABLED=false' >> "$GITHUB_ENV"
+        echo "SCCACHE_DIR=$SCCACHE_DIR" >> "$GITHUB_ENV"
+        echo 'SCCACHE_CACHE_SIZE=1G' >> "$GITHUB_ENV"
         echo 'CARGO_INCREMENTAL=0' >> "$GITHUB_ENV"
+        if "$SCCACHE_PATH" --show-stats; then
+          echo "RUSTC_WRAPPER=$SCCACHE_PATH" >> "$GITHUB_ENV"
+        else
+          echo '::warning::sccache is unavailable; compiling without a compiler wrapper'
+          echo 'RUSTC_WRAPPER=' >> "$GITHUB_ENV"
+        fi
     - uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31
       with:
         # SCCACHE_PATH may live in a per-run directory; do not hash that
