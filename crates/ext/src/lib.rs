@@ -150,7 +150,7 @@ fn exec_command(
         let mut captured = String::new();
         for line in BufReader::new(stderr).lines() {
             let line = line?;
-            println!("{line}");
+            eprintln!("{line}");
             let _ = fluentci_logging::info(&line, &namespace);
             if last_cmd {
                 captured.push_str(&line);

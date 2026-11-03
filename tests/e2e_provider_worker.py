@@ -31,7 +31,7 @@ class ProviderWorker(unittest.TestCase):
             result = self.invoke(root, [command])
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("stdout-tail", result.stdout)
-            self.assertIn("stderr-tail", result.stdout)
+            self.assertIn("stderr-tail", result.stderr)
             self.assertEqual(capture.read_text(), "stderr-tail\n")
 
     def test_hash_provider_uses_task_working_directory(self):

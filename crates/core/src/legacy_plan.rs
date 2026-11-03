@@ -287,19 +287,72 @@ fn compile(
         final_cwd: working,
     })
 }
-fn drain(path: &Path, offset: &mut u64) -> Result<(), Error> {
-    let mut file = match fs::File::open(path) {
-        Ok(file) => file,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-        Err(error) => return Err(error.into()),
-    };
-    file.seek(SeekFrom::Start(*offset))?;
-    let mut bytes = vec![];
-    file.read_to_end(&mut bytes)?;
-    std::io::stdout().write_all(&bytes)?;
-    std::io::stdout().flush()?;
-    *offset += bytes.len() as u64;
-    Ok(())
+#[derive(Default)]
+struct Display {
+    offset: u64,
+    pending: Vec<u8>,
+    lines: BTreeMap<(String, String), String>,
+}
+impl Display {
+    fn line(text: &str) -> Result<(), Error> {
+        let mut output = std::io::stdout().lock();
+        output.write_all(text.strip_suffix('\r').unwrap_or(text).as_bytes())?;
+        output.write_all(b"\n")?;
+        output.flush()?;
+        Ok(())
+    }
+    fn flush_task(&mut self, id: Option<&str>) -> Result<(), Error> {
+        for ((task, _), text) in &mut self.lines {
+            if id.is_none_or(|id| id == task.as_str()) && !text.is_empty() {
+                Self::line(text)?;
+                text.clear();
+            }
+        }
+        Ok(())
+    }
+    fn poll(&mut self, path: &Path) -> Result<(), Error> {
+        let mut file = match fs::File::open(path) {
+            Ok(file) => file,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => return Err(error.into()),
+        };
+        file.seek(SeekFrom::Start(self.offset))?;
+        let count = file.read_to_end(&mut self.pending)?;
+        self.offset += count as u64;
+        while let Some(end) = self.pending.iter().position(|byte| *byte == b'\n') {
+            let record: Vec<_> = self.pending.drain(..=end).collect();
+            let event: fluentci_executor::events::Event = serde_json::from_slice(&record)?;
+            match event.kind {
+                fluentci_executor::events::EventKind::Log { id, stream, text }
+                    if stream == "stdout" || stream == "stderr" =>
+                {
+                    let buffer = self.lines.entry((id, stream)).or_default();
+                    buffer.push_str(&text);
+                    while let Some(end) = buffer.find('\n') {
+                        Self::line(&buffer[..end])?;
+                        buffer.drain(..=end);
+                    }
+                }
+                fluentci_executor::events::EventKind::TaskState { id, status, .. }
+                    if matches!(
+                        status,
+                        fluentci_executor::Status::Succeeded
+                            | fluentci_executor::Status::Failed
+                            | fluentci_executor::Status::Skipped
+                            | fluentci_executor::Status::Cancelled
+                            | fluentci_executor::Status::TimedOut
+                    ) =>
+                {
+                    self.flush_task(Some(&id))?
+                }
+                fluentci_executor::events::EventKind::RunFinished { .. } => {
+                    self.flush_task(None)?
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
 }
 fn run(
     plan: &Plan,
@@ -312,19 +365,14 @@ fn run(
             let _context = context.attach();
             plan.execute(directory, cancel)
         });
-        let mut offsets = vec![[0; 2]; plan.tasks.len()];
+        let mut display = Display::default();
+        let journal = directory.join("events.jsonl");
         let mut display_error = None;
         loop {
             if display_error.is_none() {
-                for (i, streams) in offsets.iter_mut().enumerate() {
-                    for (stream, offset) in ["stdout", "stderr"].iter().zip(streams) {
-                        if let Err(error) = drain(&directory.join(format!("{i}.{stream}")), offset)
-                        {
-                            cancel.cancel();
-                            display_error = Some(error);
-                            break;
-                        }
-                    }
+                if let Err(error) = display.poll(&journal) {
+                    cancel.cancel();
+                    display_error = Some(error);
                 }
             }
             if handle.is_finished() {
@@ -335,11 +383,8 @@ fn run(
                 if let Some(error) = display_error {
                     return Err(error);
                 }
-                for (i, streams) in offsets.iter_mut().enumerate() {
-                    for (stream, offset) in ["stdout", "stderr"].iter().zip(streams) {
-                        drain(&directory.join(format!("{i}.{stream}")), offset)?;
-                    }
-                }
+                display.poll(&journal)?;
+                display.flush_task(None)?;
                 return Ok(result);
             }
             thread::sleep(Duration::from_millis(10));
@@ -386,11 +431,18 @@ pub(crate) fn execute(
             )
         });
         if let Some(task) = failed {
+            let name = graph
+                .vertices
+                .iter()
+                .find(|vertex| vertex.id == task.id)
+                .map(|vertex| format!("{}: {}", vertex.label, vertex.command))
+                .unwrap_or_else(|| task.id.clone());
+            let status = task
+                .exit_code
+                .map(|code| format!("exit status {code}"))
+                .unwrap_or_else(|| format!("{:?}", task.status).to_lowercase());
             bail!(
-                "task {} {:?} (exit {:?}): {}",
-                task.id,
-                task.status,
-                task.exit_code,
+                "Command failed ({status}): {name}: {}",
                 task.error.as_deref().unwrap_or("command failed")
             );
         }
@@ -445,6 +497,34 @@ mod tests {
             .unwrap();
     }
     #[test]
+    fn journal_display_handles_partial_records_and_terminal_output_without_newline() {
+        let root = tempfile::tempdir().unwrap();
+        let journal = root.path().join("events.jsonl");
+        let log = serde_json::to_vec(&serde_json::json!({"sequence":1,"elapsed_ms":0,"type":"log", "id":"task", "stream":"stdout", "text":"without-newline"})).unwrap();
+        let split = log.len() / 2;
+        fs::write(&journal, &log[..split]).unwrap();
+        let mut display = Display::default();
+        display.poll(&journal).unwrap();
+        assert!(display.lines.is_empty());
+        let mut file = fs::OpenOptions::new().append(true).open(&journal).unwrap();
+        file.write_all(&log[split..]).unwrap();
+        file.write_all(b"\n").unwrap();
+        display.poll(&journal).unwrap();
+        assert_eq!(
+            display
+                .lines
+                .get(&("task".into(), "stdout".into()))
+                .unwrap(),
+            "without-newline"
+        );
+        serde_json::to_writer(&mut file, &serde_json::json!({"sequence":2,"elapsed_ms":1,"type":"task_state", "id":"task", "status":"succeeded", "cache":"disabled", "reason":"", "duration_ms":1, "error":null})).unwrap();
+        file.write_all(b"\n").unwrap();
+        display.poll(&journal).unwrap();
+        assert!(display.lines.values().all(String::is_empty));
+        assert!(display.pending.is_empty());
+    }
+
+    #[test]
     fn diamond_preserves_legacy_order_and_terminal_capture() {
         let root = tempfile::tempdir().unwrap();
         let (mut graph, rx) = graph(root.path());
@@ -480,7 +560,7 @@ mod tests {
         graph.execute_graph(Output::Stdout);
         let (error, status) = rx.recv().unwrap();
         assert_eq!(status, 1);
-        assert!(error.contains("Some(7)"), "{error}");
+        assert!(error.contains("exit status 7"), "{error}");
         assert!(!root.path().join("unexpected").exists());
         assert!(rx.try_recv().is_err());
     }

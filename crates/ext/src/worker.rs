@@ -126,10 +126,25 @@ impl Request {
         if self.version != 1 || self.commands.is_empty() {
             bail!("invalid provider worker request");
         }
+        // Reject the complete request before executing its first operation.
         for command in &self.commands {
             if !command.cwd.is_absolute() || !command.cwd.is_dir() {
                 bail!("provider cwd must be an existing absolute directory");
             }
+            if command
+                .capture
+                .as_ref()
+                .is_some_and(|path| !path.is_absolute())
+                || command
+                    .started
+                    .as_ref()
+                    .is_some_and(|path| !path.is_absolute())
+            {
+                bail!("provider output paths must be absolute");
+            }
+            let _ = command.provider.extension()?;
+        }
+        for command in &self.commands {
             // Filesystem-based helpers use relative paths too. This is a dedicated
             // child process, never the multithreaded API server.
             std::env::set_current_dir(&command.cwd)?;

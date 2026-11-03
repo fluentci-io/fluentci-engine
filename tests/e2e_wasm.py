@@ -64,7 +64,7 @@ class WasmContracts(unittest.TestCase):
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             try:
                 deadline = time.monotonic() + 15
-                while not marker.exists() and process.poll() is None and time.monotonic() < deadline:
+                while (not marker.exists() or marker.stat().st_size == 0) and process.poll() is None and time.monotonic() < deadline:
                     time.sleep(0.02)
                 self.assertTrue(marker.exists(), "legacy child did not start")
                 pid = int(marker.read_text())
