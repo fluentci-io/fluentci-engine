@@ -66,7 +66,11 @@ def generated():
         javascript.append(f'  {name}({argument}): {result};')
     javascript.extend(['} }', ''])
     for language in ['gleam', 'purescript', 'rescript', 'typescript']:
-        yield ROOT / f'sdk/{language}/demo-plugin/imports.d.ts', '\n'.join(javascript)
+        declarations = list(javascript)
+        if language == 'purescript':
+            exports = ['greet', 'echo', 'failure', 'invalid', 'service', 'cancel', 'nested', 'hash_file', 'copy_file', 'secret_env', 'action_plan']
+            declarations[1] = 'declare module "main" { ' + ' '.join(f'export function {name}(): I32;' for name in exports) + ' }'
+        yield ROOT / f'sdk/{language}/demo-plugin/imports.d.ts', '\n'.join(declarations)
     for name, exports in plugins.items():
         if name != 'xtp-smoke':
             source = (ROOT / f'examples/{name}/src/lib.rs').read_text()

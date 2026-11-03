@@ -20,3 +20,13 @@ Wasm guest. It calls `Host`/`Memory` guest globals, without embedding a host run
 or using an HTTP client. Dependencies must fit the Extism JavaScript sandbox;
 Node/Deno OS APIs are unavailable inside Wasm. `imports.d.ts` comes from the
 canonical `schema/host.json`.
+
+The example pins the refactored SDK's immutable `FluentCI.Plugin` API. Errors are
+`PluginError` values; use `errorMessage` when displaying them. Guest input/output
+also use explicit typed effects.
+
+Additional exports exercise failure diagnostics (`failure`, `invalid`), file
+hashing/copying (`hash_file`, `copy_file`), nested plugins (`nested`), secret injection
+(`secret_env`), supervised services (`service`, `cancel`), and pure host-plan
+construction (`action_plan`). Engine CI runs these against the compiled Wasm;
+`action_plan` is executed separately to verify action-cache restore/invalidation.
