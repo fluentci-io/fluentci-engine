@@ -212,6 +212,7 @@ mod tests {
                 cache: "miss".into(),
                 reason: "new action".into(),
                 wait_reason: None,
+                error: None,
                 duration_ms: 12,
             },
             EventKind::Log {

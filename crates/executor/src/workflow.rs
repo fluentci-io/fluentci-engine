@@ -248,3 +248,17 @@ pub(crate) fn collect(
     fs::rename(staging.path(), &destination).map_err(|e| e.to_string())?;
     Ok(products)
 }
+
+/// Open only a contained, published regular artifact. Consumers must verify the
+/// advertised SHA-256 when downloading chunks from a remote run server.
+pub fn artifact_file(run: &Path, index: usize, name: &str) -> std::io::Result<fs::File> {
+    if !valid_name(name) || index >= 10_000 {
+        return Err(std::io::ErrorKind::NotFound.into());
+    }
+    let relative = PathBuf::from("artifacts")
+        .join(index.to_string())
+        .join(name);
+    let path = cache::checked_path(run, &relative)
+        .map_err(|_| std::io::Error::from(std::io::ErrorKind::NotFound))?;
+    cache::open_storage_file(&path)
+}

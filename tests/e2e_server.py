@@ -101,6 +101,33 @@ class RunServer(unittest.TestCase):
         return [str(BINARY), "watch", path.rsplit("/", 1)[1], "--server", self.base,
                 "--progress", "json", *args]
 
+    def test_named_artifact_download_is_authenticated_and_recovery_keeps_optional_outcomes(self):
+        plan = self.plan("printf artifact > artifact.txt; printf value > value.txt")
+        plan["tasks"][0]["policy"] = {"artifacts": {"binary": "artifact.txt"}, "outputs": {"version": "value.txt"}}
+        plan["tasks"].append(dict(id="optional", program="/bin/false", cwd=str(self.root), policy={"allow_failure": True}))
+        plan["tasks"].append(dict(id="never", program="/bin/false", cwd=str(self.root), policy={"when": "never"}))
+        path = self.submit(plan)
+        self.assertEqual(self.terminal(path)["status"], "succeeded")
+        endpoint = path + "/artifacts/0/binary"
+        self.assertEqual(self.request("GET", endpoint, token=False)[0], 401)
+        code, body, headers = self.request("GET", endpoint)
+        self.assertEqual((code, body), (200, b"artifact"))
+        self.assertEqual(headers["X-Artifact-Size"], "8")
+        import hashlib
+        self.assertEqual(headers["X-Artifact-Sha256"], hashlib.sha256(body).hexdigest())
+        self.assertEqual(self.request("GET", endpoint + "?cursor=3")[1], b"ifact")
+        self.assertEqual(self.request("GET", endpoint + "?cursor=99")[0], 400)
+        self.assertEqual(self.request("GET", path + "/artifacts/0/unknown")[0], 404)
+        self.stop()
+        self.start()
+        self.assertEqual(self.request("GET", path)[0], 200)
+        self.assertEqual(json.loads(self.request("GET", path)[1])["status"], "succeeded")
+        self.assertEqual(self.request("GET", endpoint)[1], b"artifact")
+        artifact_path = self.root / "runs" / path.rsplit("/", 1)[1] / "execution/artifacts/0/binary"
+        artifact_path.unlink()
+        artifact_path.symlink_to(self.root / "server.log")
+        self.assertEqual(self.request("GET", endpoint)[0], 404)
+
     def test_remote_watch_replay_and_terminal_without_journal(self):
         env = dict(os.environ, FLUENTCI_RUN_TOKEN=TOKEN)
         for script, expected in [("echo watched", 0), ("echo failed; exit 7", 1)]:

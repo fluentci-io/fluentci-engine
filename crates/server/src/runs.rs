@@ -987,6 +987,75 @@ async fn logs(
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
+async fn artifact(
+    request: HttpRequest,
+    runs: web::Data<Runs>,
+    route: web::Path<(String, usize, String)>,
+    cursor: web::Query<Cursor>,
+) -> HttpResponse {
+    if !runs.authorized(&request) {
+        return HttpResponse::Unauthorized().finish();
+    }
+    let (id, index, name) = route.into_inner();
+    if index >= 10_000 || !fluentci_executor::workflow::valid_name(&name) {
+        return HttpResponse::NotFound().finish();
+    }
+    let path = match runs.path(&id) {
+        Ok(path) => path,
+        Err(response) => return response,
+    };
+    let read = async {
+        let execution = path.join("execution");
+        let report: serde_json::Value =
+            serde_json::from_slice(&tokio::fs::read(execution.join("result.json")).await?)
+                .map_err(|_| std::io::Error::from(std::io::ErrorKind::InvalidData))?;
+        let metadata = report
+            .get("tasks")
+            .and_then(|v| v.get(index))
+            .and_then(|v| v.get("artifacts"))
+            .and_then(|v| v.get(&name))
+            .ok_or_else(|| std::io::Error::from(std::io::ErrorKind::NotFound))?;
+        let checksum = metadata
+            .get("sha256")
+            .and_then(|v| v.as_str())
+            .filter(|v| v.len() == 64 && v.bytes().all(|b| b.is_ascii_hexdigit()))
+            .ok_or_else(|| std::io::Error::from(std::io::ErrorKind::InvalidData))?
+            .to_string();
+        let size = metadata
+            .get("size")
+            .and_then(|v| v.as_u64())
+            .ok_or_else(|| std::io::Error::from(std::io::ErrorKind::InvalidData))?;
+        let std_file = fluentci_executor::workflow::artifact_file(&execution, index, &name)?;
+        let mut file = tokio::fs::File::from_std(std_file);
+        if file.metadata().await?.len() != size || cursor.cursor > size {
+            return Err(std::io::ErrorKind::InvalidInput.into());
+        }
+        file.seek(std::io::SeekFrom::Start(cursor.cursor)).await?;
+        let mut bytes = Vec::new();
+        file.take(4 * 1024 * 1024).read_to_end(&mut bytes).await?;
+        Ok::<_, std::io::Error>((bytes, checksum, size))
+    }
+    .await;
+    match read {
+        Ok((bytes, checksum, size)) => HttpResponse::Ok()
+            .insert_header((
+                "X-Next-Cursor",
+                (cursor.cursor + bytes.len() as u64).to_string(),
+            ))
+            .insert_header(("X-Artifact-Sha256", checksum))
+            .insert_header(("X-Artifact-Size", size.to_string()))
+            .content_type("application/octet-stream")
+            .body(bytes),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            HttpResponse::NotFound().finish()
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::InvalidInput => {
+            HttpResponse::BadRequest().body("invalid artifact cursor or size")
+        }
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
 pub fn configure(config: &mut web::ServiceConfig) {
     config
         .app_data(web::JsonConfig::default().limit(1024 * 1024))
@@ -996,6 +1065,10 @@ pub fn configure(config: &mut web::ServiceConfig) {
         .route("/v1/runs/{id}/result", web::get().to(result))
         .route("/v1/runs/{id}/cancel", web::post().to(cancel))
         .route("/v1/runs/{id}/events", web::get().to(events))
+        .route(
+            "/v1/runs/{id}/artifacts/{index}/{name}",
+            web::get().to(artifact),
+        )
         .route("/v1/runs/{id}/logs/{index}/{stream}", web::get().to(logs));
 }
 pub async fn start(listen: &str, root: &Path, max_runs: usize) -> anyhow::Result<()> {
