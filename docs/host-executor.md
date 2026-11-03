@@ -245,7 +245,12 @@ cache storage is trusted, and there is no remote cache protocol yet.
 `--progress auto` selects a unified TUI on a terminal and plain text in CI.
 `--progress tui`, `plain`, and `json` select explicitly. The TUI shows concurrent
 states, cache hits, elapsed time, and a bounded recent-output pane, refreshed at
-most ten times per second. Terminal controls from task output are filtered.
+most ten times per second. Failed and timed-out tasks take priority over completed
+work when the terminal cannot fit every row; running, ready and stopping services
+also stay ahead of completed work. Failure reasons remain in their task rows even
+after later logs displace them from the recent-output pane. Row labels/details and
+tail entries are kept to one line, and terminal controls from task output are filtered.
+Long rows are clipped to the terminal width; full reasons remain in the result and journal.
 
 Every run records ordered `events.jsonl` events: run start, task states, log
 chunks, and run finish. The CLI tails this journal independently of execution;

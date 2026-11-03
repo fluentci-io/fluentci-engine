@@ -81,7 +81,9 @@ milestones do not establish a claim of being the fastest engine.
    skips pending-task files and terminal streams already at EOF on ordinary ticks,
    while preserving active streams, bounded backlog reads and a final EOF recheck.
    An opt-in release microbenchmark measures inactive-task polling separately.
-8. Improve UX for local/server workflows: concise actionable errors, attach to
+8. The TUI now prioritizes failed/timed-out and active tasks, retaining failure reasons
+   in their rows after the bounded output tail rolls over (covered by a small-terminal
+   PTY regression). Improve UX for local/server workflows: concise actionable errors, attach to
    running jobs, inspect task logs/results, explain cache decisions, and sensible
    zero-daemon local defaults.
 

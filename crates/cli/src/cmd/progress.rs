@@ -20,6 +20,7 @@ struct Row {
     status: Status,
     cache: String,
     wait_reason: Option<String>,
+    error: Option<String>,
     duration_ms: u128,
     started_ms: Option<u128>,
 }
@@ -69,6 +70,7 @@ impl Progress {
                             status: Status::Pending,
                             cache: "disabled".into(),
                             wait_reason: None,
+                            error: None,
                             duration_ms: 0,
                             started_ms: None,
                         },
@@ -143,6 +145,7 @@ impl Progress {
                     row.status = status.clone();
                     row.cache = cache.clone();
                     row.wait_reason = wait_reason.clone();
+                    row.error = error.clone();
                     row.duration_ms = u128::from(duration_ms);
                 }
                 if self.mode == Mode::Plain {
@@ -197,7 +200,7 @@ impl Progress {
     }
     fn push_log(&mut self, line: String) {
         self.tail
-            .push_back(clean(&line).chars().take(4096).collect());
+            .push_back(one_line(&line).chars().take(4096).collect());
         while self.tail.len() > 8 {
             self.tail.pop_front();
         }
@@ -226,9 +229,9 @@ impl Progress {
             self.rows.len(),
             elapsed as f64 / 1000.0
         )];
-        // Keep active tasks visible even when the plan is larger than the terminal.
+        // Keep failures and active tasks visible when the plan exceeds the terminal.
         let mut ids: Vec<_> = self.order.iter().collect();
-        ids.sort_by_key(|id| self.rows[*id].status != Status::Running);
+        ids.sort_by_key(|id| visibility(&self.rows[*id].status));
         for id in ids.iter().take(max_rows) {
             let row = &self.rows[*id];
             let icon = match row.status {
@@ -249,14 +252,16 @@ impl Progress {
             };
             lines.push(format!(
                 " {icon} {:<24} {:<10?} {:>6.1}s {}",
-                clean(id),
+                one_line(id).chars().take(24).collect::<String>(),
                 row.status,
                 duration as f64 / 1000.0,
-                if row.cache == "hit" {
-                    "CACHED".into()
-                } else {
-                    clean(row.wait_reason.as_deref().unwrap_or(""))
-                }
+                one_line(row.error.as_deref().unwrap_or_else(|| {
+                    if row.cache == "hit" {
+                        "CACHED"
+                    } else {
+                        row.wait_reason.as_deref().unwrap_or("")
+                    }
+                }))
             ));
         }
         if ids.len() > max_rows {
@@ -292,6 +297,23 @@ impl Drop for Progress {
         }
     }
 }
+fn visibility(status: &Status) -> u8 {
+    match status {
+        Status::Failed | Status::TimedOut => 0,
+        Status::Running | Status::Ready | Status::Stopping => 1,
+        Status::Cancelled => 2,
+        Status::Pending => 3,
+        Status::Skipped => 4,
+        Status::Succeeded => 5,
+    }
+}
+fn one_line(value: &str) -> String {
+    clean(value)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn clean(value: &str) -> String {
     value
         .chars()
@@ -302,6 +324,14 @@ fn clean(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn task_rows_and_tail_entries_cannot_add_terminal_lines() {
+        assert_eq!(one_line("task\nreason\tmore\x1b[2J"), "task reason more[2J");
+        assert!(visibility(&Status::Failed) < visibility(&Status::Running));
+        assert!(visibility(&Status::TimedOut) < visibility(&Status::Succeeded));
+        assert_eq!(visibility(&Status::Ready), visibility(&Status::Running));
+        assert_eq!(visibility(&Status::Stopping), visibility(&Status::Running));
+    }
     #[test]
     fn terminal_control_sequences_cannot_be_injected_by_task_output() {
         assert_eq!(clean("hello\x1b[2J\r\x08world\n"), "hello[2Jworld\n");

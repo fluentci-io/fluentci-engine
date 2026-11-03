@@ -347,5 +347,54 @@ class HostExecution(unittest.TestCase):
                 proc.wait()
 
 
+    def test_tui_keeps_failure_reason_after_output_tail_rolls_over(self):
+        import errno
+        import fcntl
+        import pty
+        import select
+        import struct
+        import termios
+        master, slave = pty.openpty()
+        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 16, 160, 0, 0))
+        tasks = [self.task(f"done-{i}", "true") for i in range(8)]
+        failed = self.task("broken", "")
+        failed["program"] = str(self.root / "missing-program")
+        tasks += [failed, self.task("noisy", "sleep 0.15; i=0; while [ $i -lt 20 ]; do echo noise-$i; i=$((i+1)); done")]
+        path = self.plan(tasks, fail_fast=False)
+        proc = subprocess.Popen(self.command(path, progress="tui"), stdout=slave, stderr=slave,
+                                env={**os.environ, "TERM": "xterm-256color"})
+        os.close(slave)
+        output = bytearray()
+        try:
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                if select.select([master], [], [], 0.1)[0]:
+                    try:
+                        chunk = os.read(master, 65536)
+                    except OSError as error:
+                        if error.errno == errno.EIO:
+                            break
+                        raise
+                    if not chunk:
+                        break
+                    output.extend(chunk)
+                elif proc.poll() is not None:
+                    break
+            self.assertNotEqual(proc.wait(timeout=2), 0)
+            final_frame = output.rsplit(b"\x1b[J", 1)[-1]
+            rows, tail = final_frame.split(b"Recent output:", 1)
+            self.assertIn(b"broken", rows)
+            self.assertIn(b"Failed", rows)
+            self.assertIn(b"No such file", rows)
+            self.assertIn(b"noise-19", tail)
+            self.assertNotIn(b"No such file", tail)
+            self.assertIn(b"\x1b[?25h", output)
+        finally:
+            os.close(master)
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+
+
 if __name__ == "__main__":
     unittest.main()
