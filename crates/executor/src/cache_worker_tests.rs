@@ -270,6 +270,50 @@ fn lookup_cancellation_and_timeout_never_start_the_command() {
 }
 
 #[test]
+fn action_lock_wait_releases_job_and_resource_slots_and_remains_cancellable() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = plan(root.path(), 1);
+    p.tasks[0].timeout_ms = Some(5000);
+    let owner = cache::prepare(&root.path().join("cache"), &p.tasks[0], &[])
+        .unwrap()
+        .unwrap();
+    let mut independent = p.tasks[1].clone();
+    independent.id = "independent".into();
+    independent.needs.clear();
+    independent.resources = p.tasks[0].resources.clone();
+    independent.args[1] = "printf independent > independent".into();
+    p.tasks.push(independent);
+    let run = root.path().join("run");
+    let cancel = Cancellation::default();
+    thread::scope(|scope| {
+        let handle = scope.spawn(|| p.execute(&run, &cancel).unwrap());
+        wait_state(&run.join("events.jsonl"), "independent", "succeeded");
+        cancel.cancel();
+        let result = handle.join().unwrap();
+        assert_eq!(result.tasks[0].status, Status::Cancelled);
+        assert_eq!(result.tasks[2].status, Status::Succeeded);
+        assert!(!root.path().join("output").exists());
+        assert!(!root.path().join("dependent").exists());
+        assert_eq!(
+            fs::read_to_string(root.path().join("independent")).unwrap(),
+            "independent"
+        );
+        assert!(matches!(
+            resources::acquire(&root.path().join("locks"), &["workspace".into()], &[]).unwrap(),
+            resources::Attempt::Acquired(_)
+        ));
+        // Cancelling a waiter must not unlock the independent owner.
+        assert!(cache::prepare(&root.path().join("cache"), &p.tasks[0], &[])
+            .unwrap()
+            .is_none());
+    });
+    drop(owner);
+    assert!(cache::prepare(&root.path().join("cache"), &p.tasks[0], &[])
+        .unwrap()
+        .is_some());
+}
+
+#[test]
 fn action_lock_retries_do_not_reset_the_preparation_deadline() {
     let root = tempfile::tempdir().unwrap();
     let mut p = plan(root.path(), 1);
