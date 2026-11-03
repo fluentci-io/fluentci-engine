@@ -137,6 +137,8 @@ provision config = do
     Right actual | String.trim actual == artifact.checksum -> do
       report <- require installed
       void $ ensureSucceeded (config.run <> ".install") report
+      cleaned <- require cleanup
+      void $ ensureSucceeded (config.run <> ".stage-cleanup") cleaned
       pure (config.install <> "/sccache")
     _ -> throw "sccache download or SHA-256 verification failed; installation stopped"
 
@@ -196,4 +198,6 @@ buildProject input = do
   void $ P.runPlan (config.run <> ".socket-cleanup") (nativePlan [ task config "remove-socket" "/bin/rm" [ "-f", socket ] ])
   report <- require result
   void $ ensureSucceeded config.run report
+  cleaned <- require cleanup
+  void $ ensureSucceeded (config.run <> ".socket-cleanup") cleaned
   readText (config.run <> "/result.json")

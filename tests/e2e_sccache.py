@@ -21,7 +21,7 @@ class CompilerCache(unittest.TestCase):
     def test_provisions_reuses_cache_and_reaps_server(self):
         with tempfile.TemporaryDirectory(prefix="fluentci-sccache-") as directory:
             root = Path(directory)
-            project = root / "Rust project with spaces"
+            project = root / "Rust project ' with spaces"
             shutil.copytree(ROOT / "fixtures/sccache-demo", project)
             # Keep Rust available while excluding the action-installed sccache from PATH.
             tools = root / "tools"
@@ -63,6 +63,20 @@ class CompilerCache(unittest.TestCase):
                     # Existing binaries must be reused; deny a second installer download.
                     environment["https_proxy"] = "http://127.0.0.1:1"
                     environment["HTTPS_PROXY"] = "http://127.0.0.1:1"
+
+            failed_run = root / "failed-run"
+            failed = subprocess.run(
+                [str(BINARY), "call", "-m", str(PLUGIN), "build",
+                 json.dumps([str(project), str(failed_run), "--package", "missing-package"])],
+                env=environment, capture_output=True, text=True, timeout=120)
+            self.assertNotEqual(failed.returncode, 0, failed.stdout + failed.stderr)
+            failed_report = json.loads((failed_run / "result.json").read_text())
+            self.assertEqual(failed_report["outcome"], "failed")
+            self.assertTrue(any(t["id"] == "build" and t["status"] == "failed"
+                                for t in failed_report["tasks"]))
+            failed_socket = Path("/tmp") / ("fluentci-sccache-" + hashlib.sha256(
+                str(failed_run).encode()).hexdigest()[:24] + ".sock")
+            self.assertFalse(failed_socket.exists(), "failed build leaked its socket")
 
 
 if __name__ == "__main__":
