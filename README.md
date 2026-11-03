@@ -146,6 +146,10 @@ Run the plugin:
 fluentci-engine call -m ./target/wasm32-unknown-unknown/release/nix.wasm -- exec nix --version
 ```
 
+Source examples include [Python projects with uv](examples/uv) and
+[native Rust builds with sccache](examples/sccache), including compiler-cache
+statistics and supervised service cleanup.
+
 ### 📑 Available Plugins
 
 - [android](https://github.com/fluent-ci-templates/android-pipeline/tree/main/plugin)

@@ -343,5 +343,20 @@
         "contentType": "text/plain; charset=utf-8"
       }
     }
+  },
+  "sccache": {
+    "build": {
+      "input": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
   }
 }
