@@ -22,28 +22,23 @@ async function main() {
 
   console.log("cacheId: ", await cache.id());
 
-  const ping = dag
-    .pipeline("demo")
-    .nix()
-    .withWorkdir("nix-demo")
-    .withExec(["ping", "fluentci.io"])
-    .asService("ping_fluentci");
-
-  const pingGh = dag
-    .pipeline("demo")
-    .pkgx()
-    .withPackages(["ping"])
-    .withExec(["ping", "github.com"])
-    .asService("ping_gh");
-
-  const stdout = await dag
-    .pipeline("demo")
-    .withService(ping)
-    .withService(pingGh)
-    .withExec(["sleep", "15"])
-    .withExec(["ls", "-ltr", ".fluentci"])
-    .stdout();
-  console.log(stdout);
+  const serviceDirectory = await Deno.makeTempDir({ prefix: "fluentci-services-" });
+  const portFiles = [0, 1].map((index) => `${serviceDirectory}/service-${index}.port`);
+  const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+  try {
+    const services = portFiles.map((portFile, index) =>
+      dag.pipeline(`service-${index}`)
+        .withExec(["deno", "run", "-A", "service-demo/server.ts", `service-${index}`, quote(portFile)])
+        .asService(`http_service_${index}`)
+    );
+    console.log(await dag.pipeline("services-demo")
+      .withService(services[0])
+      .withService(services[1])
+      .withExec(["deno", "run", "-A", "service-demo/client.ts", ...portFiles.map(quote)])
+      .stdout());
+  } finally {
+    await Deno.remove(serviceDirectory, { recursive: true });
+  }
 
   const demo = await dag
     .pipeline("demo")
