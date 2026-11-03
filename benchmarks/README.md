@@ -117,3 +117,45 @@ The verified-digest set is discarded after each save. Regression coverage corrup
 a shared blob between saves, verifies repair, changes one output and one log, and
 checks that restoration retains every file's correct contents. Verification on
 restore and the staged-publication protocol are unchanged.
+
+## Copied workspace materialization
+
+```sh
+cargo test --release -p fluentci-executor --lib workspace_copy_benchmark -- --ignored --nocapture
+cargo build --release -p fluentci-engine
+python3 benchmarks/workspace.py --samples 5 --mib 64
+```
+
+The first command compares a forced streaming copy with the native-clone/fallback
+path for a 64 MiB file. Each sample verifies exact contents outside the timed copy.
+The second benchmark includes CLI startup, workspace materialization, all source
+and destination content/mode verification, and a task that mutates its private
+copy. It checks that the source is unchanged outside the timing window and emits
+JSON samples. Neither benchmark flushes OS caches or imposes a timing threshold.
+Use `--binary` to compare separately built release artifacts on the same host.
+
+On one macOS 15.6 ARM64/APFS comparison, the copy-only medians were 57.358 ms for
+streaming and 0.142 ms for successful native cloning. The complete CLI workload
+had a 419.752 ms median with the streaming baseline (`159e4e7`) and 398.678 ms with
+native cloning, about 5% less time in this pair of runs. Complete-workload samples
+in milliseconds were:
+
+- Streaming: 478.304, 462.681, 415.097, 419.752, 416.183.
+- Cloning: 971.627, 398.678, 400.421, 397.170, 396.080.
+
+The first cloned-workload sample was substantially slower; these small, sequential
+sample sets are observations, not a general throughput guarantee. Content hashing
+remains in both paths, and small files, unsupported filesystems, cross-device
+copies, or macOS metadata fallback can erase the copy-only advantage. Cloning
+avoids eagerly copying data blocks; it does not eliminate verification reads.
+
+Local tests require actual native cloning with
+`FLUENTCI_REQUIRE_WORKSPACE_CLONE=1 cargo test --release -p fluentci-executor workspace_copy`.
+They also exercise forced streaming, independent mutations, permission preservation,
+existing-target rejection, cancellation, special-file rejection, and macOS metadata
+fallback. The workflow requires cloning on its macOS jobs; Linux native behavior
+still requires a reflink-capable filesystem. Linux release cross-check and Clippy
+validation are compile checks, not native runtime evidence.
+
+The platform calls follow [Apple's clonefile contract](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/man/man2/clonefile.2)
+and [Linux's FICLONE contract](https://www.man7.org/linux/man-pages/man2/FICLONE.2const.html).
