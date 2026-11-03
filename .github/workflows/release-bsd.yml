@@ -113,6 +113,13 @@ jobs:
         with:
           name: bsd-smoke-fixtures
           path: .release-smoke
+      - name: Reserve runner disk space for BSD VM cache copyback
+        # The VM disk, restored cache and copied-back cache coexist on this host.
+        # These hosted-runner SDKs are not used by the native BSD release jobs.
+        run: |
+          df -h "$GITHUB_WORKSPACE"
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /usr/local/.ghcup /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h "$GITHUB_WORKSPACE"
       - name: Restore native compiler and Cargo artifact caches
         uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
