@@ -988,7 +988,19 @@ impl Plan {
                     &results,
                     &self.tasks,
                 );
-                if matches!(gate, workflow::Gate::Skip) {
+                // A failed service waits for consumers before it can finish
+                // shutdown. Skip ordinary consumers while it is still stopping;
+                // waiting for its terminal state would deadlock both sides.
+                let failed_service = ancestors[i].iter().any(|&parent| {
+                    (results[parent].status.terminal()
+                        && !workflow::satisfied(&results[parent], &self.tasks[parent]))
+                        || shutdowns[parent]
+                            .as_ref()
+                            .is_some_and(|shutdown| shutdown.status != Status::Succeeded)
+                });
+                if failed_service && !self.tasks[i].policy.when.finalizer() {
+                    results[i].status = Status::Skipped;
+                } else if matches!(gate, workflow::Gate::Skip) {
                     results[i].status = Status::Skipped;
                     results[i].condition_skipped = self.tasks[i].policy.when
                         != workflow::Condition::Success
