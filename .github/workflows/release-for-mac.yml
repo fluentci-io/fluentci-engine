@@ -1,63 +1,84 @@
+name: macOS releases
+
 on:
   release:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to rebuild and upload macOS assets for'
+        required: true
+        type: string
+
+permissions:
+  contents: write
 
 jobs:
   release:
-    name: release x86_64-apple-darwin
-    runs-on: macos-15-intel
+    name: release ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - x86_64-apple-darwin
-          - aarch64-apple-darwin
+        include:
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: macos-15
+            target: aarch64-apple-darwin
 
     steps:
-      - name: Installing needed dependencies
-        run: brew install protobuf
       - name: Checking out sources
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Select existing release
+        env:
+          RELEASE_VERSION: ${{ github.event.release.tag_name || inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$RELEASE_VERSION" >/dev/null
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
+      - name: Install native build and upload dependencies
+        run: brew install protobuf awscli
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
         with:
           toolchain: '1.99.1'
           targets: ${{ matrix.target }}
       - uses: ./.github/actions/rust-cache
         with:
-          key: release-macos-intel-${{ matrix.target }}
-      - name: Setup Fluent CI
-        uses: fluentci-io/setup-fluentci@v5
-        with:
-          wasm: true
-          engine-version: 0.4.0
+          key: release-${{ matrix.os }}-${{ matrix.target }}
       - name: Build cached release binary
-        run: cargo build --release --locked -p fluentci-engine --target ${{ matrix.target }}
-      - name: Set env
-        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-      - name: Packaging final binary
-        shell: bash
-        run: |
-          cd target/${{ matrix.target }}/release
-          tar czvf ../../../fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz fluentci-engine
-          shasum -a 256 ../../../fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz > ../../../fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
-          cd ../../../
-      - name: Upload assets to Cloudflare R2
-        run: |
-          mkdir -p r2/fluentci-engine/${{ env.RELEASE_VERSION }}
-          cp fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz r2/fluentci-engine/${{ env.RELEASE_VERSION }}
-          cp fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256 r2/fluentci-engine/${{ env.RELEASE_VERSION }}
-          cd r2 && fluentci run --wasm r2-sync upload --endpoint-url https://$ACCOUNT_ID.r2.cloudflarestorage.com s3://assets
         env:
-          TAG: ${{ env.RELEASE_VERSION }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          cargo build --release --locked -p fluentci-engine --target "$TARGET"
+          "target/$TARGET/release/fluentci-engine" --version
+      - name: Package final binary with macOS tools
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          archive="fluentci-engine_${RELEASE_VERSION}_${TARGET}.tar.gz"
+          /usr/bin/tar -czf "$archive" -C "target/$TARGET/release" fluentci-engine
+          /usr/bin/tar -tzf "$archive" | /usr/bin/grep -x fluentci-engine
+          /usr/bin/shasum -a 256 "$archive" > "$archive.sha256"
+      - name: Upload release assets
+        env:
+          TARGET: ${{ matrix.target }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$RELEASE_VERSION" \
+            "fluentci-engine_${RELEASE_VERSION}_${TARGET}.tar.gz" \
+            "fluentci-engine_${RELEASE_VERSION}_${TARGET}.tar.gz.sha256" --clobber
+      - name: Upload assets to Cloudflare R2
+        env:
+          TARGET: ${{ matrix.target }}
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
           ACCOUNT_ID: fe5b1e2ce9f94f4c0415ab94ce402012
-      - name: Upload release assets
         run: |
-          for ext in tar.gz tar.gz.sha256; do
-            export FILE=fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.$ext
-            fluentci run --wasm github release_upload $TAG $FILE
+          set -euo pipefail
+          for extension in tar.gz tar.gz.sha256; do
+            file="fluentci-engine_${RELEASE_VERSION}_${TARGET}.$extension"
+            aws s3 cp "$file" "s3://assets/fluentci-engine/$RELEASE_VERSION/$file" \
+              --endpoint-url "https://$ACCOUNT_ID.r2.cloudflarestorage.com" --only-show-errors
           done
-        env:
-          TAG: ${{ env.RELEASE_VERSION }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
