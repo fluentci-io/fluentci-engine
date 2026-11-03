@@ -31,7 +31,7 @@ workspace=$(mktemp -d "$PWD/.bsd-release-smoke.XXXXXX")
 (
     cd "$workspace"
     cat > plan.json <<'JSON'
-{"version":1,"jobs":2,"cache_dir":"cache","tasks":[{"id":"smoke","program":"/bin/sh","args":["-c","printf bsd-release-smoke > artifact"],"cwd":".","needs":[],"timeout_ms":5000,"cache":{"inputs":[],"outputs":["artifact"],"toolchain":"bsd-release-v1"}}]}
+{"version":1,"jobs":2,"inherit_env":false,"cache_dir":"cache","tasks":[{"id":"smoke","program":"/bin/sh","args":["-c","printf bsd-release-smoke > artifact"],"cwd":".","needs":[],"timeout_ms":5000,"cache":{"inputs":[],"outputs":["artifact"],"toolchain":"bsd-release-v1"}}]}
 JSON
     "$binary" execute plan.json --run-dir cold --progress plain
     test "$(cat artifact)" = bsd-release-smoke
