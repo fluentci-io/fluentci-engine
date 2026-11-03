@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
-    fs::{self, File, OpenOptions},
+    fs::{self, File},
     io::{Read, Write},
     path::{Component, Path, PathBuf},
 };
@@ -474,13 +474,7 @@ pub(crate) fn prepare_cancellable(
     for dir in ["actions", "blobs", "locks"] {
         fs::create_dir_all(root.join(dir)).map_err(|e| e.to_string())?;
     }
-    let lock = OpenOptions::new()
-        .create(true)
-        .truncate(false)
-        .read(true)
-        .write(true)
-        .open(root.join("locks").join(&key))
-        .map_err(|e| e.to_string())?;
+    let lock = crate::resources::open_lock_file(&root.join("locks").join(&key))?;
     #[cfg(unix)]
     {
         use std::os::fd::AsRawFd;

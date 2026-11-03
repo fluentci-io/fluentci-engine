@@ -124,7 +124,12 @@ advance log cursors before command execution.
 
 For cached tasks, the timeout covers preparation, action-lock retries, command
 execution, and saving from the first admitted lookup. Busy action locks release
-resource leases and retry after 50 ms; retries do not reset that deadline.
+resource leases and retry after 50 ms; retries do not reset that deadline. New
+resource and action lock files use mode 0600. Both open the final lock path without
+following symlinks, use nonblocking opens, and require a regular file before
+advisory locking. Invalid lock entries fail the task before its command starts;
+they are not treated as ordinary contention or silently removed. Lock files stay
+in place so active owners and waiters coordinate through the same inode.
 Cancellation, fail-fast, and timeout cancel workers cooperatively. Executor error
 cleanup cancels and joins workers before releasing leases. Unrelated task
 supervision and service probes continue during cache work. Restoration finishes

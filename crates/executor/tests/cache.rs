@@ -109,6 +109,46 @@ fn corrupted_blob_and_unsafe_manifest_are_misses_not_trusted_hits() {
 }
 
 #[test]
+fn action_lock_rejects_symlinks_directories_and_fifos_before_execution() {
+    use std::{ffi::CString, os::unix::ffi::OsStrExt};
+    for kind in ["symlink", "directory", "fifo"] {
+        let dir = TempDir::new().unwrap();
+        let p = plan(dir.path());
+        let cache = p.cache_dir.as_ref().unwrap();
+        let action = fluentci_executor::cache::prepare(cache, &p.tasks[0], &[])
+            .unwrap()
+            .unwrap();
+        let lock = cache.join("locks").join(&action.key);
+        assert_eq!(
+            fs::metadata(&lock).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+        drop(action);
+        fs::remove_file(&lock).unwrap();
+        let target = dir.path().join("target");
+        fs::write(&target, "unchanged").unwrap();
+        match kind {
+            "symlink" => symlink(&target, &lock).unwrap(),
+            "directory" => fs::create_dir(&lock).unwrap(),
+            "fifo" => {
+                let path = CString::new(lock.as_os_str().as_bytes()).unwrap();
+                assert_eq!(unsafe { libc::mkfifo(path.as_ptr(), 0o600) }, 0);
+            }
+            _ => unreachable!(),
+        }
+        let result = p
+            .execute(&dir.path().join("run"), &Cancellation::default())
+            .unwrap();
+        assert_eq!(result.tasks[0].status, Status::Failed, "{kind}");
+        assert_eq!(result.tasks[0].cache.outcome, "error", "{kind}");
+        assert!(result.tasks[0].error.is_some());
+        assert_eq!(fs::read_to_string(&target).unwrap(), "unchanged");
+        assert!(!dir.path().join("executions").exists());
+        assert!(!dir.path().join("output").exists());
+    }
+}
+
+#[test]
 fn concurrent_identical_actions_execute_once() {
     let dir = TempDir::new().unwrap();
     let mut p = plan(dir.path());

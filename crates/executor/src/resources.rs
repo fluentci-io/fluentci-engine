@@ -47,6 +47,25 @@ pub(crate) fn initialize(path: &Path) -> Result<(), String> {
     }
     Ok(())
 }
+// Shared by named resource leases and content-addressed action locks. Reject
+// symlinks and nonregular files; nonblocking opens prevent FIFO substitutions
+// from stalling before the regular-file check and advisory locking.
+pub(crate) fn open_lock_file(path: &Path) -> Result<File, String> {
+    let mut options = OpenOptions::new();
+    options.read(true).write(true).create(true).truncate(false);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options
+            .mode(0o600)
+            .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+    }
+    let file = options.open(path).map_err(|e| e.to_string())?;
+    if !file.metadata().map_err(|e| e.to_string())?.is_file() {
+        return Err("coordination lock is not a regular file".into());
+    }
+    Ok(file)
+}
 pub(crate) fn acquire(root: &Path, names: &[String], shared: &[String]) -> Result<Attempt, String> {
     let mut modes = BTreeMap::new();
     for name in shared {
@@ -58,17 +77,7 @@ pub(crate) fn acquire(root: &Path, names: &[String], shared: &[String]) -> Resul
     let mut files = Vec::new();
     for (name, exclusive) in modes {
         let path = root.join(hex::encode(Sha256::digest(name.as_bytes())));
-        let mut options = OpenOptions::new();
-        options.read(true).write(true).create(true).truncate(false);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o600).custom_flags(libc::O_NOFOLLOW);
-        }
-        let file = options.open(path).map_err(|e| e.to_string())?;
-        if !file.metadata().map_err(|e| e.to_string())?.is_file() {
-            return Err("resource lock is not a regular file".into());
-        }
+        let file = open_lock_file(&path)?;
         #[cfg(unix)]
         {
             use std::os::fd::AsRawFd;
