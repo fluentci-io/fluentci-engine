@@ -281,3 +281,41 @@ fn precancelled_file_tasks_have_no_effects() {
     assert!(!result.success());
     assert!(!root.path().join("unexpected").exists());
 }
+
+#[test]
+fn env_file_changes_invalidate_cached_process_environment() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    fs::write(root.join("ci.env"), "VALUE=first\n").unwrap();
+    let mut task = p::env_file(
+        p::exec("env", "/usr/bin/printenv", vec!["VALUE".into()], root),
+        "ci.env",
+    );
+    task.cache = Some(CachePolicy {
+        inputs: vec![],
+        outputs: vec![],
+        toolchain: "printenv-test".into(),
+        toolchain_files: vec![],
+        relocatable: false,
+    });
+    let mut plan = p::plan(vec![task]);
+    plan.cache_dir = Some(root.join("cache"));
+    let cold = plan
+        .execute(&root.join("cold"), &Cancellation::default())
+        .unwrap();
+    assert!(cold.success(), "{cold:?}");
+    let warm = plan
+        .execute(&root.join("warm"), &Cancellation::default())
+        .unwrap();
+    assert_eq!(warm.tasks[0].cache.outcome, "hit");
+    fs::write(root.join("ci.env"), "VALUE=second\n").unwrap();
+    let changed = plan
+        .execute(&root.join("changed"), &Cancellation::default())
+        .unwrap();
+    assert!(changed.success(), "{changed:?}");
+    assert_eq!(changed.tasks[0].cache.outcome, "stored");
+    assert_eq!(
+        fs::read_to_string(&changed.tasks[0].stdout).unwrap(),
+        "second\n"
+    );
+}

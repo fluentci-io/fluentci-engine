@@ -828,7 +828,7 @@ impl Plan {
                                 match supervisors[i]
                                     .as_mut()
                                     .unwrap()
-                                    .poll(&self.tasks[i], &environment)
+                                    .poll(&resolved_tasks[i], &environment)
                                 {
                                     service::Health::Ready => {
                                         results[i].status = Status::Ready;

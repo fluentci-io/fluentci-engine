@@ -361,10 +361,7 @@ fn copy_tree(
         Err(e)
             if overwrite
                 && e.kind() == std::io::ErrorKind::AlreadyExists
-                && fs::symlink_metadata(dest).is_ok_and(|m| m.is_dir()) =>
-        {
-            ()
-        }
+                && fs::symlink_metadata(dest).is_ok_and(|m| m.is_dir()) => {}
         Err(e) => return Err(e.to_string()),
     };
     for entry in entries(source)? {
