@@ -142,7 +142,14 @@ impl Operation {
             } => {
                 relative(source, false)?;
                 relative(destination, false)?;
-                if destination.starts_with(source) || source.starts_with(destination) {
+                let normalized = |path: &Path| {
+                    path.components()
+                        .filter(|part| *part != Component::CurDir)
+                        .collect::<PathBuf>()
+                };
+                let source = normalized(source);
+                let destination = normalized(destination);
+                if destination.starts_with(&source) || source.starts_with(&destination) {
                     return Err("file source and destination must not overlap".into());
                 }
             }

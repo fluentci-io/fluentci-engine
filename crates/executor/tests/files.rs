@@ -426,3 +426,33 @@ fn dotenv_parse_failures_name_the_file_and_line_without_printing_values() {
     assert!(!error.contains("secret"));
     assert!(!root.join("unexpected").exists());
 }
+
+#[test]
+fn dotted_path_aliases_cannot_bypass_copy_or_move_overlap_preflight() {
+    let root = tempfile::tempdir().unwrap();
+    for (source, destination) in [
+        ("src", "./src/inside"),
+        ("./src", "src"),
+        ("src/nested", "./src"),
+    ] {
+        for operation in [
+            Operation::CopyTree {
+                source: source.into(),
+                destination: destination.into(),
+                overwrite: true,
+            },
+            Operation::Move {
+                source: source.into(),
+                destination: destination.into(),
+                overwrite: true,
+            },
+        ] {
+            let plan = p::plan(vec![native(root.path(), "unsafe", operation)]);
+            let error = plan
+                .execute(&root.path().join("run"), &Cancellation::default())
+                .unwrap_err();
+            assert!(error.contains("overlap"), "{error}");
+            assert!(!root.path().join("run").exists());
+        }
+    }
+}
