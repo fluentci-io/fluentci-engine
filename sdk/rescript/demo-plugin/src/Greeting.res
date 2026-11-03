@@ -13,6 +13,7 @@ let greet = () => {
 
 let matrix = () => {
   let prepare = Matrix.task("prepare", "/usr/bin/python3", ["-c", "from pathlib import Path; Path('seed.txt').write_text('seed')"], ".")
+    ->Matrix.cached(["mode.txt"], ["seed.txt"], "matrix-prepare-v1")
   let cases = switch Matrix.product(Matrix.axis("node", ["22", "24"]), Matrix.axis("suite", ["unit", "integration"])) {
   | Ok(value) => value
   | Error(error) => JsError.throwWithMessage(error)

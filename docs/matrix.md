@@ -120,6 +120,12 @@ rules skip consumers of failed tasks in either mode.
 
 ## Cache, workspace, and lifecycle contracts
 
+Cache reusable setup tasks as well as their matrix consumers. An uncached
+prerequisite carries a per-run dependency identity, intentionally invalidating
+its cached descendants even when their directly declared input files match.
+A stable cached prerequisite allows verified warm hits without weakening the
+engine's dependency contract.
+
 Each expanded case has its own task status, journal events, stdout/stderr paths,
 cache policy and telemetry. Pass parameters into argv/environment/toolchain
 inputs so they affect action-cache keys; labels alone are not a cache contract.

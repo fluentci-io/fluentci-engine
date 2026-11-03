@@ -101,6 +101,7 @@ matrix = do
   directory <- request
   let prepare = Plan.task "prepare" "/usr/bin/python3" "."
         # Plan.withArgs ["-c", "from pathlib import Path; Path('seed.txt').write_text('seed')"]
+        # Plan.withCache { inputs: ["mode.txt"], outputs: ["seed.txt"], toolchain: "matrix-prepare-v1" }
   cases <- case M.product (M.axis "node" ["22", "24"]) (M.axis "suite" ["unit", "integration"]) of
     Left error -> throw (show error)
     Right value -> pure value

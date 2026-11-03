@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import extism
 from fluentci import pipeline
+from fluentci import matrix as M
+from fluentci.plan import Task, Plan, Cache
 
 
 @extism.plugin_fn
@@ -13,9 +15,8 @@ def greet() -> None:
 
 @extism.plugin_fn
 def matrix() -> None:
-    from fluentci import matrix as M
-    from fluentci.plan import Task, Plan, Cache
-    prepare = Task("prepare", "/usr/bin/python3", ("-c", "from pathlib import Path; Path('seed.txt').write_text('seed')"))
+    prepare = Task("prepare", "/usr/bin/python3", ("-c", "from pathlib import Path; Path('seed.txt').write_text('seed')"),
+        cache=Cache(("mode.txt",), ("seed.txt",), "matrix-prepare-v1"))
     cases = M.product(M.axis("node", ["22", "24"]), M.axis("suite", ["unit", "integration"]))
     cases = M.include(M.exclude(cases, lambda pair: pair == ("22", "integration")), [M.named("experimental", ("26", "unit"))])
     def build(pair: tuple[str, str]) -> Task:

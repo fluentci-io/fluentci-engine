@@ -6,7 +6,8 @@ export function greet() {
 }
 
 export function matrix() {
-  const prepare = M.task("prepare", "/usr/bin/python3", ["-c", "from pathlib import Path; Path('seed.txt').write_text('seed')"]);
+  const prepare = { ...M.task("prepare", "/usr/bin/python3", ["-c", "from pathlib import Path; Path('seed.txt').write_text('seed')"]),
+    cache: { inputs: ["mode.txt"], outputs: ["seed.txt"], toolchain: "matrix-prepare-v1" } };
   let cases = M.product(M.axis("node", ["22", "24"]), M.axis("suite", ["unit", "integration"]));
   cases = M.include(M.exclude(cases, ([node,suite]) => node === "22" && suite === "integration"), [M.named("experimental", ["26", "unit"] as const)]);
   const jobs = M.matrix("test", cases, ([node,suite]) => M.after([prepare], {

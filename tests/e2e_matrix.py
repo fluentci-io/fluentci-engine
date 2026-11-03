@@ -58,7 +58,7 @@ class MatrixGuests(unittest.TestCase):
                     path.unlink()
                 warm = self.invoke(language, root, "warm")
                 self.assertEqual(warm["outcome"], "succeeded")
-                self.assertTrue(all(task["cache"]["outcome"] == "hit" for task in warm["tasks"] if task["id"] in expected))
+                self.assertTrue(all(task["cache"]["outcome"] == "hit" for task in warm["tasks"] if task["id"] in expected), json.dumps(warm, indent=2))
                 self.assertEqual(len(list(root.glob("out-*"))), 4, "cached case outputs were not restored")
                 (root / "joined").unlink()
                 failed = self.invoke(language, root, "failed", mode="fail")

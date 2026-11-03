@@ -14,6 +14,7 @@ defmodule DemoPlugin do
     prepare =
       H.task("prepare", "/usr/bin/python3", ".")
       |> H.args(["-c", "from pathlib import Path; Path('seed.txt').write_text('seed')"])
+      |> H.cache(["mode.txt"], ["seed.txt"], "matrix-prepare-v1")
 
     {:ok, cases} =
       M.product(M.axis("node", ["22", "24"]), M.axis("suite", ["unit", "integration"]))

@@ -18,6 +18,11 @@ pub fn matrix(directory: String) -> Result(reports.RunResult, String) {
       "-c",
       "from pathlib import Path; Path('seed.txt').write_text('seed')",
     ])
+    |> host.with_cache(host.cache(
+      ["mode.txt"],
+      ["seed.txt"],
+      "matrix-prepare-v1",
+    ))
   use cases <- result.try(
     parallel.product(
       parallel.axis("node", ["22", "24"]),

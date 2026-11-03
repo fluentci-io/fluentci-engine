@@ -50,3 +50,6 @@ plugin example. The API expands named typed cases into native tasks and submits
 one complete plan via `execute_plan`. It supports bounded concurrency, independent
 case caching/logs, prerequisites, joins, failure reports and owning-run cancellation.
 Use matching engine/SDK source builds; engine 0.6.0 does not contain this new import.
+
+Import guest dependencies at module scope so extism-py can initialize them during
+compilation; avoid loading new filesystem-backed modules only inside an export.
