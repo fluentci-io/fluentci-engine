@@ -61,6 +61,13 @@ git config --global --add safe.directory "$repository"
 cargo build --release --locked -p fluentci-engine
 binary="$CARGO_TARGET_DIR/release/fluentci-engine"
 strip -s "$binary"
+if [ "$(uname -s)" = NetBSD ]; then
+    # Wasmtime generates code at runtime. Change this ELF's PaX MPROTECT
+    # policy only, preserving ASLR/Segvguard and the system-wide defaults.
+    # Apply after strip and before smoke tests, packaging, and checksums.
+    /usr/sbin/paxctl -M +m "$binary"
+    /usr/sbin/paxctl "$binary"
+fi
 "$binary" --version
 "$binary" --help > /dev/null
 sh .github/scripts/smoke-bsd-release.sh "$binary" "$repository/.release-smoke"
@@ -80,6 +87,10 @@ cp vendor/extism-openbsd/LICENSE "$stage/licenses/extism-openbsd/LICENSE"
     uname -a
     rustc -vV
     cargo --version
+    if [ "$(uname -s)" = NetBSD ]; then
+        printf '\nNetBSD per-executable PaX policy (JIT requires MPROTECT exemption):\n'
+        /usr/sbin/paxctl "$stage/fluentci-engine"
+    fi
     printf '\nDynamic dependencies (required on the destination host):\n'
     ldd "$stage/fluentci-engine"
 } > "$stage/BUILD-INFO.txt"

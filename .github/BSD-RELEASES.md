@@ -21,6 +21,21 @@ the documented guest OS/version and architecture, with the shared libraries
 listed in the archive's `BUILD-INFO.txt`. OpenBSD does not promise ABI compatibility
 between OS releases. No container or VM is required to run the installed engine.
 
+## NetBSD JIT executable policy
+
+NetBSD's PaX MPROTECT policy can reject Wasmtime's writable-to-executable memory
+transition. After stripping the release binary, the build applies
+`/usr/sbin/paxctl -M +m fluentci-engine` to that executable before running the
+Wasm smoke tests. This clears an explicit MPROTECT-enable flag and sets the
+per-executable exemption required for JIT code generation. ASLR and Segvguard
+flags and system-wide protections are unchanged.
+
+The flags live in an ELF note, so they are preserved inside the packaged binary
+and included in its checksum. `BUILD-INFO.txt` records the packaged executable's
+PaX flags. Installing a release archive preserves this note; rebuilding a binary
+requires applying the same per-executable policy before using Wasm plugins.
+See NetBSD's [paxctl(8) documentation](https://man.netbsd.org/paxctl.8).
+
 ## Assets
 
 The naming matches existing Linux/macOS releases:
