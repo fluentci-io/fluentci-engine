@@ -107,7 +107,7 @@ fn provision_native() -> Result<(), Error> {
                 "FLOX_VERSION",
                 std::env::var("FLOX_VERSION").unwrap_or_else(|_| "1.19.3".into()),
             )
-            .env("FLOX_DISABLE_METRICS", "1"),
+            .env("FLOX_DISABLE_METRICS", "true"),
         "native installer",
     )
 }

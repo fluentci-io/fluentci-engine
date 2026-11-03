@@ -7,7 +7,8 @@ root or passwordless sudo, and `/usr/bin/curl`. Only Linux and macOS are support
 
 Installer downloads have connection/total timeouts, require HTTPS, and must
 succeed before the script runs. The installer child prefers system utilities to
-avoid stale toolchain curl binaries. Installer metrics are disabled. Existing
+avoid stale toolchain curl binaries. Installer metrics are disabled with `FLOX_DISABLE_METRICS=true` (the CLI expects
+a boolean, not `1`). Existing
 working installations are reused; a broken installed CLI is reported instead of
 being overwritten automatically. Installation success is followed by a version
 check. Native Flox must be discoverable on the caller's PATH after installation.
