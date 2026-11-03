@@ -371,3 +371,107 @@ fn failed_health_probes_retain_binary_output_separately_from_service_logs() {
     );
     assert!(report["tasks"][1].get("probe_logs").is_none());
 }
+
+#[test]
+fn very_large_health_intervals_do_not_overflow_scheduler_deadlines() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut db = service("db", DAEMON, "exit 0", &[]);
+    db["service"]["health"] = json!({
+        "program": "/bin/sh", "args": ["-c", "echo unexpected > health"],
+        "interval_ms": u64::MAX, "timeout_ms": 100
+    });
+    let p = plan(
+        dir.path(),
+        vec![db, task("consumer", "sleep 0.05; echo done", &["db"])],
+    );
+    let result = p
+        .execute(&dir.path().join("run"), &Cancellation::default())
+        .unwrap();
+    assert!(result.success(), "{result:?}");
+    assert!(!dir.path().join("health").exists());
+}
+
+#[test]
+fn probe_failures_report_phase_and_cause_without_command_arguments() {
+    for (command, timeout, expected) in [
+        (
+            "exit 7 # private-argument",
+            100,
+            "health probe exited with exit status: 7",
+        ),
+        (
+            "sleep 10 # private-argument",
+            20,
+            "health probe timed out after 20 ms",
+        ),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let mut db = service("db", DAEMON, "exit 0", &[]);
+        db["service"]["health"] = json!({
+            "program": "/bin/sh", "args": ["-c", command],
+            "interval_ms": 10, "timeout_ms": timeout
+        });
+        let p = plan(dir.path(), vec![db, task("consumer", "sleep 10", &["db"])]);
+        let result = p
+            .execute(&dir.path().join("run"), &Cancellation::default())
+            .unwrap();
+        assert_eq!(result.tasks[0].status, Status::Failed);
+        assert_eq!(result.tasks[1].status, Status::Cancelled);
+        let error = result.tasks[0].error.as_ref().unwrap();
+        assert!(error.contains(expected), "{error}");
+        assert!(error.contains("2 consecutive failures"), "{error}");
+        assert!(!error.contains("private-argument"));
+        let events = fs::read_to_string(dir.path().join("run/events.jsonl")).unwrap();
+        assert!(events
+            .lines()
+            .map(|line| serde_json::from_str::<Value>(line).unwrap())
+            .any(|event| event["id"] == "db" && event["error"] == *error));
+    }
+    for phase in ["readiness", "health"] {
+        let dir = tempfile::tempdir().unwrap();
+        let mut db = service("db", DAEMON, "exit 0", &[]);
+        db["service"][phase] = json!({
+            "program": dir.path().join("missing-probe"), "args": ["private-argument"],
+            "interval_ms": 10, "timeout_ms": 100
+        });
+        let p = plan(dir.path(), vec![db, task("consumer", "sleep 10", &["db"])]);
+        let result = p
+            .execute(&dir.path().join("run"), &Cancellation::default())
+            .unwrap();
+        assert_eq!(result.tasks[0].status, Status::Failed);
+        let error = result.tasks[0].error.as_ref().unwrap();
+        assert!(
+            error.contains(&format!("could not spawn {phase} probe:")),
+            "{error}"
+        );
+        assert!(error.contains("os error"), "{error}");
+        assert!(!error.contains("private-argument"));
+    }
+}
+
+#[test]
+fn startup_timeout_preserves_the_last_readiness_failure() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = plan(
+        dir.path(),
+        vec![
+            service("db", DAEMON, "exit 23", &[]),
+            task("consumer", "touch unexpected", &["db"]),
+        ],
+    );
+    let result = p
+        .execute(&dir.path().join("run"), &Cancellation::default())
+        .unwrap();
+    assert_eq!(result.tasks[0].status, Status::TimedOut);
+    assert_eq!(result.tasks[1].status, Status::Skipped);
+    let error = result.tasks[0].error.as_ref().unwrap();
+    assert!(
+        error.contains("service startup timeout after 500 ms"),
+        "{error}"
+    );
+    assert!(
+        error.contains("last failure: readiness probe exited with exit status: 23"),
+        "{error}"
+    );
+    assert!(!dir.path().join("unexpected").exists());
+}

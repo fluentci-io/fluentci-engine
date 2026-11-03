@@ -638,8 +638,20 @@ impl Plan {
                                         .into(),
                                     ),
                                 ))
-                            } else if timed_out || startup_expired {
-                                Some((Status::TimedOut, Some("service lifecycle timeout".into())))
+                            } else if timed_out {
+                                Some((Status::TimedOut, Some("service task timeout".into())))
+                            } else if startup_expired {
+                                let mut reason = format!(
+                                    "service startup timeout after {} ms",
+                                    config.startup_timeout_ms
+                                );
+                                if let Some(failure) =
+                                    supervisors[i].as_ref().unwrap().last_failure()
+                                {
+                                    reason.push_str(": last failure: ");
+                                    reason.push_str(failure);
+                                }
+                                Some((Status::TimedOut, Some(reason)))
                             } else if unused {
                                 Some((Status::Succeeded, None))
                             } else {

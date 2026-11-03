@@ -84,6 +84,7 @@ pub(crate) struct Supervisor {
     probe: Option<Running>,
     next: Instant,
     failures: usize,
+    last_failure: Option<String>,
     pub ready: bool,
     logs: ProbeLogs,
 }
@@ -93,9 +94,13 @@ impl Supervisor {
             probe: None,
             next: Instant::now(),
             failures: 0,
+            last_failure: None,
             ready: false,
             logs,
         }
+    }
+    pub fn last_failure(&self) -> Option<&str> {
+        self.last_failure.as_deref()
     }
     pub fn stop(&mut self) {
         self.probe.take();
@@ -107,47 +112,62 @@ impl Supervisor {
         } else {
             &config.readiness
         };
+        let phase = if self.ready { "health" } else { "readiness" };
         if let Some(probe) = &mut self.probe {
             let outcome = match probe.child.try_wait() {
-                Ok(Some(status)) => Some(status.success()),
+                Ok(Some(status)) if status.success() => Some(Ok(())),
+                Ok(Some(status)) => Some(Err(format!("{phase} probe exited with {status}"))),
                 Ok(None) if probe.started.elapsed() < Duration::from_millis(check.timeout_ms) => {
                     None
                 }
-                _ => Some(false),
+                Ok(None) => Some(Err(format!(
+                    "{phase} probe timed out after {} ms",
+                    check.timeout_ms
+                ))),
+                Err(error) => Some(Err(format!("could not wait for {phase} probe: {error}"))),
             };
-            if let Some(success) = outcome {
+            if let Some(outcome) = outcome {
                 self.probe.take();
-                let next_check = if success {
+                let next_check = if outcome.is_ok() {
                     config.health.as_ref().unwrap_or(&config.readiness)
                 } else {
                     check
                 };
                 self.next = Instant::now() + Duration::from_millis(next_check.interval_ms);
-                if success {
-                    self.failures = 0;
-                    if !self.ready {
-                        self.ready = true;
-                        return Health::Ready;
+                match outcome {
+                    Ok(()) => {
+                        self.failures = 0;
+                        self.last_failure = None;
+                        if !self.ready {
+                            self.ready = true;
+                            return Health::Ready;
+                        }
                     }
-                } else {
-                    self.failures += 1;
-                    if self.ready && self.failures >= config.failure_threshold {
-                        return Health::Failed(
-                            "service health probe failure threshold reached".into(),
-                        );
+                    Err(reason) => {
+                        self.failures = self.failures.saturating_add(1);
+                        self.last_failure = Some(reason.clone());
+                        if self.ready && self.failures >= config.failure_threshold {
+                            return Health::Failed(format!(
+                                "service health probe failure threshold reached ({} consecutive failures): {reason}",
+                                self.failures
+                            ));
+                        }
                     }
                 }
             }
         } else if Instant::now() >= self.next {
-            let phase = if self.ready { "health" } else { "readiness" };
             let open = |path: &PathBuf| -> Result<_, std::io::Error> {
                 let mut file = OpenOptions::new().create(true).append(true).open(path)?;
                 writeln!(file, "--- {phase} probe ---")?;
                 Ok(file)
             };
-            let (stdout, stderr) = match (open(&self.logs.stdout), open(&self.logs.stderr)) {
-                (Ok(stdout), Ok(stderr)) => (stdout, stderr),
-                _ => return Health::Failed("could not open service probe logs".into()),
+            let streams = open(&self.logs.stdout)
+                .and_then(|stdout| open(&self.logs.stderr).map(|stderr| (stdout, stderr)));
+            let (stdout, stderr) = match streams {
+                Ok(streams) => streams,
+                Err(error) => {
+                    return Health::Failed(format!("could not open {phase} probe logs: {error}"))
+                }
             };
             let mut command = Command::new(&check.program);
             command
@@ -174,7 +194,9 @@ impl Supervisor {
                         action: None,
                     })
                 }
-                Err(_) => return Health::Failed("could not spawn service health probe".into()),
+                Err(error) => {
+                    return Health::Failed(format!("could not spawn {phase} probe: {error}"))
+                }
             }
         }
         Health::Waiting

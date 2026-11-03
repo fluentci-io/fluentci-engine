@@ -339,8 +339,14 @@ optional task `timeout_ms`, which limits its entire lifetime.
 Services use `max_services` (default 8), independently of `jobs`. Probes run as
 supervised child process groups with timeouts; they do not block scheduler polling.
 `ready` and `stopping` states appear in the TUI and JSON event journal, with
-corresponding service lifecycle events on the step span. Probe output is discarded;
-service stdout/stderr is retained as normal task logs.
+corresponding service lifecycle events on the step span. Probe output is retained
+in separate diagnostic streams; service stdout/stderr is retained as normal task logs.
+Health-threshold errors include the consecutive-failure count and last probe exit
+status or timeout. Spawn and log-open failures identify readiness versus health
+and retain the OS error. Startup timeouts include the last failed readiness attempt
+when available. These lifecycle reasons appear in task results and journal state
+events without echoing probe arguments or environment values. Raw probe output may
+still contain whatever the probe itself prints.
 
 When consumers finish, or execution is cancelled, dependent services are stopped
 before their providers. Shutdown signals the Unix process group with TERM, waits

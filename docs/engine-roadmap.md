@@ -98,7 +98,8 @@ to `target/release/fluentci-engine`. Do not report debug-profile timings.
 
 - First-class run-scoped services are implemented: readiness gates, bounded startup
   and recurring health probes (optionally distinct commands and time limits), consumer failure propagation, TERM/KILL shutdown,
-  reverse dependency teardown, separate raw probe diagnostic logs with resumable
+  reverse dependency teardown, phase-specific exit/timeout/OS failure reasons and
+  last-readiness-failure context on startup timeout, separate raw probe diagnostic logs with resumable
   HTTP/SDK access and live journal/TUI display, and cancellation/crash tests. Follow through with
   cross-run endpoint allocation and server/SDK integration.
 - Per-step OpenTelemetry is implemented for host tasks with correlated journal
