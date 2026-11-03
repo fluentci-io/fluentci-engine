@@ -72,10 +72,34 @@ pub(crate) fn exec_with_shell(
     last_cmd: bool,
     work_dir: &str,
 ) -> Result<ExitStatus, Error> {
+    exec_command(Command::new(shell), cmd, tx, out, last_cmd, work_dir)
+}
+
+pub(crate) fn exec_with_env(
+    cmd: &str,
+    tx: Sender<String>,
+    out: Output,
+    last_cmd: bool,
+    work_dir: &str,
+    environment: &[(&str, &str)],
+) -> Result<ExitStatus, Error> {
+    let mut command = Command::new("bash");
+    command.envs(environment.iter().copied());
+    exec_command(command, cmd, tx, out, last_cmd, work_dir)
+}
+
+fn exec_command(
+    mut command: Command,
+    cmd: &str,
+    tx: Sender<String>,
+    out: Output,
+    last_cmd: bool,
+    work_dir: &str,
+) -> Result<ExitStatus, Error> {
     let (stdout_tx, stdout_rx): (Sender<String>, Receiver<String>) = mpsc::channel();
     let (stderr_tx, stderr_rx): (Sender<String>, Receiver<String>) = mpsc::channel();
 
-    let mut child = Command::new(shell)
+    let mut child = command
         .arg("-c")
         .arg(cmd)
         .current_dir(work_dir)
