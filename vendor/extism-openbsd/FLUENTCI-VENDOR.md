@@ -4,7 +4,9 @@ Source: the published `extism` 1.21.0 crate from crates.io.
 Published archive SHA-256: `ed8c5859bdab81d2eb4cd963eeacd8031d353b1ffb2fde43ee9179a0d6295120`.
 The BSD-3-Clause license is preserved in `LICENSE` from the upstream v1.21.0 tag.
 
-Only the Cargo package name changes to `fluentci-extism-openbsd`. The library
+The Cargo package name changes to `fluentci-extism-openbsd`; the preserved
+upstream `Cargo.toml.orig` is excluded from republication because Cargo reserves
+that filename for its own generated manifest. The library
 implementation, bundled Extism kernel, and build script are unchanged. This
 allows the workspace to select Extism 1.21.0 on OpenBSD alongside the current
 Extism 1.41.0 selection for other targets, without conflicting exact constraints
