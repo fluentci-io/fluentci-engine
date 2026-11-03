@@ -610,12 +610,18 @@ mod tests {
     fn failed_step_stops_dependencies_and_completes_once() {
         let root = tempfile::tempdir().unwrap();
         let (mut graph, rx) = graph(root.path());
-        add(&mut graph, "fail", "exit 7", &[]);
+        add(
+            &mut graph,
+            "fail",
+            "printf 'legacy process error' >&2; exit 7",
+            &[],
+        );
         add(&mut graph, "never", "touch unexpected", &["fail"]);
         graph.execute_graph(Output::Stdout);
         let (error, status) = rx.recv().unwrap();
-        assert_eq!(status, 1);
+        assert_eq!(status, 7);
         assert!(error.contains("exit status 7"), "{error}");
+        assert!(error.contains("legacy process error"), "{error}");
         assert!(!root.path().join("unexpected").exists());
         assert!(rx.try_recv().is_err());
     }
@@ -745,7 +751,9 @@ mod tests {
             assert!(cancel.wait_idle(Duration::from_secs(10)));
             execution.join().unwrap();
         });
-        assert_eq!(rx.recv().unwrap().1, 1);
+        let (error, status) = rx.recv().unwrap();
+        assert_eq!(status, 130);
+        assert!(error.contains("cancel"), "{error}");
         assert!(rx.try_recv().is_err());
     }
 
