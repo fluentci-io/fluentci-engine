@@ -258,7 +258,7 @@ fn relative_path_lookup_is_pinned_to_the_hashed_executable_in_task_cwd() {
     let mut p = plan(dir.path());
     fs::create_dir(dir.path().join("tools")).unwrap();
     let tool = dir.path().join("tools/build-fixture");
-    fs::write(&tool, "#!/bin/sh\nprintf original > output\n").unwrap();
+    fs::write(&tool, "#!/bin/sh\n/usr/bin/printf original > output\n").unwrap();
     fs::set_permissions(&tool, fs::Permissions::from_mode(0o700)).unwrap();
     p.tasks[0].program = "build-fixture".into();
     p.tasks[0].args.clear();
@@ -268,7 +268,7 @@ fn relative_path_lookup_is_pinned_to_the_hashed_executable_in_task_cwd() {
         fs::read_to_string(dir.path().join("output")).unwrap(),
         "original"
     );
-    fs::write(&tool, "#!/bin/sh\nprintf changed > output\n").unwrap();
+    fs::write(&tool, "#!/bin/sh\n/usr/bin/printf changed > output\n").unwrap();
     let changed = run(&p, dir.path(), "changed");
     assert_ne!(
         first.tasks[0].cache.components["executable"],
