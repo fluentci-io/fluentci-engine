@@ -1,1 +1,1 @@
-export { greet } from "./src/Plugin.res.mjs";
+export { greet } from "./src/Greeting.res.mjs";
