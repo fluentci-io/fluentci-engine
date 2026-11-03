@@ -4,12 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::directory::Directory;
 
-#[host_fn]
-extern "ExtismHost" {
-    fn branch(name: String);
-    fn commit() -> String;
-    fn tree() -> Json<Directory>;
-}
+include!("generated/git_imports.rs");
 
 #[derive(Serialize, Deserialize)]
 pub struct Git {

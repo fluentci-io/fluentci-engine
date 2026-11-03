@@ -16,3 +16,6 @@ pub mod pkgx;
 pub mod proto;
 pub mod shared;
 pub mod state;
+
+#[path = "generated/host_functions.rs"]
+pub mod host;

@@ -1,0 +1,6 @@
+name = "xtp-smoke"
+bin = "../../target/wasm32-unknown-unknown/release/xtp_smoke.wasm"
+
+[scripts]
+build = "cargo build --release --locked --target wasm32-unknown-unknown -p xtp-smoke"
+format = "cargo fmt --all"

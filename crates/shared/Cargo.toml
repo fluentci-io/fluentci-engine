@@ -13,8 +13,8 @@ version = "0.2.9"
 
 [dependencies]
 anyhow = "1.0.82"
-extism = "1.2.0"
-extism-pdk = "1.1.0"
+extism = { workspace = true }
+extism-pdk = { workspace = true }
 fluentci-common = {path = "../common", version = "0.2.9"}
 fluentci-core = {path = "../core", version = "0.3.8"}
 fluentci-ext = {path = "../ext", version = "0.2.7"}

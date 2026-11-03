@@ -18,7 +18,7 @@ serde_json = "1.0"
 crossterm = "0.23.2"
 anyhow = "1.0.81"
 clap = "3.2.20"
-extism = "1.2.0"
+extism = { workspace = true }
 fluentci-core = {path = "../core", version = "0.3.8"}
 fluentci-ext = {path = "../ext", version = "0.2.7"}
 fluentci-server = {path = "../server", version = "0.3.9"}

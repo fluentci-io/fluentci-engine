@@ -425,3 +425,7 @@ FluentCI Engine supports sending logs to [Baselime](https://baselime.io). To ena
 
 Independent host pipelines can also use the authenticated `serve-runs` API; see
 the [server run API documentation](docs/host-executor.md#independent-server-runs).
+
+Rust Wasm plugins use Extism and XTP schemas for the host ABI. See the
+[plugin schema and code-generation guide](schema/README.md) for generating plugins
+and running release-mode compatibility tests.

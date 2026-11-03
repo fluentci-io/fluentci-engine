@@ -1,0 +1,8 @@
+{
+  "tasks": {
+    "check": "deno run --allow-read check.ts"
+  },
+  "imports": {
+    "@dylibso/xtp-bindgen": "npm:@dylibso/xtp-bindgen@1.0.0-rc.17"
+  }
+}

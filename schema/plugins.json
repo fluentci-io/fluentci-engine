@@ -1,0 +1,310 @@
+{
+  "pkgx": {
+    "exec": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  },
+  "mise": {
+    "exec": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  },
+  "nix": {
+    "exec": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  },
+  "proto": {
+    "exec": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  },
+  "archive": {
+    "tar_czvf": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "$ref": "#/components/schemas/File",
+        "contentType": "application/json"
+      }
+    },
+    "zip": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "$ref": "#/components/schemas/File",
+        "contentType": "application/json"
+      }
+    },
+    "tar_xzvf": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "array",
+        "description": "StringList JSON array.",
+        "items": {
+          "type": "string"
+        },
+        "contentType": "application/json"
+      }
+    },
+    "unzip": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "array",
+        "description": "StringList JSON array.",
+        "items": {
+          "type": "string"
+        },
+        "contentType": "application/json"
+      }
+    }
+  },
+  "hash": {
+    "md5": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "sha256": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  },
+  "module": {
+    "call": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  },
+  "hermit": {
+    "exec": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  },
+  "pixi": {
+    "exec": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  },
+  "env": {
+    "get_env": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "has_env": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "boolean",
+        "contentType": "application/json"
+      }
+    },
+    "set_envs": {
+      "input": {
+        "type": "array",
+        "description": "Environment JSON array.",
+        "items": {
+          "type": "array",
+          "description": "Exactly two strings: environment name and value.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "contentType": "application/json"
+      }
+    },
+    "remove_env": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "get_os": {
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "get_arch": {
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  },
+  "devbox": {
+    "exec": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  },
+  "http": {
+    "get": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  },
+  "chmod": {
+    "chmod": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "$ref": "#/components/schemas/File",
+        "contentType": "application/json"
+      }
+    }
+  },
+  "flox": {
+    "exec": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  },
+  "git": {
+    "git_tree": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "array",
+        "description": "StringList JSON array.",
+        "items": {
+          "type": "string"
+        },
+        "contentType": "application/json"
+      }
+    }
+  },
+  "vault": {
+    "get_secret": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  },
+  "xtp-smoke": {
+    "echo_json": {
+      "input": {
+        "$ref": "#/components/schemas/Module",
+        "contentType": "application/json"
+      },
+      "output": {
+        "$ref": "#/components/schemas/Module",
+        "contentType": "application/json"
+      }
+    },
+    "env_roundtrip": {
+      "input": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
+  }
+}

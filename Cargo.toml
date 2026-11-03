@@ -4,3 +4,7 @@ members = ["crates/*", "examples/*"]
 resolver = "2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[workspace.dependencies]
+extism = "=1.41.0"
+extism-pdk = "=1.4.1"

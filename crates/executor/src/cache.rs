@@ -1003,7 +1003,7 @@ fn publish_outputs(cwd: &Path, artifacts: &Path, outputs: &[PathBuf]) -> Result<
             }
         }
         if !failures.is_empty() {
-            let retained = backups.into_path();
+            let retained = backups.keep();
             return Err(format!(
                 "cache publication failed: {error}; rollback failed: {}; backups retained at {}",
                 failures.join("; "),

@@ -6,6 +6,9 @@ on:
       - 'crates/**'
       - 'Cargo.*'
       - 'tests/**'
+      - 'examples/**'
+      - 'schema/**'
+      - 'scripts/xtp_codegen.py'
       - 'sdk/**'
       - 'sdk/elixir/**'
       - '.github/workflows/host-executor.yml'
@@ -37,7 +40,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # pinned action; toolchain selected below
         with:
           toolchain: '1.99.1'
-          components: clippy
+          components: clippy,rustfmt
+          targets: wasm32-unknown-unknown
       - uses: ./.github/actions/rust-cache
         with:
           key: host-${{ matrix.os }}
@@ -75,6 +79,11 @@ jobs:
           cargo build --release --locked -p fluentci-engine
           python3 tests/e2e_host.py -v
           python3 tests/e2e_server.py -v
+      - name: Compile and exercise legacy and XTP-generated Wasm plugins
+        run: |
+          python3 scripts/xtp_codegen.py --check
+          cargo build --release --locked --target wasm32-unknown-unknown -p env -p hash -p archive -p chmod -p devbox -p flox -p git -p hermit -p http -p mise -p module -p nix -p pixi -p pkgx -p proto -p vault -p xtp-smoke
+          python3 tests/e2e_wasm.py -v
 
       - name: Set up Gleam for JavaScript host plans
         uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1
@@ -88,6 +97,8 @@ jobs:
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
           deno-version: '2.9.7'
+      - name: Validate XTP schemas with the official parser
+        run: deno task --config schema/deno.json check
       - name: Gleam host contracts against the release engine (Node and Deno)
         working-directory: sdk/gleam
         env:

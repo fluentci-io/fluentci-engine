@@ -7,33 +7,7 @@ use super::{
     pixi::Pixi, pkgx::Pkgx, proto::Proto,
 };
 
-#[host_fn]
-extern "ExtismHost" {
-    fn directory(path: String) -> Json<Directory>;
-    fn entries(path: String) -> Json<Vec<String>>;
-    fn devbox() -> Json<Devbox>;
-    fn devenv() -> Json<Devenv>;
-    fn flox() -> Json<Flox>;
-    fn nix(args: Json<NixArgs>) -> Json<Nix>;
-    fn pkgx() -> Json<Pkgx>;
-    fn pixi() -> Json<Pixi>;
-    fn proto() -> Json<Proto>;
-    fn mise() -> Json<Mise>;
-    fn envhub() -> Json<Envhub>;
-    fn tar_czvf(path: String) -> Json<File>;
-    fn zip(path: String) -> Json<File>;
-    fn with_exec(args: Json<Vec<String>>);
-    fn with_file(file: Json<File>);
-    fn with_workdir(path: String);
-    fn with_cache(cache: Json<Cache>);
-    fn stdout() -> String;
-    fn stderr() -> String;
-    fn as_service(name: String) -> Json<Service>;
-    fn with_service(service_id: String);
-    fn set_envs(envs: Json<Vec<(String, String)>>);
-    fn wait_on(args: Json<Vec<u32>>);
-    fn with_secret_variable(params: Json<Vec<String>>);
-}
+include!("generated/directory_imports.rs");
 
 #[derive(Serialize, Deserialize)]
 pub struct Directory {

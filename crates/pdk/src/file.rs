@@ -4,16 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::directory::Directory;
 
-#[host_fn]
-extern "ExtismHost" {
-    fn zip(path: String) -> Json<File>;
-    fn unzip(path: String) -> Json<Directory>;
-    fn tar_czvf(path: String) -> Json<File>;
-    fn tar_xzvf(path: String) -> Json<Directory>;
-    fn md5(path: String) -> String;
-    fn sha256(path: String) -> String;
-    fn chmod(opt: Json<Chmod>) -> Json<File>;
-}
+include!("generated/file_imports.rs");
 
 #[derive(Serialize, Deserialize)]
 pub struct File {

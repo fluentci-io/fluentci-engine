@@ -1,0 +1,16 @@
+{
+  "version": "5",
+  "specifiers": {
+    "npm:@dylibso/xtp-bindgen@1.0.0-rc.17": "1.0.0-rc.17"
+  },
+  "npm": {
+    "@dylibso/xtp-bindgen@1.0.0-rc.17": {
+      "integrity": "sha512-M5jZR/tTb6/sbZ8A6zypwseW9rQcNOo2wO5CpzcJeFc79Ln48RfjiL/uEa5FdcB1bq+x/5Eo5MvUpSQb/UPnMQ=="
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "npm:@dylibso/xtp-bindgen@1.0.0-rc.17"
+    ]
+  }
+}

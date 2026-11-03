@@ -28,34 +28,7 @@ pub mod proto;
 pub mod secret;
 pub mod secret_manager;
 
-#[host_fn]
-extern "ExtismHost" {
-    fn cache(key: String) -> Json<Cache>;
-    fn devbox() -> Json<Devbox>;
-    fn devenv() -> Json<Devenv>;
-    fn directory(path: String) -> Json<Directory>;
-    fn envhub() -> Json<Envhub>;
-    fn file(path: String) -> Json<File>;
-    fn flox() -> Json<Flox>;
-    fn git(url: String) -> Json<Git>;
-    fn http(url: String) -> Json<File>;
-    fn hermit() -> Json<Hermit>;
-    fn mise() -> Json<Mise>;
-    fn nix(args: Json<NixArgs>) -> Json<Nix>;
-    fn pipeline(name: String) -> Json<Pipeline>;
-    fn pixi() -> Json<Pixi>;
-    fn proto() -> Json<Proto>;
-    fn pkgx() -> Json<Pkgx>;
-    fn get_env(key: String) -> String;
-    fn has_env(key: String) -> Json<bool>;
-    fn set_envs(envs: Json<Vec<(String, String)>>);
-    fn remove_env(key: String);
-    fn get_os() -> String;
-    fn get_arch() -> String;
-    fn call(opts: Json<Module>) -> String;
-    fn add_secretmanager(provider: Json<Provider>) -> String;
-    fn set_secret(params: Json<Vec<String>>) -> String;
-}
+include!("generated/lib_imports.rs");
 
 pub struct Client {}
 

@@ -2,22 +2,7 @@ use extism_pdk::*;
 use fluentci_types::{cache::Cache, file::File, mise as types, service::Service};
 use serde::{Deserialize, Serialize};
 
-#[host_fn]
-extern "ExtismHost" {
-    fn set_runner(runner: String);
-    fn trust();
-    fn with_exec(args: Json<Vec<String>>);
-    fn with_workdir(path: String);
-    fn with_cache(cache: Json<Cache>);
-    fn with_file(file: Json<File>);
-    fn stdout() -> String;
-    fn stderr() -> String;
-    fn as_service(name: String) -> Json<Service>;
-    fn with_service(service_id: String);
-    fn set_envs(envs: Json<Vec<(String, String)>>);
-    fn wait_on(args: Json<Vec<u32>>);
-    fn with_secret_variable(params: Json<Vec<String>>);
-}
+include!("generated/mise_imports.rs");
 
 #[derive(Serialize, Deserialize)]
 pub struct Mise {

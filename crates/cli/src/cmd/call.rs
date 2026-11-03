@@ -6,29 +6,10 @@ use std::{
 };
 
 use anyhow::Error;
-use extism::{Manifest, PluginBuilder, UserData, Wasm, PTR};
+use extism::{Manifest, PluginBuilder, UserData, Wasm};
 use fluentci_core::deps::Graph;
 use fluentci_ext::{pkgx::Pkgx, runner::Runner, Extension};
-use fluentci_shared::{
-    cache::*,
-    devbox::*,
-    devenv::*,
-    directory::*,
-    envhub::*,
-    file::*,
-    flox::*,
-    git::*,
-    hermit::*,
-    http::*,
-    mise::*,
-    nix::*,
-    pipeline::*,
-    pixi::*,
-    pkgx::*,
-    proto::*,
-    shared::{self, *},
-    state::State,
-};
+use fluentci_shared::state::State;
 
 pub fn call(module: &str, command: &str) -> Result<(), Error> {
     match fluentci_core::init_tracer() {
@@ -64,85 +45,15 @@ pub fn call(module: &str, command: &str) -> Result<(), Error> {
     };
 
     let manifest = Manifest::new([module]);
-    let mut plugin = PluginBuilder::new(manifest.clone())
-        .with_wasi(true)
-        .with_function("set_runner", [PTR], [], user_data.clone(), set_runner)
-        .with_function("cache", [PTR], [PTR], user_data.clone(), cache)
-        .with_function("devbox", [], [PTR], user_data.clone(), devbox)
-        .with_function("devenv", [], [PTR], user_data.clone(), devenv)
-        .with_function("directory", [PTR], [PTR], user_data.clone(), directory)
-        .with_function("entries", [PTR], [PTR], user_data.clone(), entries)
-        .with_function("envhub", [], [PTR], user_data.clone(), envhub)
-        .with_function("unzip", [PTR], [PTR], user_data.clone(), unzip)
-        .with_function("file", [PTR], [PTR], user_data.clone(), file)
-        .with_function("flox", [], [PTR], user_data.clone(), flox)
-        .with_function("git", [PTR], [PTR], user_data.clone(), git)
-        .with_function("branch", [PTR], [], user_data.clone(), branch)
-        .with_function("commit", [], [PTR], user_data.clone(), commit)
-        .with_function("tree", [], [PTR], user_data.clone(), tree)
-        .with_function("http", [PTR], [PTR], user_data.clone(), http)
-        .with_function("nix", [PTR], [PTR], user_data.clone(), nix)
-        .with_function("pipeline", [PTR], [PTR], user_data.clone(), pipeline)
-        .with_function("pixi", [], [PTR], user_data.clone(), pixi)
-        .with_function("pkgx", [], [PTR], user_data.clone(), pkgx)
-        .with_function("proto", [], [PTR], user_data.clone(), proto)
-        .with_function("mise", [], [PTR], user_data.clone(), mise)
-        .with_function("trust", [], [], user_data.clone(), trust)
-        .with_function("hermit", [], [PTR], user_data.clone(), hermit)
-        .with_function("install", [], [], user_data.clone(), install)
-        .with_function("with_exec", [PTR], [], user_data.clone(), with_exec)
-        .with_function("with_workdir", [PTR], [], user_data.clone(), with_workdir)
-        .with_function("with_cache", [PTR], [], user_data.clone(), with_cache)
-        .with_function("stdout", [], [PTR], user_data.clone(), stdout)
-        .with_function("stderr", [], [PTR], user_data.clone(), stderr)
-        .with_function("zip", [PTR], [PTR], user_data.clone(), zip)
-        .with_function("tar_czvf", [PTR], [PTR], user_data.clone(), tar_czvf)
-        .with_function("tar_xzvf", [PTR], [PTR], user_data.clone(), tar_xzvf)
-        .with_function("md5", [PTR], [PTR], user_data.clone(), md5)
-        .with_function("sha256", [PTR], [PTR], user_data.clone(), sha256)
-        .with_function("chmod", [PTR], [PTR], user_data.clone(), chmod)
-        .with_function("with_file", [PTR], [], user_data.clone(), with_file)
-        .with_function("get_env", [PTR], [PTR], user_data.clone(), get_env)
-        .with_function("set_envs", [PTR], [], user_data.clone(), set_envs)
-        .with_function("remove_env", [PTR], [], user_data.clone(), remove_env)
-        .with_function("has_env", [PTR], [PTR], user_data.clone(), has_env)
-        .with_function("get_os", [], [PTR], user_data.clone(), get_os)
-        .with_function("get_arch", [], [PTR], user_data.clone(), get_arch)
-        .with_function("call", [PTR], [PTR], user_data.clone(), shared::call)
-        .with_function("with_packages", [PTR], [], user_data.clone(), with_packages)
-        .with_function("as_service", [PTR], [PTR], user_data.clone(), as_service)
-        .with_function("with_service", [PTR], [], user_data.clone(), with_service)
-        .with_function("wait_on", [PTR], [], user_data.clone(), wait_on)
-        .with_function(
-            "add_secretmanager",
-            [PTR],
-            [PTR],
-            user_data.clone(),
-            add_secretmanager,
-        )
-        .with_function("get_secret", [PTR], [PTR], user_data.clone(), get_secret)
-        .with_function("set_secret", [PTR], [PTR], user_data.clone(), set_secret)
-        .with_function(
-            "with_secret_variable",
-            [PTR],
-            [],
-            user_data.clone(),
-            with_secret_variable,
-        )
-        .with_function(
-            "get_secret_plaintext",
-            [PTR],
-            [PTR],
-            user_data.clone(),
-            get_secret_plaintext,
-        )
-        .build()
-        .unwrap();
+    let mut plugin =
+        fluentci_shared::host::register(PluginBuilder::new(manifest).with_wasi(true), user_data)
+            .build()?;
 
-    let func = command.split_whitespace().next().unwrap();
-    let args = command.split_whitespace().skip(1).collect::<Vec<&str>>();
-    let args = args.join(" ");
-    match plugin.call::<&str, &str>(func, &args) {
+    let (func, args) = command.split_once(' ').unwrap_or((command, ""));
+    if func.is_empty() {
+        return Err(anyhow::anyhow!("a plugin export name is required"));
+    }
+    match plugin.call::<&str, &str>(func, args) {
         Ok(res) => {
             println!("{}", res);
         }

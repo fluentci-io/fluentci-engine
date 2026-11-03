@@ -2,10 +2,7 @@ use extism_pdk::{host_fn, Error, Json};
 use fluentci_types::secret as types;
 use serde::{Deserialize, Serialize};
 
-#[host_fn]
-extern "ExtismHost" {
-    fn get_secret_plaintext(params: Json<Vec<String>>) -> String;
-}
+include!("generated/secret_imports.rs");
 
 #[derive(Serialize, Deserialize)]
 pub struct Secret {

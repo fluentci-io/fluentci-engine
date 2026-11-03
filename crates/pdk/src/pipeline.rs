@@ -7,32 +7,7 @@ use super::{
     hermit::Hermit, mise::Mise, nix::Nix, pixi::Pixi, pkgx::Pkgx,
 };
 
-#[host_fn]
-extern "ExtismHost" {
-    fn set_runner(runner: String);
-    fn devbox() -> Json<Devbox>;
-    fn devenv() -> Json<Devenv>;
-    fn flox() -> Json<Flox>;
-    fn nix(args: Json<NixArgs>) -> Json<Nix>;
-    fn pkgx() -> Json<Pkgx>;
-    fn pixi() -> Json<Pixi>;
-    fn hermit() -> Json<Hermit>;
-    fn git(url: String) -> Json<Git>;
-    fn http(url: String) -> Json<File>;
-    fn mise() -> Json<Mise>;
-    fn envhub() -> Json<Envhub>;
-    fn with_exec(args: Json<Vec<String>>);
-    fn with_workdir(path: String);
-    fn with_cache(cache: Json<Cache>);
-    fn with_file(file: Json<File>);
-    fn stdout() -> String;
-    fn stderr() -> String;
-    fn as_service(name: String) -> Json<Service>;
-    fn with_service(service_id: String);
-    fn set_envs(envs: Json<Vec<(String, String)>>);
-    fn wait_on(args: Json<Vec<u32>>);
-    fn with_secret_variable(params: Json<Vec<String>>);
-}
+include!("generated/pipeline_imports.rs");
 
 #[derive(Serialize, Deserialize)]
 pub struct Pipeline {

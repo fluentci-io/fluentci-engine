@@ -4,10 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::secret::Secret;
 
-#[host_fn]
-extern "ExtismHost" {
-    fn get_secret(params: Json<Vec<String>>) -> Json<Vec<types::Secret>>;
-}
+include!("generated/secret_manager_imports.rs");
 
 #[derive(Serialize, Deserialize)]
 pub struct SecretManager {
