@@ -3,6 +3,7 @@ import gleam/dict
 import gleam/dynamic.{type DecodeErrors, type Dynamic, DecodeError}
 import gleam/list
 import gleam/option.{type Option, Some}
+import gleam/option
 import gleam/result
 
 pub type Outcome {
@@ -33,7 +34,22 @@ pub type TaskResult {
     stdout: String,
     stderr: String,
     cache: Cache,
+    outputs: dict.Dict(String, String),
+    artifacts: dict.Dict(String, Artifact),
+    allowed_failure: Bool,
+    condition_skipped: Bool,
   )
+}
+
+pub type Artifact {
+  Artifact(path: String, size: Int, sha256: String)
+}
+
+fn artifact(data: Dynamic) -> Result(Artifact, DecodeErrors) {
+  use path <- result.try(dynamic.field("path", dynamic.string)(data))
+  use size <- result.try(dynamic.field("size", dynamic.int)(data))
+  use sha256 <- result.try(dynamic.field("sha256", dynamic.string)(data))
+  Ok(Artifact(path:, size:, sha256:))
 }
 
 pub type RunResult {
@@ -90,6 +106,23 @@ fn task(data: Dynamic) -> Result(TaskResult, DecodeErrors) {
   use stdout <- result.try(dynamic.field("stdout", dynamic.string)(data))
   use stderr <- result.try(dynamic.field("stderr", dynamic.string)(data))
   use cache <- result.try(dynamic.field("cache", cache)(data))
+  use outputs <- result.try(dynamic.optional_field(
+    "outputs",
+    dynamic.dict(dynamic.string, dynamic.string),
+  )(data))
+  use artifacts <- result.try(dynamic.optional_field(
+    "artifacts",
+    dynamic.dict(dynamic.string, artifact),
+  )(data))
+  use allowed_failure <- result.try(dynamic.optional_field(
+    "allowed_failure",
+    dynamic.bool,
+  )(data))
+  use condition_skipped <- result.try(dynamic.optional_field(
+    "condition_skipped",
+    dynamic.bool,
+  )(data))
+
   case duration_ms >= 0 && id != "" {
     True ->
       Ok(TaskResult(
@@ -101,6 +134,10 @@ fn task(data: Dynamic) -> Result(TaskResult, DecodeErrors) {
         stdout:,
         stderr:,
         cache:,
+        outputs: option.unwrap(outputs, dict.new()),
+        artifacts: option.unwrap(artifacts, dict.new()),
+        allowed_failure: option.unwrap(allowed_failure, False),
+        condition_skipped: option.unwrap(condition_skipped, False),
       ))
     False -> invalid()
   }
@@ -114,7 +151,14 @@ fn report(data: Dynamic) -> Result(RunResult, DecodeErrors) {
     True -> Ok(Nil)
     False -> invalid()
   })
-  let success = list.all(tasks, fn(task) { task.status == TaskSucceeded })
+  let success =
+    list.all(tasks, fn(task) {
+      task.status == TaskSucceeded
+      || task.status == TaskSkipped
+      && task.condition_skipped
+      || task.allowed_failure
+      && { task.status == TaskFailed || task.status == TaskTimedOut }
+    })
   case outcome, success {
     Some(Succeeded), False -> invalid()
     Some(Failed), True | Some(Cancelled), True -> invalid()

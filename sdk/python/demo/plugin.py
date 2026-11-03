@@ -3,6 +3,7 @@ from __future__ import annotations
 import extism
 from fluentci import pipeline
 from fluentci import matrix as M
+from fluentci import workflow as W
 from fluentci.plan import Task, Plan, Cache
 
 
@@ -30,3 +31,18 @@ def matrix() -> None:
     if not report.succeeded:
         raise RuntimeError("matrix jobs failed; see the run result")
     extism.output_str("matrix complete")
+
+@extism.plugin_fn
+def workflow() -> None:
+    def task(name: str, mode: str) -> Task:
+        return Task(name, "/usr/bin/python3", ("job.py", mode))
+    producer = W.resource(W.artifact(W.output(W.retry(task("produce", "produce"), 3, 10), "version", "value.txt"), "binary", "artifact.bin"), "checkout")
+    consumer = W.output_env(task("consume", "consume"), "VALUE", producer, "version")
+    optional = W.allow_failure(task("optional", "optional"))
+    never = W.when(task("never", "never"), "never")
+    failure = W.when(M.after([consumer], task("failure", "failure")), "failure")
+    cleanup = W.always(M.after([consumer, optional, never, failure], task("cleanup", "cleanup")))
+    report = Plan((producer, consumer, optional, never, failure, cleanup), jobs=2).run(extism.input_str())
+    if not report.succeeded:
+        raise RuntimeError("workflow failed; see result.json")
+    extism.output_str("workflow complete")

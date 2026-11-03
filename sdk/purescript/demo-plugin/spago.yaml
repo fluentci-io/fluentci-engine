@@ -7,6 +7,7 @@ package:
     - effect
     - either
     - fluentci
+    - maybe
     - prelude
     - tuples
 workspace:
@@ -15,4 +16,4 @@ workspace:
   extraPackages:
     fluentci:
       git: https://github.com/fluentci-io/purescript-fluentci.git
-      ref: d44113ee102ecd19e0274cd09d16272e53d675ea
+      ref: 849865b1d695788cb09e8c8c6aa272fe6566e0d7

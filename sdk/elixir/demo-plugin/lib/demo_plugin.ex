@@ -45,4 +45,29 @@ defmodule DemoPlugin do
       input()
     )
   end
+
+  defplugin workflow do
+    alias FluentCI.Host, as: H
+    alias FluentCI.Matrix, as: M
+    task = fn name, mode -> H.task(name, "/usr/bin/python3", ".") |> H.args(["job.py", mode]) end
+
+    producer =
+      task.("produce", "produce")
+      |> H.retry(3, 10)
+      |> H.output("version", "value.txt")
+      |> H.artifact("binary", "artifact.bin")
+      |> H.resource("checkout")
+
+    consumer = task.("consume", "consume") |> H.output_env("VALUE", producer, "version")
+    optional = task.("optional", "optional") |> H.allow_failure()
+    never = task.("never", "never") |> H.when(:never)
+    failure = task.("failure", "failure") |> M.after_jobs([consumer]) |> H.when(:failure)
+
+    cleanup =
+      task.("cleanup", "cleanup")
+      |> M.after_jobs([consumer, optional, never, failure])
+      |> H.always()
+
+    run_plan(M.parallel([producer, consumer, optional, never, failure, cleanup], 2), input())
+  end
 end

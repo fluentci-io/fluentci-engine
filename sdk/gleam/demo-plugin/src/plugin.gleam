@@ -67,3 +67,38 @@ pub fn matrix(directory: String) -> Result(reports.RunResult, String) {
     False -> Error("matrix jobs failed; see the run result")
   }
 }
+
+pub fn workflow(directory: String) -> Result(reports.RunResult, String) {
+  let task = fn(name, mode) {
+    host.task(name, "/usr/bin/python3", ".") |> host.with_args(["job.py", mode])
+  }
+  let producer =
+    task("produce", "produce")
+    |> host.retry(3, 10)
+    |> host.output("version", "value.txt")
+    |> host.artifact("binary", "artifact.bin")
+    |> host.resource("checkout")
+  let consumer =
+    task("consume", "consume") |> host.output_env("VALUE", producer, "version")
+  let optional = task("optional", "optional") |> host.allow_failure(True)
+  let never = task("never", "never") |> host.when_task(host.Never)
+  let failure =
+    task("failure", "failure")
+    |> parallel.after_jobs([consumer])
+    |> host.when_task(host.OnFailure)
+  let cleanup =
+    task("cleanup", "cleanup")
+    |> parallel.after_jobs([consumer, optional, never, failure])
+    |> host.always
+  use report <- result.try(
+    parallel.parallel(
+      [producer, consumer, optional, never, failure, cleanup],
+      2,
+    )
+    |> parallel.run(directory),
+  )
+  case reports.succeeded(report) {
+    True -> Ok(report)
+    False -> Error("workflow failed; see result.json")
+  }
+}

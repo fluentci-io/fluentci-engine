@@ -415,6 +415,10 @@ jobs:
             hello Hello, World!
 ```
 
+Native plans also support [composable workflow primitives](docs/workflow-primitives.md):
+retries, conditional tasks, bounded finalizers, named outputs and artifacts,
+resource leases and supervised services (matching source builds required).
+
 ## ⚡ Caching
 
 FluentCI Engine supports caching. To enable it, set the following environment variables:

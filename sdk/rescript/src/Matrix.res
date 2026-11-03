@@ -24,3 +24,24 @@ type runResult = {outcome: string, tasks: array<taskResult>}
 let product = (left, right) => productImpl(left, right, value => Ok(value), error => Error(error))
 let matrix = (name, cases, build) => matrixImpl(name, cases, build, value => Ok(value), error => Error(error))
 let run = (plan, directory) => runImpl(plan, directory, value => Ok(value), error => Error(error))
+
+/** Conditions are wire-compatible with every SDK's native plan. */
+type condition = Success | Failure | Always | Never
+@module("./matrix_ffi.mjs") external retry: (task, int, int) => task = "retry"
+@module("./matrix_ffi.mjs") external whenImpl: (task, string) => task = "whenTask"
+@module("./matrix_ffi.mjs") external always: task => task = "always"
+@module("./matrix_ffi.mjs") external allowFailure: (task, bool) => task = "allowFailure"
+@module("./matrix_ffi.mjs") external artifact: (task, string, string) => task = "artifact"
+@module("./matrix_ffi.mjs") external output: (task, string, string) => task = "output"
+@module("./matrix_ffi.mjs") external outputEnv: (task, string, task, string) => task = "outputEnv"
+@module("./matrix_ffi.mjs") external resource: (task, string) => task = "resource"
+@module("./matrix_ffi.mjs") external service: (task, string, array<string>, int, int) => task = "service"
+let whenTask = (value, condition) => whenImpl(value, switch condition {
+  | Success => "success" | Failure => "failure" | Always => "always" | Never => "never"
+})
+
+type artifactResult = {path: string, size: float, sha256: string}
+@module("./matrix_ffi.mjs") external resultOutputImpl: (runResult, string, string, string => result<string, string>, string => result<string, string>) => result<string, string> = "resultOutput"
+@module("./matrix_ffi.mjs") external resultArtifactImpl: (runResult, string, string, artifactResult => result<artifactResult, string>, string => result<artifactResult, string>) => result<artifactResult, string> = "resultArtifact"
+let resultOutput = (report, id, name) => resultOutputImpl(report, id, name, value => Ok(value), error => Error(error))
+let resultArtifact = (report, id, name) => resultArtifactImpl(report, id, name, value => Ok(value), error => Error(error))

@@ -58,7 +58,7 @@ def generated():
     yield ROOT / 'sdk/python/src/fluentci/_imports.py', '\n'.join(python)
     yield ROOT / 'sdk/python/src/fluentci/_imports.pyi', '\n'.join(typing) + '\n'
     javascript = ['// Generated from schema/host.json. Guest import signatures.',
-                  'declare module "main" { export function greet(): I32; export function matrix(): I32; }',
+                  'declare module "main" { export function greet(): I32; export function matrix(): I32; export function workflow(): I32; }',
                   'declare module "extism:host" { interface user {']
     for name, function in schema['imports'].items():
         argument = 'value: I64' if 'input' in function else ''
@@ -68,7 +68,7 @@ def generated():
     for language in ['gleam', 'purescript', 'rescript', 'typescript']:
         declarations = list(javascript)
         if language == 'purescript':
-            exports = ['greet', 'echo', 'failure', 'invalid', 'service', 'cancel', 'nested', 'hash_file', 'copy_file', 'secret_env', 'action_plan', 'matrix']
+            exports = ['greet', 'echo', 'failure', 'invalid', 'service', 'cancel', 'nested', 'hash_file', 'copy_file', 'secret_env', 'action_plan', 'matrix', 'workflow']
             declarations[1] = 'declare module "main" { ' + ' '.join(f'export function {name}(): I32;' for name in exports) + ' }'
         yield ROOT / f'sdk/{language}/demo-plugin/imports.d.ts', '\n'.join(declarations)
     for name, exports in plugins.items():

@@ -94,6 +94,47 @@ defmodule FluentCI.Host do
     )
   end
 
+  # Task-first functions compose naturally with Elixir's pipe operator.
+  def retry(%Task{} = task, attempts \\ 3, delay_ms \\ 250),
+    do:
+      policy(task, :retry, %{
+        max_attempts: attempts,
+        delay_ms: delay_ms,
+        max_delay_ms: 60_000,
+        exit_codes: []
+      })
+
+  def unquote(:when)(%Task{} = task, condition) do
+    task = policy(task, :when, Atom.to_string(condition))
+
+    if condition in [:always, :failure] do
+      task
+      |> timeout_ms(Map.get(task.data, :timeout_ms, 30_000))
+      |> resource_wait_timeout_ms(Map.get(task.data, :resource_wait_timeout_ms, 30_000))
+    else
+      task
+    end
+  end
+
+  def always(%Task{} = task), do: __MODULE__.when(task, :always)
+  def allow_failure(%Task{} = task, enabled \\ true), do: policy(task, :allow_failure, enabled)
+  def artifact(%Task{} = task, name, path), do: named_policy(task, :artifacts, name, path)
+  def output(%Task{} = task, name, path), do: named_policy(task, :outputs, name, path)
+
+  def output_env(%Task{} = task, key, %Task{} = producer, name) do
+    task = needs(task, Enum.uniq(Map.get(task.data, :needs, []) ++ [producer.data.id]))
+    named_policy(task, :bindings, key, %{task: producer.data.id, name: name})
+  end
+
+  def resource(%Task{} = task, name),
+    do: resources(task, Enum.uniq(Map.get(task.data, :resources, []) ++ [name]))
+
+  defp policy(%Task{data: data} = task, key, value),
+    do: %{task | data: Map.put(data, :policy, Map.put(Map.get(data, :policy, %{}), key, value))}
+
+  defp named_policy(%Task{} = task, field, name, value),
+    do: policy(task, field, Map.put(get_in(task.data, [:policy, field]) || %{}, name, value))
+
   @spec probe(String.t(), [String.t()], keyword()) :: map()
   def probe(program, args \\ [], opts \\ []) do
     Map.merge(%{program: program, args: args, interval_ms: 250, timeout_ms: 1000}, Map.new(opts))
@@ -199,6 +240,18 @@ defmodule FluentCI.Host do
             shutdown_timeout_ms: :positive,
             failure_threshold: :positive
           }},
+       policy:
+         {:object, %{},
+          %{
+            when: {:enum, ["success", "failure", "always", "never"]},
+            retry:
+              {:object, %{max_attempts: :positive, delay_ms: :positive, max_delay_ms: :positive},
+               %{exit_codes: {:list, :integer}}},
+            allow_failure: :boolean,
+            outputs: :environment,
+            artifacts: :environment,
+            bindings: {:map, {:object, %{task: :nonempty, name: :nonempty}, %{}}}
+          }},
        package_install:
          {:object, %{provider: provider_schema(), packages: {:nonempty_list, :package}}, %{}},
        package_environment: {:list, provider_schema()}
@@ -258,6 +311,20 @@ defmodule FluentCI.Host do
   end
 
   defp validate(value, {:enum, allowed}, path), do: checked(value in allowed, path)
+
+  defp validate(value, {:map, rule}, path) when is_map(value) and not is_struct(value) do
+    Enum.reduce_while(value, :ok, fn {key, entry}, :ok ->
+      case if(text?(key) and key != "",
+             do: validate(entry, rule, path ++ [key]),
+             else: {:error, {:invalid_field, path}}
+           ) do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp validate(value, :integer, path), do: checked(is_integer(value), path)
 
   defp validate(value, :positive, path),
     do: checked(is_integer(value) and value > 0 and value <= 18_446_744_073_709_551_615, path)

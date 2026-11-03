@@ -19,3 +19,16 @@ export function matrix() {
   if (report.outcome !== "succeeded") throw Error("matrix jobs failed; see the run result");
   Host.outputString("matrix complete");
 }
+
+export function workflow() {
+  const task = (id: string, mode: string) => M.task(id, "/usr/bin/python3", ["job.py", mode]);
+  const producer = M.resource(M.artifact(M.output(M.retry(task("produce", "produce"), 3, 10), "version", "value.txt"), "binary", "artifact.bin"), "checkout");
+  const consumer = M.outputEnv(task("consume", "consume"), "VALUE", producer, "version");
+  const optional = M.allowFailure(task("optional", "optional"));
+  const never = M.when(task("never", "never"), "never");
+  const failure = M.when(M.after([consumer], task("failure", "failure")), "failure");
+  const cleanup = M.always(M.after([consumer, optional, never, failure], task("cleanup", "cleanup")));
+  const report = M.run(M.parallel([producer, consumer, optional, never, failure, cleanup], 2), Host.inputString());
+  if (report.outcome !== "succeeded") throw Error("workflow failed; see result.json");
+  Host.outputString("workflow complete");
+}

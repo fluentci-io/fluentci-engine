@@ -42,6 +42,41 @@ pub type Provider {
   Provider(kind: ProviderKind, executable: Option(String))
 }
 
+pub type Condition {
+  OnSuccess
+  OnFailure
+  Always
+  Never
+}
+
+pub type Retry {
+  Retry(
+    max_attempts: Int,
+    delay_ms: Int,
+    max_delay_ms: Int,
+    exit_codes: List(Int),
+  )
+}
+
+pub type OutputRef {
+  OutputRef(task: String, name: String)
+}
+
+pub type Policy {
+  Policy(
+    condition: Condition,
+    retry: Option(Retry),
+    allow_failure: Bool,
+    outputs: List(#(String, String)),
+    artifacts: List(#(String, String)),
+    bindings: List(#(String, OutputRef)),
+  )
+}
+
+fn default_policy() -> Policy {
+  Policy(OnSuccess, None, False, [], [], [])
+}
+
 pub opaque type Task {
   Task(
     id: String,
@@ -58,6 +93,7 @@ pub opaque type Task {
     service: Option(Service),
     installation: Option(#(Provider, List(String))),
     packages: List(Provider),
+    policy: Option(Policy),
   )
 }
 
@@ -96,7 +132,102 @@ pub fn task(id: String, program: String, cwd: String) -> Task {
     service: None,
     installation: None,
     packages: [],
+    policy: None,
   )
+}
+
+pub fn retry(task: Task, attempts: Int, delay_ms: Int) -> Task {
+  let policy = option.unwrap(task.policy, default_policy())
+  Task(
+    ..task,
+    policy: Some(
+      Policy(..policy, retry: Some(Retry(attempts, delay_ms, 60_000, []))),
+    ),
+  )
+}
+
+pub fn when_task(task: Task, condition: Condition) -> Task {
+  let policy = option.unwrap(task.policy, default_policy())
+  let task = Task(..task, policy: Some(Policy(..policy, condition:)))
+  case condition {
+    Always | OnFailure ->
+      Task(
+        ..task,
+        timeout_ms: Some(option.unwrap(task.timeout_ms, 30_000)),
+        resource_wait_timeout_ms: Some(option.unwrap(
+          task.resource_wait_timeout_ms,
+          30_000,
+        )),
+      )
+    _ -> task
+  }
+}
+
+pub fn always(task: Task) -> Task {
+  when_task(task, Always)
+}
+
+pub fn allow_failure(task: Task, enabled: Bool) -> Task {
+  let policy = option.unwrap(task.policy, default_policy())
+  Task(..task, policy: Some(Policy(..policy, allow_failure: enabled)))
+}
+
+pub fn artifact(task: Task, name: String, path: String) -> Task {
+  let policy = option.unwrap(task.policy, default_policy())
+  Task(
+    ..task,
+    policy: Some(
+      Policy(
+        ..policy,
+        artifacts: list.append(
+          list.filter(policy.artifacts, fn(entry) { entry.0 != name }),
+          [#(name, path)],
+        ),
+      ),
+    ),
+  )
+}
+
+pub fn output(task: Task, name: String, path: String) -> Task {
+  let policy = option.unwrap(task.policy, default_policy())
+  Task(
+    ..task,
+    policy: Some(
+      Policy(
+        ..policy,
+        outputs: list.append(
+          list.filter(policy.outputs, fn(entry) { entry.0 != name }),
+          [#(name, path)],
+        ),
+      ),
+    ),
+  )
+}
+
+pub fn output_env(
+  task: Task,
+  key: String,
+  producer: Task,
+  name: String,
+) -> Task {
+  let task = after_jobs(task, [producer])
+  let policy = option.unwrap(task.policy, default_policy())
+  Task(
+    ..task,
+    policy: Some(
+      Policy(
+        ..policy,
+        bindings: list.append(
+          list.filter(policy.bindings, fn(entry) { entry.0 != key }),
+          [#(key, OutputRef(producer.id, name))],
+        ),
+      ),
+    ),
+  )
+}
+
+pub fn resource(task: Task, name: String) -> Task {
+  Task(..task, resources: list.unique(list.append(task.resources, [name])))
 }
 
 /// Rename a value without changing its command/dependencies.
@@ -340,6 +471,55 @@ fn encode_cache(cache: Cache) -> String {
   })
 }
 
+fn encode_policy(policy: Policy) -> String {
+  let condition = case policy.condition {
+    OnSuccess -> "success"
+    OnFailure -> "failure"
+    Always -> "always"
+    Never -> "never"
+  }
+  object(list.append(
+    [
+      #("when", quote(condition)),
+      #("allow_failure", boolean(policy.allow_failure)),
+      #(
+        "outputs",
+        object(
+          list.map(policy.outputs, fn(entry) { #(entry.0, quote(entry.1)) }),
+        ),
+      ),
+      #(
+        "artifacts",
+        object(
+          list.map(policy.artifacts, fn(entry) { #(entry.0, quote(entry.1)) }),
+        ),
+      ),
+      #(
+        "bindings",
+        object(
+          list.map(policy.bindings, fn(entry) {
+            #(
+              entry.0,
+              object([
+                #("task", quote(entry.1.task)),
+                #("name", quote(entry.1.name)),
+              ]),
+            )
+          }),
+        ),
+      ),
+    ],
+    optional(policy.retry, "retry", fn(retry) {
+      object([
+        #("max_attempts", int.to_string(retry.max_attempts)),
+        #("delay_ms", int.to_string(retry.delay_ms)),
+        #("max_delay_ms", int.to_string(retry.max_delay_ms)),
+        #("exit_codes", array(list.map(retry.exit_codes, int.to_string))),
+      ])
+    }),
+  ))
+}
+
 fn encode_task(task: Task) -> String {
   let fields = [
     #("id", quote(task.id)),
@@ -362,6 +542,7 @@ fn encode_task(task: Task) -> String {
         int.to_string,
       ),
       optional(task.cache, "cache", encode_cache),
+      optional(task.policy, "policy", encode_policy),
       optional(task.service, "service", encode_service),
       optional(task.installation, "package_install", fn(install) {
         object([

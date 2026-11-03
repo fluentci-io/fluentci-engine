@@ -1,14 +1,60 @@
 """Native task/plan values. run() is a guest PDK effect, not an embedded host."""
 from __future__ import annotations
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 import json
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
+from types import MappingProxyType
 
 @dataclass(frozen=True, slots=True)
 class Cache:
     inputs: tuple[str, ...]
     outputs: tuple[str, ...]
     toolchain: str
+
+Condition = Literal["success", "failure", "always", "never"]
+
+@dataclass(frozen=True, slots=True)
+class Retry:
+    max_attempts: int = 3
+    delay_ms: int = 250
+    max_delay_ms: int = 60_000
+    exit_codes: tuple[int, ...] = ()
+
+@dataclass(frozen=True, slots=True)
+class Probe:
+    program: str
+    args: tuple[str, ...] = ()
+    interval_ms: int = 250
+    timeout_ms: int = 1000
+
+@dataclass(frozen=True, slots=True)
+class Service:
+    readiness: Probe
+    startup_timeout_ms: int = 30_000
+    shutdown_timeout_ms: int = 5000
+    failure_threshold: int = 3
+
+@dataclass(frozen=True, slots=True)
+class OutputRef:
+    task: str
+    name: str
+
+@dataclass(frozen=True, slots=True)
+class Policy:
+    when: Condition = "success"
+    retry: Retry | None = None
+    allow_failure: bool = False
+    outputs: tuple[tuple[str, str], ...] = ()
+    artifacts: tuple[tuple[str, str], ...] = ()
+    bindings: tuple[tuple[str, OutputRef], ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        value: dict[str, Any] = {"when": self.when, "allow_failure": self.allow_failure,
+            "outputs": dict(self.outputs), "artifacts": dict(self.artifacts),
+            "bindings": {key: asdict(ref) for key, ref in self.bindings}}
+        if self.retry is not None:
+            value["retry"] = asdict(self.retry)
+        return value
 
 @dataclass(frozen=True, slots=True)
 class Task:
@@ -20,6 +66,10 @@ class Task:
     needs: tuple[str, ...] = ()
     timeout_ms: int | None = None
     cache: Cache | None = None
+    resources: tuple[str, ...] = ()
+    resource_wait_timeout_ms: int | None = None
+    service: Service | None = None
+    policy: Policy | None = None
 
     def with_env(self, key: str, value: str) -> Task:
         return replace(self, env=(*self.env, (key, value)))
@@ -31,7 +81,29 @@ class Task:
             value["timeout_ms"] = self.timeout_ms
         if self.cache is not None:
             value["cache"] = {"inputs": list(self.cache.inputs), "outputs": list(self.cache.outputs), "toolchain": self.cache.toolchain}
+        if self.resources:
+            value["resources"] = list(self.resources)
+        if self.resource_wait_timeout_ms is not None:
+            value["resource_wait_timeout_ms"] = self.resource_wait_timeout_ms
+        if self.service is not None:
+            value["service"] = asdict(self.service)
+        if self.policy is not None:
+            value["policy"] = self.policy.to_dict()
         return value
+
+@dataclass(frozen=True, slots=True)
+class Artifact:
+    path: str
+    size: int
+    sha256: str
+
+@dataclass(frozen=True, slots=True)
+class Attempt:
+    number: int
+    status: str
+    exit_code: int | None
+    duration_ms: int
+    error: str | None
 
 @dataclass(frozen=True, slots=True)
 class TaskResult:
@@ -41,6 +113,11 @@ class TaskResult:
     stdout: str
     stderr: str
     error: str | None
+    outputs: Mapping[str, str] = field(default_factory=dict)
+    artifacts: Mapping[str, Artifact] = field(default_factory=dict)
+    attempts: tuple[Attempt, ...] = ()
+    allowed_failure: bool = False
+    condition_skipped: bool = False
 
 @dataclass(frozen=True, slots=True)
 class RunResult:
@@ -80,5 +157,9 @@ class Plan:
         for row in raw["tasks"]:
             if not isinstance(row, dict) or row.get("status") not in {"succeeded", "failed", "skipped", "cancelled", "timed_out"}:
                 raise RuntimeError("invalid terminal task report")
-            tasks.append(TaskResult(row["id"], row["status"], row["exit_code"], row["stdout"], row["stderr"], row["error"]))
+            tasks.append(TaskResult(row["id"], row["status"], row["exit_code"], row["stdout"], row["stderr"], row["error"],
+                MappingProxyType(dict(row.get("outputs", {}))),
+                MappingProxyType({name: Artifact(**artifact) for name, artifact in row.get("artifacts", {}).items()}),
+                tuple(Attempt(**attempt) for attempt in row.get("attempts", [])),
+                row.get("allowed_failure", False), row.get("condition_skipped", False)))
         return RunResult(raw["outcome"], tuple(tasks))

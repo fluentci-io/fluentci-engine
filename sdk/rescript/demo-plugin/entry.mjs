@@ -1,1 +1,1 @@
-export { greet, matrix } from "./src/Greeting.res.mjs";
+export { greet, matrix, workflow } from "./src/Greeting.res.mjs";

@@ -3,11 +3,12 @@ export type Case<A> = Readonly<{ key: string; value: A }>;
 export type Task = Readonly<{
   id: string; program: string; args: readonly string[]; cwd: string;
   env: Readonly<Record<string, string>>; needs: readonly string[];
-  timeout_ms?: number;
+  timeout_ms?: number; resource_wait_timeout_ms?: number;
+  resources?: readonly string[]; service?: Service; policy?: Policy;
   cache?: Readonly<{ inputs: readonly string[]; outputs: readonly string[]; toolchain: string }>;
 }>;
 export type Plan = Readonly<{ version: 1; tasks: readonly Task[]; jobs: number; inherit_env: false; fail_fast: boolean; cache_dir?: string }>;
-export type TaskResult = Readonly<{ id: string; status: string; exit_code: number | null; stdout: string; stderr: string; error: string | null }>;
+export type TaskResult = Readonly<{ id: string; status: string; exit_code: number | null; stdout: string; stderr: string; error: string | null; outputs?: Readonly<Record<string,string>>; artifacts?: Readonly<Record<string,{path:string;size:number;sha256:string}>>; attempts?: readonly {number:number;status:string;exit_code:number|null;duration_ms:number;error:string|null}[]; allowed_failure?: boolean; condition_skipped?: boolean }>;
 export type RunResult = Readonly<{ outcome: "succeeded" | "failed" | "cancelled"; tasks: readonly TaskResult[] }>;
 const component = (value: string) => encodeURIComponent(value).replace(/[!'()*]/g, char => "%" + char.charCodeAt(0).toString(16).toUpperCase());
 export const named = <A>(name: string, value: A): Case<A> => Object.freeze({ key: component(name), value });
@@ -47,3 +48,26 @@ export function run(plan: Plan, runDir: string): RunResult {
   if (!["succeeded", "failed", "cancelled"].includes(report?.outcome) || !Array.isArray(report.tasks)) throw Error("invalid terminal plan report");
   return report as RunResult;
 }
+
+/** Task-first policy helpers are immutable; commands remain literal argv. */
+export type Condition = "success" | "failure" | "always" | "never";
+export type Retry = Readonly<{ max_attempts: number; delay_ms: number; max_delay_ms: number; exit_codes: readonly number[] }>;
+export type Probe = Readonly<{ program: string; args: readonly string[]; interval_ms: number; timeout_ms: number }>;
+export type Service = Readonly<{ readiness: Probe; startup_timeout_ms: number; shutdown_timeout_ms: number; failure_threshold: number }>;
+export type Policy = Readonly<{ when?: Condition; retry?: Retry; allow_failure?: boolean;
+  outputs?: Readonly<Record<string, string>>; artifacts?: Readonly<Record<string, string>>;
+  bindings?: Readonly<Record<string, Readonly<{ task: string; name: string }>>> }>;
+const policy = (value: Task, update: Policy): Task => Object.freeze({ ...value, policy: Object.freeze({ ...value.policy, ...update }) });
+export const retry = (value: Task, attempts = 3, delayMs = 250): Task => policy(value, { retry: Object.freeze({ max_attempts: attempts, delay_ms: delayMs, max_delay_ms: 60000, exit_codes: Object.freeze([]) }) });
+export const when = (value: Task, condition: Condition): Task => {
+  const task = policy(value, { when: condition });
+  return condition === "always" || condition === "failure"
+    ? Object.freeze({ ...task, timeout_ms: task.timeout_ms ?? 30000, resource_wait_timeout_ms: task.resource_wait_timeout_ms ?? 30000 }) : task;
+};
+export const always = (value: Task): Task => when(value, "always");
+export const allowFailure = (value: Task, enabled = true): Task => policy(value, { allow_failure: enabled });
+export const artifact = (value: Task, name: string, path: string): Task => policy(value, { artifacts: Object.freeze({ ...value.policy?.artifacts, [name]: path }) });
+export const output = (value: Task, name: string, path: string): Task => policy(value, { outputs: Object.freeze({ ...value.policy?.outputs, [name]: path }) });
+export const outputEnv = (value: Task, key: string, producer: Task, name: string): Task => policy(after([producer], value), { bindings: Object.freeze({ ...value.policy?.bindings, [key]: Object.freeze({ task: producer.id, name }) }) });
+export const resource = (value: Task, name: string): Task => Object.freeze({ ...value, resources: Object.freeze([...new Set([...(value.resources ?? []), name])]) });
+export const service = (value: Task, readiness: Probe): Task => Object.freeze({ ...value, service: Object.freeze({ readiness: Object.freeze({ ...readiness, args: Object.freeze([...readiness.args]) }), startup_timeout_ms: 30000, shutdown_timeout_ms: 5000, failure_threshold: 3 }) });

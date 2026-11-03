@@ -37,3 +37,17 @@ let matrix = () => {
   | Error(error) => JsError.throwWithMessage(error)
   }
 }
+
+let workflow = () => {
+  let task = (name, mode) => Matrix.task(name, "/usr/bin/python3", ["job.py", mode], ".")
+  let producer = task("produce", "produce")->Matrix.retry(3, 10)->Matrix.output("version", "value.txt")->Matrix.artifact("binary", "artifact.bin")->Matrix.resource("checkout")
+  let consumer = task("consume", "consume")->Matrix.outputEnv("VALUE", producer, "version")
+  let optional = task("optional", "optional")->Matrix.allowFailure(true)
+  let never = task("never", "never")->Matrix.whenTask(Matrix.Never)
+  let failure = task("failure", "failure")->Matrix.afterJobs([consumer])->Matrix.whenTask(Matrix.Failure)
+  let cleanup = task("cleanup", "cleanup")->Matrix.afterJobs([consumer, optional, never, failure])->Matrix.always
+  switch Matrix.run(Matrix.parallel([producer, consumer, optional, never, failure, cleanup], 2), input()) {
+  | Ok(report) => if report.outcome == "succeeded" { output("workflow complete") } else { JsError.throwWithMessage("workflow failed; see result.json") }
+  | Error(error) => JsError.throwWithMessage(error)
+  }
+}

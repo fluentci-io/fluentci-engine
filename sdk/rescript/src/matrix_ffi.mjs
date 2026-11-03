@@ -41,3 +41,27 @@ export const run = (plan, directory, ok, error) => result(ok, error, () => {
 export const cached = (task, inputs, outputs, toolchain) => frozen({ ...task, cache: frozen({ inputs: frozen([...inputs]), outputs: frozen([...outputs]), toolchain }) });
 
 export const withCacheDirectory = (plan, cache_dir) => frozen({ ...plan, cache_dir });
+
+const policy = (value, update) => frozen({ ...value, policy: frozen({ ...value.policy, ...update }) });
+export const retry = (value, attempts, delayMs) => policy(value, { retry: frozen({ max_attempts: attempts, delay_ms: delayMs, max_delay_ms: 60000, exit_codes: frozen([]) }) });
+export const whenTask = (value, condition) => {
+  const task = policy(value, { when: condition });
+  return ["always", "failure"].includes(condition) ? frozen({ ...task, timeout_ms: task.timeout_ms ?? 30000, resource_wait_timeout_ms: task.resource_wait_timeout_ms ?? 30000 }) : task;
+};
+export const always = value => whenTask(value, "always");
+export const allowFailure = (value, enabled) => policy(value, { allow_failure: enabled });
+export const artifact = (value, name, path) => policy(value, { artifacts: frozen({ ...value.policy?.artifacts, [name]: path }) });
+export const output = (value, name, path) => policy(value, { outputs: frozen({ ...value.policy?.outputs, [name]: path }) });
+export const outputEnv = (value, key, producer, name) => policy(after(value, [producer]), { bindings: frozen({ ...value.policy?.bindings, [key]: frozen({ task: producer.id, name }) }) });
+export const resource = (value, name) => frozen({ ...value, resources: frozen([...new Set([...(value.resources ?? []), name])]) });
+export const service = (value, program, args, interval_ms, timeout_ms) => frozen({ ...value, service: frozen({ readiness: frozen({ program, args: frozen([...args]), interval_ms, timeout_ms }), startup_timeout_ms: 30000, shutdown_timeout_ms: 5000, failure_threshold: 3 }) });
+export const resultOutput = (report, id, name, ok, error) => result(ok, error, () => {
+  const value = report.tasks.find(task => task.id === id)?.outputs?.[name];
+  if (typeof value !== "string") throw Error(`missing output ${id}.${name}`);
+  return value;
+});
+export const resultArtifact = (report, id, name, ok, error) => result(ok, error, () => {
+  const value = report.tasks.find(task => task.id === id)?.artifacts?.[name];
+  if (!value || typeof value.path !== "string" || typeof value.sha256 !== "string" || typeof value.size !== "number") throw Error(`missing artifact ${id}.${name}`);
+  return frozen({ ...value });
+});

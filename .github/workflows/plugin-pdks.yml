@@ -47,7 +47,7 @@ jobs:
       - name: Check canonical ABI and immutable guest primitives
         run: |
           python3 scripts/xtp_codegen.py --check
-          node --test tests/guest_pdks.test.mjs tests/matrix.test.mjs
+          node --test tests/guest_pdks.test.mjs tests/matrix.test.mjs tests/workflow.test.mjs
       - name: Typecheck, test, and compile Python guest
         working-directory: sdk/python
         run: |
@@ -85,6 +85,7 @@ jobs:
           cargo build --release --locked -p fluentci-engine
           python3 tests/e2e_guest_pdks.py -v
           python3 tests/e2e_matrix.py -v
+          python3 tests/e2e_workflow.py -v
           python3 tests/e2e_sccache.py -v
       - name: Preserve compiled guests and generated entry source
         if: always()

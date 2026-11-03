@@ -49,4 +49,26 @@ defmodule FluentCI.MatrixTest do
     assert source =~ "unsafe { execute_plan(request.to_string()) }"
     refute source =~ "pipeline.with_exec"
   end
+
+  test "workflow functions preserve immutable task values and output dependencies" do
+    original = H.task("produce", "/missing", "/missing")
+
+    produced =
+      original
+      |> H.retry(3, 10)
+      |> H.output("version", "version.txt")
+      |> H.artifact("report", "report.txt")
+      |> H.resource("checkout")
+
+    consumer =
+      H.task("consume", "/missing", "/missing") |> H.output_env("VERSION", produced, "version")
+
+    cleanup = consumer |> H.always()
+    refute Map.has_key?(original.data, :policy)
+    assert consumer.data.needs == ["produce"]
+    assert cleanup.data.policy.when == "always"
+    assert cleanup.data.timeout_ms == 30_000
+    assert {:ok, _} = H.compile(H.plan([produced, consumer]))
+    assert produced.data.policy.artifacts["report"] == "report.txt"
+  end
 end
