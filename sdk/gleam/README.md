@@ -122,6 +122,11 @@ pub fn main() {
 }
 ```
 
+Servers configured with `--max-queued` can return `Queued` before `Running`;
+keep polling both states. Cancelling a queued run before execution leaves no
+result report. After a hard server stop, unstarted queued runs become `Interrupted`
+and require an explicit new submission to run.
+
 Paths refer to the **server filesystem**; the adapter does not upload a local
 workspace. Store the returned ID and use `get_state(id, config)` to poll until
 `Succeeded`, `Failed`, `Cancelled`, or `Interrupted`. Then `get_result(id, config)`

@@ -26,7 +26,7 @@ fn terminal(
   use value <- promise.await(client.get_state(id, config))
   let assert Ok(state) = value
   case state.status {
-    client.Running -> {
+    client.Queued | client.Running -> {
       let assert True = attempts > 0
       use _ <- promise.await(pause())
       terminal(id, config, attempts - 1)
@@ -235,6 +235,12 @@ pub fn remote_rejects_invalid_responses_test() {
     let id = "00000000-0000-0000-0000-000000000001"
     use value <- promise.await(client.get_state(
       id,
+      client.Config(base, "queued-state", 1000),
+    ))
+    let assert Ok(queued) = value
+    queued.status |> should.equal(client.Queued)
+    use value <- promise.await(client.get_state(
+      id,
       client.Config(base, "unknown-status", 1000),
     ))
     value |> should.equal(Error(client.DecodeError))
@@ -414,5 +420,35 @@ pub fn history_rediscovers_runs_after_restart_test() {
     use value <- promise.map(client.get_result(saved.id, config))
     let assert Ok(value) = value
     value.outcome |> should.equal(Some(report.Succeeded))
+  })
+}
+
+pub fn queued_runs_can_be_cancelled_before_execution_test() {
+  fixture(fn(base, token, root) {
+    let config = client.Config(base, token, 5000)
+    let blocker =
+      host.task("blocker", "/bin/sh", root)
+      |> host.with_args([
+        "-c",
+        "printf executed > output; printf live; while :; do /bin/sleep 0.02; done",
+      ])
+      |> host.with_timeout(10_000)
+    use value <- promise.await(client.submit(host.plan([blocker]), config))
+    let assert Ok(running) = value
+    use _ <- promise.await(live_output(running.id, config, 200))
+    let queued_plan = host.plan([host.task("queued", "/bin/true", root)])
+    use value <- promise.await(client.submit(queued_plan, config))
+    let assert Ok(queued) = value
+    queued.status |> should.equal(client.Queued)
+    use value <- promise.await(client.cancel(queued.id, config))
+    value |> should.equal(Ok(Nil))
+    use state <- promise.await(terminal(queued.id, config, 200))
+    state.status |> should.equal(client.Cancelled)
+    use value <- promise.await(client.get_result(queued.id, config))
+    let assert Error(client.HttpError(404, _)) = value
+    use value <- promise.await(client.cancel(running.id, config))
+    value |> should.equal(Ok(Nil))
+    use state <- promise.map(terminal(running.id, config, 200))
+    state.status |> should.equal(client.Cancelled)
   })
 }

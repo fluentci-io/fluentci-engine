@@ -14,6 +14,7 @@ pub type Config {
 }
 
 pub type RunStatus {
+  Queued
   Running
   Succeeded
   Failed
@@ -70,6 +71,7 @@ fn invalid() -> Result(a, DecodeErrors) {
 fn status(data: Dynamic) -> Result(RunStatus, DecodeErrors) {
   use value <- result.try(dynamic.string(data))
   case value {
+    "queued" -> Ok(Queued)
     "running" -> Ok(Running)
     "succeeded" -> Ok(Succeeded)
     "failed" -> Ok(Failed)
@@ -193,7 +195,7 @@ pub fn get_state(
   )
 }
 
-/// A running run can return HTTP 404 until its terminal report is published.
+/// A queued or running run can return HTTP 404 until its terminal report is published.
 pub fn get_result(
   id: String,
   config: Config,

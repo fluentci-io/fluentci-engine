@@ -41,7 +41,7 @@ export async function fixture(run, traced = false) {
   let child, stopped, diagnostics, launchError;
   function start() {
     diagnostics = ''; launchError = undefined;
-    child = spawn(binary, ['serve-runs', '--listen', `127.0.0.1:${port}`, '--data-dir', join(root, 'server'), '--max-runs', '2'], {
+    child = spawn(binary, ['serve-runs', '--listen', `127.0.0.1:${port}`, '--data-dir', join(root, 'server'), '--max-runs', '1', '--max-queued', '2'], {
       env: { ...env, FLUENTCI_RUN_TOKEN: token }, stdio: ['ignore', 'ignore', 'pipe'],
     });
     child.stderr.on('data', value => { diagnostics = (diagnostics + value).slice(-8192); });
@@ -135,6 +135,7 @@ export async function mock_fixture(run) {
       if (mode === 'Bearer unknown-history-status') state.status = 'unknown';
       res.writeHead(200); res.end(JSON.stringify(page)); return;
     }
+    if (mode === 'Bearer queued-state') state.status = 'queued';
     if (mode === 'Bearer unknown-status') state.status = 'unknown';
     if (mode === 'Bearer wrong-id') state.id = '00000000-0000-0000-0000-000000000002';
     if (mode === 'Bearer negative-time') state.created_at_ms = -1;
