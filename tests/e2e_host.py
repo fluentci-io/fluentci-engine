@@ -294,6 +294,18 @@ s.serve_forever()
         self.assertEqual(replay.returncode, 23, replay.stderr)
         self.assertIn("ACTUAL-PROCESS-ERROR", replay.stderr)
 
+    def test_signal_failure_and_timeout_report_explicit_exit_codes(self):
+        result = subprocess.run(self.command(self.plan([self.task("signal", "kill -TERM $$")])), capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 143, result.stderr)
+        self.assertIn("signal 15", result.stderr)
+        report = json.loads((self.root / "run/result.json").read_text())
+        self.assertEqual(report["tasks"][0]["signal"], 15)
+        timed = self.task("timeout", "sleep 120")
+        timed["timeout_ms"] = 80
+        result = subprocess.run(self.command(self.plan([timed]), run="timed"), capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 124, result.stderr)
+        self.assertIn("timed out", result.stderr)
+
     def test_failure_exit_code_and_skipped_dependency(self):
         result = subprocess.run(self.command(self.plan([self.task("bad", "exit 7"), self.task("skip", "touch unexpected", ["bad"])])), capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, 7)

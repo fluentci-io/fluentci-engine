@@ -16,4 +16,4 @@ workspace:
   extraPackages:
     fluentci:
       git: https://github.com/fluentci-io/purescript-fluentci.git
-      ref: 849865b1d695788cb09e8c8c6aa272fe6566e0d7
+      ref: f80bc26c15412655a3847ad9ce9b476f01be1ef4

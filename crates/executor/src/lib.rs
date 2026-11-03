@@ -895,6 +895,14 @@ impl Plan {
                     results[i].exit_code = code;
                     results[i].error = error;
                     results[i].duration_ms = elapsed.as_millis();
+                    // Stop background descendants before capturing output artifacts.
+                    let completed_leases = running[n].leases.take();
+                    let completed_action = running[n].action.take();
+                    let task_started = running[n].started;
+                    running.swap_remove(n);
+                    if let Some(supervisor) = &mut supervisors[i] {
+                        supervisor.stop();
+                    }
                     if results[i].status == Status::TimedOut {
                         results[i].exit_code = Some(124);
                         let message = results[i].error.take().unwrap_or_else(|| {
@@ -948,14 +956,6 @@ impl Plan {
                                 results[i].error = Some(format!("{message}\n{diagnostic}"));
                             }
                         }
-                    }
-                    // Stop background descendants before capturing output artifacts.
-                    let completed_leases = running[n].leases.take();
-                    let completed_action = running[n].action.take();
-                    let task_started = running[n].started;
-                    running.swap_remove(n);
-                    if let Some(supervisor) = &mut supervisors[i] {
-                        supervisor.stop();
                     }
                     if self.tasks[i].service.is_none() {
                         let number = results[i].attempts.len() + 1;
