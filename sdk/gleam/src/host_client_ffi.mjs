@@ -39,11 +39,12 @@ async function perform(config, method, id, suffix, body, key, ok, error, trace =
         !Number.isSafeInteger(config.timeout_ms) || config.timeout_ms <= 0 || config.timeout_ms > 2147483647 ||
         !config.token || /[\r\n]/.test(config.token)) throw Error("configuration");
     const submission = method === "POST" && suffix === "" && id === "";
-    if (!submission && !valid_id(id)) throw Error("invalid run id");
+    const collection = submission || (method === "GET" && id === "" && suffix.startsWith("?limit="));
+    if (!collection && !valid_id(id)) throw Error("invalid run id");
     if (key !== "" && !/^[A-Za-z0-9_-]{1,128}$/.test(key)) throw Error("invalid key");
     problem = submission ? "request failed; submission outcome may be unknown" : "request failed";
     timer = setTimeout(() => controller.abort(), config.timeout_ms);
-    response = await fetch(new URL(`/v1/runs${submission ? "" : `/${id}${suffix}`}`, base), {
+    response = await fetch(new URL(`/v1/runs${collection ? suffix : `/${id}${suffix}`}`, base), {
       method,
       headers: { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json",
         ...(key === "" ? {} : { "Idempotency-Key": key }), ...trace },
@@ -108,4 +109,13 @@ export function submit_request(config, body, key, traceparent, tracestate, ok, e
   const trace = traceparent === "" ? {} : { traceparent, ...(tracestate === "" ? {} : { tracestate }) };
   return perform(config, "POST", "", "", body, key, (response, bytes) =>
     ok(response.status, new TextDecoder().decode(bytes), response.headers.get("Idempotency-Key") ?? ""), error, trace);
+}
+
+
+export function history(config, limit, before, ok, error) {
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 200) return Promise.resolve(error("history limit must be 1-200"));
+  let query;
+  try { query = `?limit=${limit}` + (before === "" ? "" : `&before=${encodeURIComponent(before)}`); }
+  catch { return Promise.resolve(error("invalid history cursor encoding")); }
+  return request(config, "GET", "", query, "", "", ok, error);
 }

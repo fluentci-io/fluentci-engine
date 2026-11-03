@@ -5,7 +5,7 @@ import fluentci/host/result as report
 import gleam/bit_array
 import gleam/javascript/promise.{type Promise}
 import gleam/list
-import gleam/option.{Some}
+import gleam/option.{None, Some}
 import gleam/string
 import gleeunit/should
 
@@ -38,6 +38,8 @@ fn terminal(
 pub fn remote_execution_replay_and_cancel_test() {
   fixture(fn(base, token, root) {
     let config = client.Config(base, token, 5000)
+    use value <- promise.await(client.history(10, None, config))
+    value |> should.equal(Ok(client.RunPage([], None)))
     let probe =
       host.Probe(
         "/bin/sh",
@@ -72,6 +74,7 @@ pub fn remote_execution_replay_and_cancel_test() {
     replayed.id |> should.equal(admitted.id)
     use state <- promise.await(terminal(admitted.id, config, 200))
     state.status |> should.equal(client.Succeeded)
+    let succeeded_id = admitted.id
     use value <- promise.await(client.get_result(admitted.id, config))
     let assert Ok(value) = value
     value.outcome |> should.equal(Some(report.Succeeded))
@@ -190,6 +193,27 @@ pub fn remote_execution_replay_and_cancel_test() {
     let assert Ok(last_tail) = list.last(tail.events)
     last_tail.kind |> should.equal(journal.RunFinished(False))
 
+    use value <- promise.await(client.history(1, None, config))
+    let assert Ok(client.RunPage([newest], Some(cursor))) = value
+    newest.id |> should.equal(admitted.id)
+    newest.status |> should.equal(client.Cancelled)
+    let another = host.plan([host.task("newest", "/bin/true", root)])
+    use value <- promise.await(client.submit(another, config))
+    let assert Ok(added) = value
+    use _ <- promise.await(terminal(added.id, config, 200))
+    use value <- promise.await(client.history(1, Some(cursor), config))
+    let assert Ok(client.RunPage([older], None)) = value
+    older.id |> should.equal(succeeded_id)
+    older.status |> should.equal(client.Succeeded)
+    use value <- promise.await(client.history(1, None, config))
+    let assert Ok(client.RunPage([latest], _)) = value
+    latest.id |> should.equal(added.id)
+    use value <- promise.await(client.history(
+      10,
+      None,
+      client.Config(base, "wrong", 5000),
+    ))
+    let assert Error(client.HttpError(401, _)) = value
     use value <- promise.map(client.get_state(
       admitted.id,
       client.Config(base, "wrong", 5000),
@@ -326,5 +350,69 @@ pub fn traced_submission_reaches_events_and_exporter_test() {
     let assert Ok(first) = list.first(page.events)
     list.any(page.events, fn(event) { event.span_id != first.span_id })
     |> should.be_true
+  })
+}
+
+@external(javascript, "./host_client_test_ffi.mjs", "history_transport_contract")
+fn history_transport_contract() -> Promise(Nil)
+
+pub fn history_transport_test() {
+  history_transport_contract()
+}
+
+pub fn history_response_validation_test() {
+  mock_fixture(fn(base) {
+    use value <- promise.await(client.history(
+      10,
+      None,
+      client.Config(base, "duplicate-history", 1000),
+    ))
+    value |> should.equal(Error(client.DecodeError))
+    use value <- promise.await(client.history(
+      10,
+      None,
+      client.Config(base, "empty-history-cursor", 1000),
+    ))
+    value |> should.equal(Error(client.DecodeError))
+    use value <- promise.await(client.history(
+      10,
+      Some("same"),
+      client.Config(base, "repeated-history-cursor", 1000),
+    ))
+    value |> should.equal(Error(client.DecodeError))
+    use value <- promise.map(client.history(
+      10,
+      None,
+      client.Config(base, "unknown-history-status", 1000),
+    ))
+    value |> should.equal(Error(client.DecodeError))
+  })
+}
+
+@external(javascript, "./host_client_test_ffi.mjs", "fixture")
+fn restart_fixture(
+  run: fn(String, String, String, fn() -> Promise(Nil)) -> Promise(Nil),
+) -> Promise(Nil)
+
+pub fn history_rediscovers_runs_after_restart_test() {
+  restart_fixture(fn(base, token, root, restart) {
+    let config = client.Config(base, token, 5000)
+    let task =
+      host.task("persisted", "/bin/sh", root)
+      |> host.with_args(["-c", "printf executed >> output"])
+    use value <- promise.await(client.submit(host.plan([task]), config))
+    let assert Ok(admitted) = value
+    use _ <- promise.await(terminal(admitted.id, config, 200))
+    use value <- promise.await(client.history(10, None, config))
+    let assert Ok(before) = value
+    use _ <- promise.await(restart())
+    use value <- promise.await(client.history(10, None, config))
+    value |> should.equal(Ok(before))
+    let assert [saved] = before.runs
+    saved.id |> should.equal(admitted.id)
+    saved.status |> should.equal(client.Succeeded)
+    use value <- promise.map(client.get_result(saved.id, config))
+    let assert Ok(value) = value
+    value.outcome |> should.equal(Some(report.Succeeded))
   })
 }

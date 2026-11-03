@@ -195,7 +195,21 @@ when the retry carries a different context. Tests use a local OTLP HTTP/protobuf
 collector and check journal correlation and exported run/step spans after server
 shutdown. They do not contact an external telemetry service.
 
-Run history remains to be added to this Gleam adapter.
+### Discover persisted runs
+
+`history(limit, before, config)` returns `RunPage(runs, next_cursor)`, ordered
+newest first by creation time with a run-ID tie-breaker. Use a limit from 1 to 200,
+start with `None`, then pass `next_cursor` unchanged until it is `None`. Cursors
+are opaque strings and are separate from log/event byte cursors. Restart with
+`None` to discover newly submitted runs; a traversal of older pages excludes new
+runs that sort above its cursor. State values can change while you traverse pages.
+
+Each run includes its ID, typed status, optional error and optional creation time.
+The client rejects oversized pages, duplicate IDs, empty continuation pages and
+repeated continuation cursors. History survives a server restart; the integration
+test restarts the release server, rediscovers the same run, and fetches its result.
+History requests use the same bearer authentication and transport bounds as other
+client calls.
 
 The existing APIs below use the legacy engine path. Verify host plans, local
 execution and server execution against a built release engine with:
@@ -212,7 +226,8 @@ architectures using pinned Gleam/Deno versions and Node 26. The engine fixture u
 checks cold/warm caching across workspaces, typed local success/failure, launch errors,
 cancellation cleanup, authenticated server execution, keyed replay, live binary
 output, service probe logs, typed journal events, resumable byte cursors and HTTP
-error paths, trace propagation and local OTLP export. Tests perform no package installation.
+error paths, trace propagation, local OTLP export, history pagination and restart
+rediscovery. Tests perform no package installation.
 
 ## Legacy API quick start
 

@@ -2,8 +2,10 @@
 import fluentci/host
 import fluentci/host/journal
 import fluentci/host/result as report
+import gleam/dict
 import gleam/dynamic.{type DecodeErrors, type Dynamic}
 import gleam/javascript/promise.{type Promise}
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 
@@ -361,5 +363,74 @@ pub fn submit_with_context(
       promise.resolve(Error(TransportError("traceparent must not be empty")))
     None, _ -> submit_impl(plan, config, "", Some(context))
     Some(key), _ -> submit_impl(plan, config, key, Some(context))
+  }
+}
+
+pub type RunPage {
+  RunPage(runs: List(RunState), next_cursor: Option(String))
+}
+
+@external(javascript, "../../host_client_ffi.mjs", "history")
+fn history_request(
+  config: Config,
+  limit: Int,
+  before: String,
+  ok: fn(Int, String, String) -> Result(RunPage, Error),
+  error: fn(String) -> Result(RunPage, Error),
+) -> Promise(Result(RunPage, Error))
+
+fn page(
+  data: Dynamic,
+  limit: Int,
+  before: Option(String),
+) -> Result(RunPage, DecodeErrors) {
+  use runs <- result.try(dynamic.field("runs", dynamic.list(state))(data))
+  use next_cursor <- result.try(dynamic.optional_field(
+    "next_cursor",
+    dynamic.string,
+  )(data))
+  let count = list.length(runs)
+  let ids = dict.from_list(list.map(runs, fn(run) { #(run.id, Nil) }))
+  let valid_cursor = case next_cursor {
+    None -> True
+    Some(value) -> value != "" && next_cursor != before && runs != []
+  }
+  case count <= limit && dict.size(ids) == count && valid_cursor {
+    True -> Ok(RunPage(runs:, next_cursor:))
+    False -> invalid()
+  }
+}
+
+/// Discover runs newest first. Pass None initially and then next_cursor unchanged.
+/// Cursors are opaque strings; new runs can be discovered by restarting at None.
+pub fn history(
+  limit: Int,
+  before: Option(String),
+  config: Config,
+) -> Promise(Result(RunPage, Error)) {
+  case before {
+    Some("") ->
+      promise.resolve(Error(TransportError("history cursor must not be empty")))
+    _ ->
+      history_request(
+        config,
+        limit,
+        option.unwrap(before, ""),
+        fn(code, body, _) {
+          case code {
+            200 ->
+              parse_json(
+                body,
+                fn(data) {
+                  page(data, limit, before)
+                  |> result.map_error(fn(_) { DecodeError })
+                },
+                fn() { Error(DecodeError) },
+              )
+            _ -> Error(HttpError(code, body))
+          }
+        },
+        fn(message) { Error(TransportError(message)) },
+      )
   }
 }

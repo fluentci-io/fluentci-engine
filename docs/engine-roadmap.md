@@ -43,12 +43,12 @@ milestones do not establish a claim of being the fastest engine.
    host builders, typed direct local execution with cooperative cancellation, and
    typed HTTP submission/state/results/cancellation with acknowledged keyed replay
    and resumable binary task/service-probe logs plus typed execution journal events.
+   Typed cursor-paginated history is verified across concurrent admissions and server restart.
    Explicit submission trace context is verified through journal correlation and a local
    OTLP collector, including original-trace preservation on keyed replay.
    Release-engine cache/workspace, process-cleanup and server fixtures run on Node and Deno.
    The host CI matrix now includes these fixtures on both runtimes with required
-   release-engine execution (configured, not remotely verified). Complete Gleam HTTP
-   run history. Implement
+   release-engine execution (configured, not remotely verified). Implement
    equivalent TypeScript and Elixir builders/adapters, automate cross-repository
    compatibility tests, and complete
    the legacy SDK migration path.

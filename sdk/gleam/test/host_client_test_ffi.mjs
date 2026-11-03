@@ -6,7 +6,7 @@ import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import process from 'node:process';
 import assert from 'node:assert/strict';
-import { request, logs, events, submit_request } from './host_client_ffi.mjs';
+import { request, logs, events, submit_request, history } from './host_client_ffi.mjs';
 
 export const pause = () => new Promise(resolve => setTimeout(resolve, 25));
 const listen = server => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(server.address().port)));
@@ -38,27 +38,34 @@ export async function fixture(run, traced = false) {
     env.OTEL_EXPORTER_OTLP_ENDPOINT = `http://127.0.0.1:${collectorPort}/v1/traces`;
     env.OTEL_EXPORTER_OTLP_PROTOCOL = 'http/protobuf';
   }
-  const child = spawn(binary, ['serve-runs', '--listen', `127.0.0.1:${port}`, '--data-dir', join(root, 'server'), '--max-runs', '2'], {
-    env: { ...env, FLUENTCI_RUN_TOKEN: token }, stdio: ['ignore', 'ignore', 'pipe'],
-  });
-  let diagnostics = '', launchError;
-  child.stderr.on('data', value => { diagnostics = (diagnostics + value).slice(-8192); });
-  child.on('error', error => { launchError = error; });
-  const stopped = new Promise(resolve => child.once('close', resolve));
-  try {
-    let ready = false;
+  let child, stopped, diagnostics, launchError;
+  function start() {
+    diagnostics = ''; launchError = undefined;
+    child = spawn(binary, ['serve-runs', '--listen', `127.0.0.1:${port}`, '--data-dir', join(root, 'server'), '--max-runs', '2'], {
+      env: { ...env, FLUENTCI_RUN_TOKEN: token }, stdio: ['ignore', 'ignore', 'pipe'],
+    });
+    child.stderr.on('data', value => { diagnostics = (diagnostics + value).slice(-8192); });
+    child.on('error', error => { launchError = error; });
+    stopped = new Promise(resolve => child.once('close', resolve));
+  }
+  async function ready() {
     for (let i = 0; i < 200; i++) {
       if (launchError) throw launchError;
       if (child.exitCode !== null) throw Error(`server exited: ${diagnostics}`);
       try {
         const response = await fetch(`${base}/v1/runs`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(200) });
         await response.arrayBuffer();
-        if (response.ok) { ready = true; break; }
+        if (response.ok) return;
       } catch {}
       await pause();
     }
-    assert.ok(ready, `server did not become ready: ${diagnostics}`);
-    await run(base, token, root);
+    throw Error(`server did not become ready: ${diagnostics}`);
+  }
+  start();
+  try {
+    await ready();
+    const restart = async () => { child.kill('SIGINT'); await stopped; start(); await ready(); };
+    await run(base, token, root, restart);
     assert.equal(await readFile(join(root, 'output'), 'utf8'), 'executed', 'replayed submission must execute once');
   } finally {
     child.kill('SIGINT');
@@ -120,6 +127,14 @@ export async function mock_fixture(run) {
   const server = createServer((req, res) => {
     const mode = req.headers.authorization;
     const state = { id: '00000000-0000-0000-0000-000000000001', status: 'running', created_at_ms: 1 };
+    if (req.url.startsWith('/v1/runs?')) {
+      let page = { runs: [state], next_cursor: null };
+      if (mode === 'Bearer duplicate-history') page.runs.push(state);
+      if (mode === 'Bearer empty-history-cursor') page = { runs: [], next_cursor: 'cursor' };
+      if (mode === 'Bearer repeated-history-cursor') page.next_cursor = 'same';
+      if (mode === 'Bearer unknown-history-status') state.status = 'unknown';
+      res.writeHead(200); res.end(JSON.stringify(page)); return;
+    }
     if (mode === 'Bearer unknown-status') state.status = 'unknown';
     if (mode === 'Bearer wrong-id') state.id = '00000000-0000-0000-0000-000000000002';
     if (mode === 'Bearer negative-time') state.created_at_ms = -1;
@@ -221,5 +236,31 @@ export async function trace_transport_contract() {
       assert.equal(await send(p, state), 'error');
     }
     assert.equal(requests.length, count);
+  } finally { await close(server); }
+}
+
+
+export async function history_transport_contract() {
+  const urls = [];
+  const server = createServer((req, res) => {
+    assert.equal(req.headers.authorization, 'Bearer history-token');
+    urls.push(req.url);
+    res.writeHead(200); res.end('{"runs":[],"next_cursor":null}');
+  });
+  const port = await listen(server);
+  const config = { base_url: `http://127.0.0.1:${port}`, token: 'history-token', timeout_ms: 5000 };
+  const send = (limit, cursor) => history(config, limit, cursor, (code, body) => ({ code, body }), () => 'error');
+  try {
+    assert.equal((await send(1, '')).code, 200);
+    assert.equal((await send(200, 'opaque &limit=999/#é')).code, 200);
+    assert.equal(urls[0], '/v1/runs?limit=1');
+    const parsed = new URL(urls[1], config.base_url);
+    assert.equal(parsed.searchParams.get('before'), 'opaque &limit=999/#é');
+    assert.deepEqual(parsed.searchParams.getAll('limit'), ['200']);
+    assert.equal([...parsed.searchParams].length, 2);
+    const count = urls.length;
+    for (const limit of [0, -1, 201, 1.5]) assert.equal(await send(limit, ''), 'error');
+    assert.equal(await send(1, String.fromCharCode(0xd800)), 'error');
+    assert.equal(urls.length, count);
   } finally { await close(server); }
 }
