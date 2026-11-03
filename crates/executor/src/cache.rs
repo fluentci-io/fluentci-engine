@@ -127,6 +127,10 @@ pub(crate) fn copy_file(
 fn file_digest(path: &Path, cancel: &Cancellation) -> Result<String, String> {
     check_cancel(cancel)?;
     let mut file = File::open(path).map_err(|e| format!("read {}: {e}", path.display()))?;
+    stream_digest(&mut file, cancel)
+}
+
+fn stream_digest(file: &mut impl Read, cancel: &Cancellation) -> Result<String, String> {
     let mut hasher = Sha256::new();
     let mut buffer = [0u8; 65536];
     loop {
@@ -139,6 +143,39 @@ fn file_digest(path: &Path, cancel: &Cancellation) -> Result<String, String> {
     }
     Ok(hex::encode(hasher.finalize()))
 }
+// Storage leaves must be ordinary files. Open nonblocking before inspecting the
+// descriptor so a substituted FIFO cannot trap a cache worker before cancellation.
+// This protects the final component; the cache root/ancestors remain trusted.
+fn open_storage_file(path: &Path) -> std::io::Result<File> {
+    let mut options = fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+    }
+    let file = options.open(path)?;
+    if !file.metadata()?.is_file() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "cache storage entry is not a regular file",
+        ));
+    }
+    Ok(file)
+}
+
+fn copy_blob(source: &Path, destination: &Path, cancel: &Cancellation) -> Result<(), String> {
+    check_cancel(cancel)?;
+    let mut input = open_storage_file(source).map_err(|e| e.to_string())?;
+    let mut output = File::create(destination).map_err(|e| e.to_string())?;
+    copy_stream(&mut input, &mut output, cancel)?;
+    fs::set_permissions(
+        destination,
+        input.metadata().map_err(|e| e.to_string())?.permissions(),
+    )
+    .map_err(|e| e.to_string())
+}
+
 fn encoded_digest<T: Serialize>(value: &T) -> Result<String, String> {
     Ok(digest(
         &serde_json::to_vec(value).map_err(|e| e.to_string())?,
@@ -554,8 +591,14 @@ impl Prepared {
     }
     fn store_blob(&self, source: &Path, expected: &str) -> Result<(), String> {
         let destination = self.blob(expected)?;
-        if destination.exists() && file_digest(&destination, &self.cancel)? == expected {
-            return Ok(());
+        match open_storage_file(&destination) {
+            Ok(mut file) => {
+                if stream_digest(&mut file, &self.cancel)? == expected {
+                    return Ok(());
+                }
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.to_string()),
         }
         let mut staging =
             tempfile::NamedTempFile::new_in(self.root.join("blobs")).map_err(|e| e.to_string())?;
@@ -647,11 +690,13 @@ impl Prepared {
         crate::cache_worker_tests::pause(&task.cwd, "restore", &self.cancel)?;
         check_cancel(&self.cancel)?;
         let path = self.root.join("actions").join(format!("{}.json", self.key));
-        let bytes = match fs::read(&path) {
-            Ok(bytes) => bytes,
+        let mut file = match open_storage_file(&path) {
+            Ok(file) => file,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(false),
             Err(e) => return Err(e.to_string()),
         };
+        let mut bytes = Vec::new();
+        copy_stream(&mut file, &mut bytes, &self.cancel)?;
         let record: ActionRecord =
             serde_json::from_slice(&bytes).map_err(|e| format!("invalid cache manifest: {e}"))?;
         if encoded_digest(&record.manifest)? != record.checksum {
@@ -691,7 +736,7 @@ impl Prepared {
                 if let Some(parent) = destination.parent() {
                     fs::create_dir_all(parent).map_err(|e| e.to_string())?;
                 }
-                copy_file(&self.blob(hash)?, &destination, &self.cancel)?;
+                copy_blob(&self.blob(hash)?, &destination, &self.cancel)?;
                 if file_digest(&destination, &self.cancel)? != *hash {
                     return Err("cache blob failed integrity verification".into());
                 }
@@ -711,7 +756,7 @@ impl Prepared {
             (&manifest.stdout, &staged_stdout),
             (&manifest.stderr, &staged_stderr),
         ] {
-            copy_file(&self.blob(hash)?, target, &self.cancel)?;
+            copy_blob(&self.blob(hash)?, target, &self.cancel)?;
             if file_digest(target, &self.cancel)? != *hash {
                 return Err("cached log failed integrity verification".into());
             }
@@ -1016,6 +1061,80 @@ mod duplicate_blob_tests {
         .unwrap();
         let action = prepare(&root.join("cache"), &task, &[]).unwrap().unwrap();
         (task, action, stdout, stderr)
+    }
+
+    fn substitute(path: &Path, kind: &str, target: &Path) {
+        fs::remove_file(path).unwrap();
+        match kind {
+            "symlink" => std::os::unix::fs::symlink(target, path).unwrap(),
+            "directory" => fs::create_dir(path).unwrap(),
+            "fifo" => {
+                use std::os::unix::ffi::OsStrExt;
+                let path = std::ffi::CString::new(path.as_os_str().as_bytes()).unwrap();
+                assert_eq!(unsafe { libc::mkfifo(path.as_ptr(), 0o600) }, 0);
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn substituted_storage_entries_reject_restore_without_publishing() {
+        for entry in ["manifest", "blob", "stdout", "stderr"] {
+            for kind in ["symlink", "directory", "fifo"] {
+                let root = tempfile::tempdir().unwrap();
+                let (task, action, stdout, stderr) = fixture(root.path(), 2, b"shared");
+                fs::write(&stdout, b"cached stdout").unwrap();
+                fs::write(&stderr, b"cached stderr").unwrap();
+                action.save(&task, &stdout, &stderr).unwrap();
+                let path = if entry == "manifest" {
+                    action
+                        .root
+                        .join("actions")
+                        .join(format!("{}.json", action.key))
+                } else {
+                    let bytes: &[u8] = match entry {
+                        "stdout" => b"cached stdout",
+                        "stderr" => b"cached stderr",
+                        _ => b"shared",
+                    };
+                    action.blob(&digest(bytes)).unwrap()
+                };
+                // Even a symlink to byte-for-byte valid content must be rejected.
+                let target = root.path().join("external");
+                let original = fs::read(&path).unwrap();
+                fs::write(&target, &original).unwrap();
+                substitute(&path, kind, &target);
+                fs::write(root.path().join("outputs/0"), b"keep output").unwrap();
+                fs::write(&stdout, b"keep stdout").unwrap();
+                fs::write(&stderr, b"keep stderr").unwrap();
+                assert!(
+                    action.restore(&task, &stdout, &stderr).is_err(),
+                    "{entry}/{kind}"
+                );
+                assert_eq!(
+                    fs::read(root.path().join("outputs/0")).unwrap(),
+                    b"keep output"
+                );
+                assert_eq!(fs::read(&stdout).unwrap(), b"keep stdout");
+                assert_eq!(fs::read(&stderr).unwrap(), b"keep stderr");
+                assert_eq!(fs::read(&target).unwrap(), original);
+            }
+        }
+    }
+
+    #[test]
+    fn substituted_blobs_reject_save_without_modifying_external_content() {
+        for kind in ["symlink", "directory", "fifo"] {
+            let root = tempfile::tempdir().unwrap();
+            let (task, action, stdout, stderr) = fixture(root.path(), 2, b"shared");
+            action.save(&task, &stdout, &stderr).unwrap();
+            let blob = action.blob(&digest(b"shared")).unwrap();
+            let target = root.path().join("external");
+            fs::write(&target, b"shared").unwrap();
+            substitute(&blob, kind, &target);
+            assert!(action.save(&task, &stdout, &stderr).is_err(), "{kind}");
+            assert_eq!(fs::read(&target).unwrap(), b"shared");
+        }
     }
 
     #[test]

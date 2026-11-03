@@ -226,6 +226,11 @@ outputs or logs share its digest. This deduplication is local to that publicatio
 later publications verify stored contents again and repair corrupted blobs.
 Source snapshots still hash every distinct output path. Action locks deduplicate
 concurrent identical executions on Unix.
+On Unix, manifest and blob reads open the final path component without following
+symlinks and reject nonregular files. Nonblocking opens prevent substituted FIFOs
+from trapping workers before cancellation checks. Cache roots and ancestor
+directories remain trusted; this is not protection against arbitrary concurrent
+filesystem mutation. Manifest reads check cancellation between chunks.
 Restoration verifies all staged artifacts and logs before replacing outputs.
 Output replacement keeps backups and rolls back earlier replacements if a later
 filesystem operation fails. If rollback itself fails, backups are retained and
