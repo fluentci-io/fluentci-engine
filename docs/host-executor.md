@@ -76,7 +76,15 @@ modify the other. macOS files with special flags or extended attributes other th
 OS-maintained provenance use streaming copies, preserving the existing content/mode
 contract. Timestamps, ACLs, extended attributes, and sparse allocation are not
 part of that contract or the snapshot identity.
-Both paths retain all source/destination content and mode verification. Copying
+Both paths retain all source/destination content and mode verification. Workspace
+snapshots hash files concurrently up to the plan's `jobs` limit, capped at 64 workers
+per snapshot. Single-file snapshots and trees below 1 MiB stay serial to avoid
+thread overhead. Results remain sorted by path regardless of completion order;
+all started workers are joined on success, cancellation, error, or panic before
+setup can return or remove its staging directory. Cache-task snapshots remain
+serial within their existing bounded cache workers, without nested hash pools.
+These are per-run limits; concurrent runs can each use their configured capacity.
+Copying
 checks cancellation between entries, before/after clone calls, and between 64 KiB
 streaming chunks; an in-progress kernel clone call cannot be interrupted by the
 cancellation token. Setup finishes before the task event journal and task spans begin; setup progress events are not yet emitted.

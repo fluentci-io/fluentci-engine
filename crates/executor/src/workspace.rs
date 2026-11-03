@@ -83,7 +83,7 @@ impl Workspace {
         }
         // Before creating the run, reject links/special files and capture content
         // and modes. Rechecking source and destination detects copy-time changes.
-        let before = cache::snapshot(&source, &self.inputs, cancel)?;
+        let before = cache::snapshot_with_jobs(&source, &self.inputs, cancel, plan.jobs)?;
         let mut directory = fs::DirBuilder::new();
         #[cfg(unix)]
         {
@@ -120,8 +120,8 @@ impl Workspace {
             for entry in before.iter().rev().filter(|entry| entry.directory) {
                 cache::set_mode(&staging.path().join(&entry.path), entry.mode)?;
             }
-            if cache::snapshot(staging.path(), &self.inputs, cancel)? != before
-                || cache::snapshot(&source, &self.inputs, cancel)? != before
+            if cache::snapshot_with_jobs(staging.path(), &self.inputs, cancel, plan.jobs)? != before
+                || cache::snapshot_with_jobs(&source, &self.inputs, cancel, plan.jobs)? != before
             {
                 return Err("workspace inputs changed during setup".into());
             }

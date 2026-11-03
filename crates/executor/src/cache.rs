@@ -383,16 +383,26 @@ pub(crate) fn snapshot(
     paths: &[PathBuf],
     cancel: &Cancellation,
 ) -> Result<Vec<Entry>, String> {
+    snapshot_with_jobs(base, paths, cancel, 1)
+}
+
+pub(crate) fn snapshot_with_jobs(
+    base: &Path,
+    paths: &[PathBuf],
+    cancel: &Cancellation,
+    jobs: usize,
+) -> Result<Vec<Entry>, String> {
     fn visit(
         base: &Path,
         relative: &Path,
         entries: &mut BTreeMap<PathBuf, Entry>,
         cancel: &Cancellation,
+        bytes: &mut u64,
     ) -> Result<(), String> {
         check_cancel(cancel)?;
         // Input declarations can overlap (e.g. a source tree and a selected
-        // generated file). Each entry already contains a content hash from this
-        // traversal; revisiting it only repeats I/O. Do not retain this map
+        // generated file). Inventory each path once, then hash its contents.
+        // Revisiting it only repeats I/O. Do not retain this map
         // between snapshots: preparation/publication must re-read live inputs.
         if entries.contains_key(relative) {
             return Ok(());
@@ -403,32 +413,141 @@ pub(crate) fn snapshot(
         if !meta.is_dir() && !meta.is_file() {
             return Err(format!("unsupported artifact: {}", path.display()));
         }
+        if meta.is_file() {
+            *bytes = bytes.saturating_add(meta.len());
+        }
         entries.insert(
             relative.into(),
             Entry {
                 path: relative.into(),
                 directory: meta.is_dir(),
                 mode: mode(&meta),
-                digest: if meta.is_file() {
-                    Some(file_digest(&path, cancel)?)
-                } else {
-                    None
-                },
+                digest: None,
             },
         );
         if meta.is_dir() {
             for item in fs::read_dir(&path).map_err(|e| e.to_string())? {
                 let item = item.map_err(|e| e.to_string())?;
-                visit(base, &relative.join(item.file_name()), entries, cancel)?;
+                visit(
+                    base,
+                    &relative.join(item.file_name()),
+                    entries,
+                    cancel,
+                    bytes,
+                )?;
             }
         }
         Ok(())
     }
     let mut entries = BTreeMap::new();
+    let mut bytes = 0;
     for path in paths {
-        visit(base, path, &mut entries, cancel)?;
+        visit(base, path, &mut entries, cancel, &mut bytes)?;
     }
-    Ok(entries.into_values().collect())
+    let mut entries: Vec<_> = entries.into_values().collect();
+    // Thread startup costs more than it saves for tiny source trees.
+    let jobs = if bytes < 1024 * 1024 { 1 } else { jobs };
+    hash_entries(base, &mut entries, cancel, jobs, &|path, cancel| {
+        check_cancel(cancel)?;
+        let mut file = open_storage_file(path).map_err(|e| e.to_string())?;
+        stream_digest(&mut file, cancel)
+    })?;
+    Ok(entries)
+}
+
+// Inventory order determines the snapshot, never worker completion order. Cache
+// workers use jobs=1; only workspace setup opts into parallel hashing, avoiding
+// a nested pool for every concurrently running cached task.
+fn hash_entries(
+    base: &Path,
+    entries: &mut [Entry],
+    cancel: &Cancellation,
+    jobs: usize,
+    hash: &(impl Fn(&Path, &Cancellation) -> Result<String, String> + Sync),
+) -> Result<(), String> {
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+    if jobs <= 1
+        || entries
+            .iter()
+            .filter(|entry| !entry.directory)
+            .take(2)
+            .count()
+            < 2
+    {
+        for entry in entries.iter_mut().filter(|entry| !entry.directory) {
+            check_cancel(cancel)?;
+            entry.digest = Some(hash(&base.join(&entry.path), cancel)?);
+        }
+        return check_cancel(cancel);
+    }
+    let files: Vec<_> = entries
+        .iter()
+        .enumerate()
+        .filter(|(_, entry)| !entry.directory)
+        .collect();
+    let workers = jobs.min(64).min(files.len());
+    let next = AtomicUsize::new(0);
+    let failed = AtomicBool::new(false);
+    let digests = std::thread::scope(|scope| {
+        let mut handles = Vec::with_capacity(workers);
+        let mut failure = None;
+        for _ in 0..workers {
+            let work = || {
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    let mut digests = Vec::new();
+                    while !failed.load(Ordering::Relaxed) {
+                        check_cancel(cancel)?;
+                        let position = next.fetch_add(1, Ordering::Relaxed);
+                        let Some(&(index, entry)) = files.get(position) else {
+                            break;
+                        };
+                        digests.push((index, hash(&base.join(&entry.path), cancel)?));
+                    }
+                    Ok::<_, String>(digests)
+                }))
+                .unwrap_or_else(|_| Err("snapshot worker panicked".into()));
+                if result.is_err() {
+                    failed.store(true, Ordering::Relaxed);
+                }
+                result
+            };
+            match std::thread::Builder::new()
+                .name("fluentci-snapshot".into())
+                .spawn_scoped(scope, work)
+            {
+                Ok(handle) => handles.push(handle),
+                Err(error) => {
+                    failed.store(true, Ordering::Relaxed);
+                    failure = Some(error.to_string());
+                    break;
+                }
+            }
+        }
+        let mut all = Vec::new();
+        // Always join every started worker, including spawn/error/panic paths.
+        for handle in handles {
+            match handle
+                .join()
+                .unwrap_or_else(|_| Err("snapshot worker panicked".into()))
+            {
+                Ok(digests) => all.extend(digests),
+                Err(error) => {
+                    failed.store(true, Ordering::Relaxed);
+                    failure.get_or_insert(error);
+                }
+            }
+        }
+        if let Some(error) = failure {
+            Err(error)
+        } else {
+            Ok(all)
+        }
+    })?;
+    check_cancel(cancel)?;
+    for (index, digest) in digests {
+        entries[index].digest = Some(digest);
+    }
+    Ok(())
 }
 
 /// Returns None when another process owns the same action. The scheduler can
@@ -1199,5 +1318,134 @@ mod duplicate_blob_tests {
         }
         assert_eq!(fs::read(stdout).unwrap(), bytes);
         assert_eq!(fs::read(stderr).unwrap(), bytes);
+    }
+}
+
+#[cfg(all(test, unix))]
+mod parallel_snapshot_tests {
+    use super::*;
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Barrier,
+    };
+
+    fn entries(count: usize) -> Vec<Entry> {
+        (0..count)
+            .map(|index| Entry {
+                path: index.to_string().into(),
+                directory: false,
+                mode: 0o644,
+                digest: None,
+            })
+            .collect()
+    }
+    struct Active<'a>(&'a AtomicUsize);
+    impl Drop for Active<'_> {
+        fn drop(&mut self) {
+            self.0.fetch_sub(1, Ordering::SeqCst);
+        }
+    }
+
+    #[test]
+    fn serial_and_parallel_snapshots_have_identical_content_and_order() {
+        let root = tempfile::tempdir().unwrap();
+        fs::create_dir(root.path().join("tree")).unwrap();
+        fs::create_dir(root.path().join("tree/empty")).unwrap();
+        for index in 0..12 {
+            fs::write(
+                root.path().join(format!("tree/{index}")),
+                vec![index as u8; 100_000 + index],
+            )
+            .unwrap();
+        }
+        let roots = vec!["tree".into(), "tree/0".into(), "tree".into()];
+        let cancel = Cancellation::default();
+        let serial = snapshot(root.path(), &roots, &cancel).unwrap();
+        for jobs in [1, 2, 4, usize::MAX] {
+            assert_eq!(
+                snapshot_with_jobs(root.path(), &roots, &cancel, jobs).unwrap(),
+                serial
+            );
+        }
+        fs::write(root.path().join("tree/0"), b"changed").unwrap();
+        let changed = snapshot_with_jobs(root.path(), &roots, &cancel, 4).unwrap();
+        assert_ne!(changed, serial);
+        assert_eq!(changed, snapshot(root.path(), &roots, &cancel).unwrap());
+        std::os::unix::fs::symlink(root.path().join("tree/0"), root.path().join("tree/link"))
+            .unwrap();
+        assert!(snapshot_with_jobs(root.path(), &roots, &cancel, 4).is_err());
+        cancel.cancel();
+        assert!(snapshot_with_jobs(root.path(), &[], &cancel, 4).is_err());
+    }
+
+    #[test]
+    fn hashing_overlaps_without_exceeding_the_requested_bound() {
+        let active = AtomicUsize::new(0);
+        let peak = AtomicUsize::new(0);
+        let calls = AtomicUsize::new(0);
+        let barrier = Barrier::new(2);
+        let mut entries = entries(12);
+        hash_entries(
+            Path::new("/unused"),
+            &mut entries,
+            &Cancellation::default(),
+            2,
+            &|path, _| {
+                let running = active.fetch_add(1, Ordering::SeqCst) + 1;
+                let _active = Active(&active);
+                peak.fetch_max(running, Ordering::SeqCst);
+                if calls.fetch_add(1, Ordering::SeqCst) < 2 {
+                    barrier.wait();
+                }
+                std::thread::sleep(std::time::Duration::from_millis(2));
+                Ok(path.file_name().unwrap().to_string_lossy().into_owned())
+            },
+        )
+        .unwrap();
+        assert_eq!(peak.load(Ordering::SeqCst), 2);
+        assert_eq!(active.load(Ordering::SeqCst), 0);
+        assert_eq!(calls.load(Ordering::SeqCst), 12);
+        for entry in entries {
+            assert_eq!(entry.digest.as_deref(), entry.path.to_str());
+        }
+    }
+
+    #[test]
+    fn cancellation_failure_and_panic_join_all_hash_workers() {
+        for outcome in ["cancel", "error", "panic"] {
+            let active = AtomicUsize::new(0);
+            let finished = AtomicUsize::new(0);
+            let barrier = Barrier::new(2);
+            let cancel = Cancellation::default();
+            let mut entries = entries(2);
+            let result = hash_entries(
+                Path::new("/unused"),
+                &mut entries,
+                &cancel,
+                2,
+                &|path, token| {
+                    active.fetch_add(1, Ordering::SeqCst);
+                    let _active = Active(&active);
+                    barrier.wait();
+                    if path.file_name().unwrap() == "0" {
+                        match outcome {
+                            "cancel" => {
+                                token.cancel();
+                                return Err("cancelled".into());
+                            }
+                            "error" => return Err("injected read failure".into()),
+                            _ => panic!("injected hash panic"),
+                        }
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(20));
+                    finished.fetch_add(1, Ordering::SeqCst);
+                    Ok("other worker finished".into())
+                },
+            );
+            assert!(result.is_err(), "{outcome}");
+            assert_eq!(active.load(Ordering::SeqCst), 0, "{outcome}");
+            assert_eq!(finished.load(Ordering::SeqCst), 1, "{outcome}");
+            assert!(entries.iter().all(|entry| entry.digest.is_none()));
+        }
     }
 }

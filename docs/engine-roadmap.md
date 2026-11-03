@@ -8,6 +8,7 @@ milestones do not establish a claim of being the fastest engine.
 
 - Opt-in per-run copies of declared source paths, with content/mode verification,
   native macOS/Linux copy-on-write materialization with streaming fallback,
+  bounded parallel workspace hashing with deterministic results and joined cancellation,
   cancellable setup, CLI/HTTP support, and a PureScript workspace builder. This
   separates run files but does not sandbox host access. Explicit relocatable cache
   contracts enable reuse/deduplication across copied workspaces; the caller must
