@@ -159,3 +159,34 @@ validation are compile checks, not native runtime evidence.
 
 The platform calls follow [Apple's clonefile contract](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/man/man2/clonefile.2)
 and [Linux's FICLONE contract](https://www.man7.org/linux/man-pages/man2/FICLONE.2const.html).
+
+### Bounded workspace hashing
+
+```sh
+python3 benchmarks/workspace.py --files 8 --mib 8 --jobs 1
+python3 benchmarks/workspace.py --files 8 --mib 8 --jobs 4
+```
+
+`--mib` is the size of each file; this example uses 64 MiB total. The task mutates
+only the first workspace file. Post-run assertions verify every other workspace
+file and every source file. JSON records the file count, per-file size, and jobs.
+
+With parallel workspace snapshots on one macOS 15.6 ARM64/APFS host, five-sample
+complete-CLI medians were 414.430 ms at jobs=1 and 139.043 ms at jobs=4 (about 3x
+faster / 66% less time for this workload). Samples in milliseconds were:
+
+- jobs=1: 999.415, 408.614, 414.481, 408.477, 414.430.
+- jobs=4: 139.043, 139.069, 135.856, 136.874, 140.124.
+
+These runs used the same release binary and retained all three content/mode
+snapshots. They were sequential, without flushing OS caches; the first jobs=1
+sample was an outlier. This is a many-file hashing workload, not a general pipeline
+speedup. One large file remains serial, small snapshots below 1 MiB avoid thread
+startup, and extra I/O concurrency may not help every filesystem.
+
+Workspace snapshots use at most min(jobs, 64, file count) owned workers. Inventory
+and result order remain deterministic; overlapping declarations hash each distinct
+path once. Tests compare serial/parallel snapshots, detect later input changes,
+prove actual overlap within the configured bound, and verify all workers are
+joined after cancellation, read failure, or panic. Cache-task snapshots remain
+serial within their existing cache-worker scheduling limit.
