@@ -756,21 +756,27 @@ Fixture tests exercise command selection, argv, failures, parallel readers, excl
 updates, child-local environments, and cached consumers. The native CI matrix now
 includes an opt-in `native_package_plan_install` test that installs `jq` and runs it
 through the provider environment on supported Homebrew and BSD hosts. These jobs
-are configured but have not yet been executed remotely. MacPorts provisioning and
-native macports-rs CI coverage remain pending.
+also cover MacPorts on macOS 15 ARM64 and Intel. CI provisions the official
+MacPorts 2.12.7 binary installer and macports-rs 0.1.3 release binaries with pinned
+SHA-256 checks, avoiding CLI source builds. Both variants use the signed official
+HTTPS ports snapshot rather than rsync. The updated binary provisioning still
+requires a successful native CI run before it can be considered verified.
 
 
 ### Native MacPorts CI
 
 The host-executor workflow has separate macOS ARM64 and x86_64 jobs for native
-MacPorts and the optional Rust backend. It builds [MacPorts base v2.12.7](https://github.com/macports/macports-base/tree/dcf596a2d661edf370cd448d65db8fe99f8524e9)
-using the [official source installation procedure](https://guide.macports.org/#installing.macports.source)
-and builds [macports-rs at a pinned commit](https://github.com/tsirysndr/macports-rs/tree/5942733500137883ba642db6e8261f57907c531e)
-with `cargo build --release --locked`. Both configurations use base-provided
-configuration and a synced ports tree; this does not test standalone Rust-backend
-bootstrap. The ports tree and package archives remain upstream network inputs.
+MacPorts and the optional Rust backend. It installs the official, notarized
+[MacPorts base v2.12.7 package](https://github.com/macports/macports-base/releases/tag/v2.12.7)
+for macOS 15, plus the matching architecture's
+[macports-rs v0.1.3 binary](https://github.com/tsirysndr/macports-rs/releases/tag/v0.1.3)
+for Rust-backend jobs. Installers are cached and verified against pinned SHA-256
+hashes. Neither CLI is built from source. Both configurations use base-provided
+configuration and the signed official HTTPS ports snapshot; this does not test
+standalone Rust-backend bootstrap. The ports tree and package archives remain
+upstream network inputs.
 
-Compilation runs without elevation. Only provisioning and the already-built
+Compilation of provider tests runs without elevation. Only provisioning and the already-built
 ignored native tests run as root on disposable GitHub runners. Each job starts
 without `/opt/local/bin/jq`, installs it through the chosen provider, verifies that
 PATH selects that exact binary, then exercises the legacy extension adapter.

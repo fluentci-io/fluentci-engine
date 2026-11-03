@@ -160,47 +160,48 @@ jobs:
       - uses: ./.github/actions/rust-cache
         with:
           key: macports-${{ matrix.os }}-${{ matrix.backend }}
-      - name: Checkout pinned MacPorts base
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Cache MacPorts binary installers
+        uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
-          repository: macports/macports-base
-          ref: dcf596a2d661edf370cd448d65db8fe99f8524e9 # v2.12.7
-          path: .ci/macports-base
-          persist-credentials: false
-      - name: Provision empty MacPorts prefix on disposable runner
-        working-directory: .ci/macports-base
+          path: .ci-cache/macports-installers
+          key: macports-cli-v1-2.12.7-rs-0.1.3-${{ matrix.os }}-${{ matrix.backend }}
+      - name: Install official MacPorts binary package
         run: |
           set -euo pipefail
+          test "$(/usr/bin/sw_vers -productVersion | cut -d. -f1)" = 15
           test ! -e /opt/local/bin/jq
-          ./configure --prefix=/opt/local
-          make -j 3
-          sudo -n make install
+          package_dir="$GITHUB_WORKSPACE/.ci-cache/macports-installers"
+          mkdir -p "$package_dir"
+          package="$package_dir/MacPorts-2.12.7-15-Sequoia.pkg"
+          if [ ! -f "$package" ]; then
+            /usr/bin/curl --fail --location --proto '=https' --proto-redir '=https' --retry 3 --output "$package" https://github.com/macports/macports-base/releases/download/v2.12.7/MacPorts-2.12.7-15-Sequoia.pkg
+          fi
+          printf '%s  %s\n' 87b2e87ed7adc4aca947b42eb7ff991614cc0edfccb486237f2bbc75f28aae63 "$package" | shasum -a 256 --check
+          # Seed before installation: its postflight synchronizes the ports tree.
+          sudo -n mkdir -p /opt/local/etc/macports
+          printf '%s\n' 'https://distfiles.macports.org/ports.tar.gz [default]' | sudo -n tee /opt/local/etc/macports/sources.conf
+          sudo -n /usr/sbin/installer -pkg "$package" -target /
           /opt/local/bin/port version
           sudo -n /opt/local/bin/port -N sync
-      - name: Checkout pinned Rust backend
+      - name: Install pinned Rust backend binary
         if: matrix.backend == 'rust'
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          repository: tsirysndr/macports-rs
-          ref: 5942733500137883ba642db6e8261f57907c531e
-          path: .ci/macports-rs
-          persist-credentials: false
-      - name: Cache Rust MacPorts backend dependencies
-        if: matrix.backend == 'rust'
-        uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31
-        with:
-          env-vars: CARGO CC CFLAGS CXX CMAKE RUSTFLAGS RUSTDOCFLAGS RUSTUP_TOOLCHAIN
-          shared-key: macports-backend-${{ matrix.os }}
-          workspaces: .ci/macports-rs -> target
-          cache-on-failure: 'true'
-          cache-bin: 'false'
-      - name: Build and install release Rust backend
-        if: matrix.backend == 'rust'
-        working-directory: .ci/macports-rs
         run: |
-          cargo build --release --locked --bin port
+          set -euo pipefail
+          case "$(uname -m)" in
+            arm64) target=aarch64-apple-darwin; checksum=eed753409b5150dd0a9dffe60b2179a95497ff1bf6e13815565eb2ceee62ba40 ;;
+            x86_64) target=x86_64-apple-darwin; checksum=904e4397e3bba92302fd155f490fb22927185e7b0a76950acf8b4ec65a6e6725 ;;
+            *) echo "No pinned macports-rs binary for this architecture" >&2; exit 1 ;;
+          esac
+          package_dir="$GITHUB_WORKSPACE/.ci-cache/macports-installers"
+          archive="$package_dir/port-$target.tar.gz"
+          if [ ! -f "$archive" ]; then
+            /usr/bin/curl --fail --location --proto '=https' --proto-redir '=https' --retry 3 --output "$archive" "https://github.com/tsirysndr/macports-rs/releases/download/v0.1.3/port-$target.tar.gz"
+          fi
+          printf '%s  %s\n' "$checksum" "$archive" | shasum -a 256 --check
+          extract=$(mktemp -d "$RUNNER_TEMP/macports-rs.XXXXXX")
+          tar -xzf "$archive" -C "$extract"
           sudo -n install -d /usr/local/bin
-          sudo -n install -m 755 target/release/port /usr/local/bin/port
+          sudo -n install -m 755 "$extract/port" /usr/local/bin/port
           /usr/local/bin/port version
       - name: Build release native-install tests without elevation
         run: |

@@ -14,8 +14,8 @@ flags remain in the key.
 
 The native macOS release and legacy Linux e2e workflows build directly with Cargo
 so these caches are used. Neither workflow deletes Cargo build artifacts before
-cache persistence. MacPorts' external Rust workspace has a separate dependency
-cache and uses the same compiler wrapper.
+cache persistence. MacPorts and macports-rs use pinned, SHA-256-verified native binary packages
+instead of rebuilding the CLIs; the provider tests still use the compiler caches.
 
 BSD VM jobs restore `.ci-cache/bsd-rust` before boot and copy it back after the
 VM run. Cache keys separate guest OS/release/architecture and manifest/source
