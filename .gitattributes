@@ -2,3 +2,4 @@
 # Keep pinned third-party snapshots identifiable and preserve upstream whitespace.
 vendor/** linguist-vendored
 vendor/wasmtime/** -whitespace
+vendor/extism-openbsd/** -whitespace

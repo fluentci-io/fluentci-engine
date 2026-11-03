@@ -6,14 +6,15 @@ The `BSD releases` workflow builds the **full CLI** on native x86_64 guests:
 | --- | --- | --- | --- |
 | `x86_64-unknown-freebsd` | FreeBSD 14.3 | Official Rust 1.99.1 | Build, smoke-test, package |
 | `x86_64-unknown-netbsd` | NetBSD 10.1 | Official Rust 1.99.1 | Build with the vendored Wasmtime signal-context fix, smoke-test, package |
-| `x86_64-unknown-openbsd` | OpenBSD 7.8 | Native package must match Rust 1.99.1 | Explicitly skip while unavailable; never substitute an older compiler |
+| `x86_64-unknown-openbsd` | OpenBSD 7.8 | Latest native package (currently Rust 1.90.0) | Build with the OpenBSD-compatible runtime, smoke-test, package |
 
-The compiler pin is read from `rust-toolchain.toml`. OpenBSD does not have
-upstream precompiled Rust host tools; its pinned 7.8 package repository currently
-provides Rust 1.90.0. Its workflow reports the mismatch in the job summary and
-uploads no OpenBSD asset. A matching native package enables that build without
-changing the compiler requirement. Other build or smoke-test failures fail the
-job; they are not silently classified as unsupported platforms.
+FreeBSD/NetBSD read the compiler pin from `rust-toolchain.toml`. OpenBSD uses
+its latest native Rust package because upstream does not distribute precompiled
+Rust host tools for this target. Its package repository currently provides Rust
+1.90.0. Only OpenBSD selects the vendored Extism 1.21.0 compatibility runtime with
+Wasmtime 41.0.4 (MSRV 1.90); the other platforms keep Extism 1.41.0 and the patched
+Wasmtime 49.0.5. The Rust PDK and XTP contracts are unchanged. Build and smoke-test
+failures fail the job and prevent publishing.
 
 Only x86_64 is covered. These are dynamically linked native binaries. Use them on
 the documented guest OS/version and architecture, with the shared libraries
@@ -31,9 +32,9 @@ fluentci-engine_<tag>_x86_64-unknown-netbsd.tar.gz
 fluentci-engine_<tag>_x86_64-unknown-netbsd.tar.gz.sha256
 ```
 
-The OpenBSD pair uses the same convention when its compiler gate passes.
+The OpenBSD pair uses the same convention with `x86_64-unknown-openbsd`.
 Each archive contains the executable, build/source/toolchain metadata, project
-license, this guide, and the vendored SuperConsole/Wasmtime licenses.
+license, this guide, and the vendored runtime licenses.
 Compare `sha256 -q <archive>` against its `.sha256` file before extracting.
 Install the extracted executable into a directory on `PATH`, for example:
 
@@ -70,8 +71,7 @@ that touch release/runtime files build artifacts without publishing. Manual
 `workflow_dispatch` defaults to validation only; enabling `publish` requires a
 nonempty existing release tag containing this workflow and its scripts.
 
-Publishing starts only after all native build jobs succeed or explicitly skip an
-unsupported OpenBSD toolchain. No release tag is created automatically. Linux and
+Publishing starts only after all native build jobs succeed. No release tag is created automatically. Linux and
 macOS retain their existing release workflows. Native runtime validation happens
 in GitHub Actions; adding this workflow does not claim a completed BSD build.
 

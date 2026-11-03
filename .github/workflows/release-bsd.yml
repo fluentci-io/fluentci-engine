@@ -9,12 +9,14 @@ on:
       - '.github/workflows/release-bsd.yml'
       - '.github/scripts/*bsd-release*'
       - '.github/scripts/create-bsd-smoke-fixtures.py'
-      - 'vendor/wasmtime/**'
+      - '.github/scripts/check-openbsd-msrv.py'
+      - 'vendor/**'
   pull_request:
     paths:
       - '.github/workflows/release-bsd.yml'
       - '.github/scripts/*bsd-release*'
       - '.github/scripts/create-bsd-smoke-fixtures.py'
+      - '.github/scripts/check-openbsd-msrv.py'
       - 'crates/**'
       - 'Cargo.*'
       - 'vendor/**'
@@ -64,6 +66,8 @@ jobs:
       - uses: ./.github/actions/rust-cache
         with:
           key: bsd-release-wasm-fixtures
+      - name: Check OpenBSD dependency compiler requirements
+        run: python3 .github/scripts/check-openbsd-msrv.py
       - name: Verify artifact-validation safeguards using mock archives
         run: python3 .github/scripts/test-bsd-release-verification.py -v
       - name: Build XTP plugin and generate trap fixtures
@@ -139,7 +143,7 @@ jobs:
           envs: 'RELEASE_TAG RELEASE_TARGET'
           prepare: sh .github/scripts/prepare-bsd-release.sh
           run: sh .github/scripts/build-bsd-release.sh
-      - name: Build and smoke-test on OpenBSD when its native compiler matches
+      - name: Build and smoke-test on OpenBSD with native Rust
         if: matrix.os == 'openbsd'
         uses: vmactions/openbsd-vm@f1ca8bc8ecc5b6ef7218e5b914836e067e1546d3
         with:
@@ -151,7 +155,7 @@ jobs:
           envs: 'RELEASE_TAG RELEASE_TARGET'
           prepare: sh .github/scripts/prepare-bsd-release.sh
           run: sh .github/scripts/build-bsd-release.sh
-      - name: Verify copied-back release assets or explain unsupported toolchain
+      - name: Verify copied-back release assets
         id: assets
         shell: bash
         run: |
@@ -162,12 +166,6 @@ jobs:
               python3 .github/scripts/verify-bsd-release.py "$output" "$RELEASE_TAG" "$RELEASE_TARGET"
               echo 'built=true' >> "$GITHUB_OUTPUT"
               echo "Built and smoke-tested $RELEASE_TARGET ($RELEASE_TAG)." >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            skipped)
-              test "$RELEASE_TARGET" = x86_64-unknown-openbsd
-              echo 'built=false' >> "$GITHUB_OUTPUT"
-              cat "$output/SKIPPED.txt" >> "$GITHUB_STEP_SUMMARY"
-              echo '::notice::OpenBSD release skipped: native Rust does not match the pinned toolchain.'
               ;;
             *) echo 'Missing or invalid build status' >&2; exit 1 ;;
           esac

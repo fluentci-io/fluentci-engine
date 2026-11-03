@@ -29,6 +29,7 @@ class ReleaseVerification(unittest.TestCase):
                 "BUILD-INFO.txt": f"Target: {metadata_target}\nRelease tag: {TAG}\n".encode(),
                 "LICENSE": b"fixture", "README.md": b"fixture",
                 "licenses/wasmtime/LICENSE": b"fixture",
+                "licenses/extism-openbsd/LICENSE": b"fixture",
                 "licenses/superconsole/LICENSE-MIT": b"fixture",
                 "licenses/superconsole/LICENSE-APACHE": b"fixture",
             }

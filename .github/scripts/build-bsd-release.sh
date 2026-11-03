@@ -20,17 +20,13 @@ rust_version=$(sed -n 's/^channel = "\([^"]*\)"/\1/p' rust-toolchain.toml)
 test -n "$rust_version"
 
 if [ "$(uname -s)" = OpenBSD ]; then
-    # OpenBSD is tier 3: official Rust binary toolchains are not distributed.
-    # Keep the requested compiler pin; do not silently publish with an older compiler.
-    installed_version=$(rustc --version | awk '{print $2}')
-    if [ "$installed_version" != "$rust_version" ]; then
-        printf 'OpenBSD %s provides Rust %s; this release requires Rust %s. No asset was built.\n' \
-            "$(uname -r)" "$installed_version" "$rust_version" > "$output/SKIPPED.txt"
-        printf 'skipped\n' > "$output/status"
-        cat "$output/SKIPPED.txt"
-        exit 0
-    fi
+    # OpenBSD uses the newest compiler shipped by its native package repository.
+    # Its target-specific runtime dependencies are compatible with Rust 1.90.
+    rust_version=$(rustc --version | awk '{print $2}')
+    echo "Using native OpenBSD Rust $rust_version"
+    runtime='Extism 1.21.0 / Wasmtime 41.0.4 (OpenBSD compatibility)'
 else
+    runtime='Extism 1.41.0 / Wasmtime 49.0.5 (NetBSD signal backport)'
     # FreeBSD and NetBSD have official Rust host-tool distributions.
     prefix="$repository/.ci-cache/bsd-rust/toolchains/$rust_version-$RELEASE_TARGET"
     if [ ! -x "$prefix/bin/rustc" ] || [ "$("$prefix/bin/rustc" --version | awk '{print $2}')" != "$rust_version" ]; then
@@ -73,12 +69,14 @@ stage=$(mktemp -d)
 cp "$binary" "$stage/fluentci-engine"
 cp LICENSE "$stage/LICENSE"
 cp .github/BSD-RELEASES.md "$stage/README.md"
-mkdir -p "$stage/licenses/superconsole" "$stage/licenses/wasmtime"
+mkdir -p "$stage/licenses/superconsole" "$stage/licenses/wasmtime" "$stage/licenses/extism-openbsd"
 cp vendor/superconsole/LICENSE-* "$stage/licenses/superconsole/"
 cp vendor/wasmtime/LICENSE "$stage/licenses/wasmtime/LICENSE"
+cp vendor/extism-openbsd/LICENSE "$stage/licenses/extism-openbsd/LICENSE"
 {
     printf 'Target: %s\nRelease tag: %s\nSource revision: %s\n' "$RELEASE_TARGET" "$RELEASE_TAG" "$(git rev-parse HEAD)"
     "$stage/fluentci-engine" --version
+    printf 'Runtime: %s\n' "$runtime"
     uname -a
     rustc -vV
     cargo --version

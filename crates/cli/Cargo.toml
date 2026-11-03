@@ -18,7 +18,6 @@ serde_json = "1.0"
 crossterm = { workspace = true }
 anyhow = "1.0.81"
 clap = "3.2.20"
-extism = { workspace = true }
 fluentci-core = {path = "../core", version = "0.3.8"}
 fluentci-ext = {path = "../ext", version = "0.2.7"}
 fluentci-server = {path = "../server", version = "0.3.9"}
@@ -30,3 +29,10 @@ sha256 = "1.5.0"
 tokio = {version = "1.36.0", features = ["tokio-macros", "macros", "rt", "rt-multi-thread", "signal"]}
 
 reqwest = { version = "0.12.4", default-features = false, features = ["rustls-tls"] }
+
+[target.'cfg(not(target_os = "openbsd"))'.dependencies]
+extism = { workspace = true }
+
+# Wasmtime 41 is the newest runtime line supported by OpenBSD's Rust 1.90.
+[target.'cfg(target_os = "openbsd")'.dependencies]
+extism-openbsd = { package = "fluentci-extism-openbsd", path = "../../vendor/extism-openbsd", version = "=1.21.0" }

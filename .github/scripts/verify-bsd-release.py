@@ -37,7 +37,7 @@ with tarfile.open(archive, "r:gz") as package:
         info = source.read().decode("utf-8")
     if f"Target: {target}\n" not in info or f"Release tag: {tag}\n" not in info:
         raise SystemExit("Build metadata does not match artifact")
-    for required in ["LICENSE", "README.md", "licenses/wasmtime/LICENSE",
+    for required in ["LICENSE", "README.md", "licenses/wasmtime/LICENSE", "licenses/extism-openbsd/LICENSE",
                      "licenses/superconsole/LICENSE-MIT", "licenses/superconsole/LICENSE-APACHE"]:
         if not package.getmember(required).isfile():
             raise SystemExit(f"Missing release file: {required}")

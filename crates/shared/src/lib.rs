@@ -1,3 +1,7 @@
+// OpenBSD's native Rust 1.90 requires the compatible runtime line.
+#[cfg(target_os = "openbsd")]
+extern crate extism_openbsd as extism;
+
 pub mod cache;
 pub mod devbox;
 pub mod devenv;

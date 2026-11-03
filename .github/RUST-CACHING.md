@@ -55,6 +55,7 @@ revision and reproducible patch.
 
 BSD release jobs additionally cache the exact official FreeBSD/NetBSD Rust host
 toolchains. They build and smoke-test the full CLI before packaging. The native
-OpenBSD compiler must match the project pin or its release is explicitly skipped.
+OpenBSD compiler comes from its native package repository and uses a compatible
+OpenBSD-only runtime dependency selection.
 All vendored Rust sources and manifests participate in source cache keys, including
 the pinned Wasmtime backport used for NetBSD. See [BSD releases](BSD-RELEASES.md).
