@@ -84,6 +84,12 @@ defmodule FluentCI.Host.Local do
   @spec output(Execution.t()) :: {:ok, binary()} | {:error, Error.t()}
   def output(%Execution{pid: pid}), do: call(pid, :output, 5000)
 
+  @doc "Read a resumable typed journal page. Retained artifacts remain readable after close."
+  @spec events(Execution.t(), non_neg_integer(), pos_integer()) ::
+          {:ok, FluentCI.Host.Journal.Batch.t()} | {:error, FluentCI.Host.Journal.Error.t()}
+  def events(%Execution{run_directory: directory}, cursor \\ 0, limit \\ 100),
+    do: FluentCI.Host.Journal.read(directory, cursor, limit)
+
   defp call(pid, message, timeout) do
     GenServer.call(pid, message, timeout)
   catch

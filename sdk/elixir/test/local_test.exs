@@ -1,7 +1,7 @@
 defmodule FluentCI.LocalTest do
   use ExUnit.Case, async: true
   alias FluentCI.Host, as: H
-  alias FluentCI.Host.{Local, Result}
+  alias FluentCI.Host.{Journal, Local, Result}
   import Bitwise
 
   @engine System.get_env(
@@ -75,6 +75,52 @@ defmodule FluentCI.LocalTest do
       |> H.timeout_ms(15_000)
 
     H.plan([task])
+  end
+
+  defp remaining_events(handle, cursor) do
+    assert {:ok, batch} = Local.events(handle, cursor, 2)
+
+    case batch.events do
+      [] -> []
+      events -> events ++ remaining_events(handle, batch.next_cursor)
+    end
+  end
+
+  test "typed events are readable live and resume after completion and close", %{
+    root: root,
+    opts: opts
+  } do
+    task =
+      H.task("live", "/bin/sh", ".")
+      |> H.args([
+        "-c",
+        "printf 'live-你好\\n'; while [ ! -f release ]; do /bin/sleep 0.02; done; printf done"
+      ])
+      |> H.timeout_ms(15_000)
+
+    handle = start(H.plan([task]), opts)
+
+    wait_until(fn ->
+      {:ok, batch} = Local.events(handle)
+
+      Enum.any?(batch.events, fn event ->
+        match?({:log, %{text: "live-你好\n"}}, event.kind)
+      end)
+    end)
+
+    assert {:error, %Local.Error{kind: :timeout}} = Local.await(handle, 1)
+    assert {:ok, first} = Local.events(handle)
+    File.write!(Path.join(root, "release"), "go")
+    assert {:ok, _} = Local.await(handle)
+    events = first.events ++ remaining_events(handle, first.next_cursor)
+    assert Enum.map(events, & &1.sequence) == Enum.to_list(0..(length(events) - 1))
+    assert hd(events).kind == {:run_started, 1}
+    assert List.last(events).kind == {:run_finished, true}
+    assert Enum.any?(events, &match?({:task_state, %{status: :succeeded}}, &1.kind))
+    assert :ok = Local.close(handle)
+
+    assert {:ok, %Journal.Batch{events: [%Journal.Event{sequence: 0}]}} =
+             Local.events(handle, 0, 1)
   end
 
   test "owned runs resolve paths once, isolate files and return cache hits", %{
@@ -405,6 +451,12 @@ defmodule FluentCI.LocalTest do
              Local.cancel(handle)
 
     assert %Result.ProbeLogs{} = hd(result.tasks).probe_logs
+    events = remaining_events(handle, 0)
+    assert Enum.any?(events, &match?({:task_state, %{status: :ready}}, &1.kind))
+    assert Enum.any?(events, &match?({:task_state, %{status: :cancelled}}, &1.kind))
+    assert Enum.any?(events, &match?({:log, %{stream: :probe_stdout}}, &1.kind))
+    assert Enum.any?(events, &match?({:log, %{stream: :probe_stderr}}, &1.kind))
+    assert List.last(events).kind == {:run_finished, false}
 
     for file <- ["service.pid", "probe.pid", "consumer.pid"] do
       pid = File.read!(Path.join(root, file)) |> String.trim()

@@ -826,5 +826,8 @@ remain absent. `FluentCI.Host.Local` starts private, independently owned executi
 returns typed reports after engine exit, and cooperatively cancels on request or
 owner death. Temporary OTP-supervised workers do not replay side effects on failure;
 ordinary termination waits for engine cleanup. A bounded live diagnostic tail is
-available, with exact bytes retained in task/probe files. Hard-crash supervision,
-an Elixir HTTP client, and event decoding remain unfinished.
+available, with exact bytes retained in task/probe files. `FluentCI.Host.Journal`
+decodes typed events and reads bounded local pages with resumable byte cursors;
+`Local.events` follows live runs and retained artifacts. Partial records wait for
+the next poll, and malformed records return structured errors. Hard-crash
+supervision and an Elixir HTTP client remain unfinished.

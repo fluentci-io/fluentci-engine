@@ -94,8 +94,8 @@ consumer = H.task("jq", "jq", "/absolute/project")
 Installation is a separate uncached step with a prefix lease. No package manager
 is installed or bootstrapped by the SDK, and compilation never installs packages.
 The generated JSON can be passed to the existing CLI or authenticated run API.
-A managed local runner is also available; an Elixir HTTP client and event decoder
-remain work for subsequent milestones.
+A managed local runner and typed, resumable local journal reads are also available.
+An Elixir HTTP client remains work for a subsequent milestone.
 
 ## Managed local execution
 
@@ -163,6 +163,60 @@ not a complete or resumable log stream. Exact task/probe bytes remain in report 
 files. Errors include the run directory, exit status when available, and a bounded
 diagnostic tail; that tail may contain task output and should be handled accordingly.
 
+## Typed live events
+
+```elixir
+alias FluentCI.Host.{Journal, Local}
+
+{:ok, batch} = Local.events(execution, 0, 100)
+Enum.each(batch.events, fn
+  %Journal.Event{kind: {:log, %{stream: :stdout, text: text}}} -> IO.write(text)
+  %Journal.Event{kind: {:task_state, task}} -> IO.inspect({task.id, task.status})
+  %Journal.Event{kind: {:run_finished, success}} -> IO.inspect({:finished, success})
+  _ -> :ok
+end)
+next_cursor = batch.next_cursor
+# On the next poll: Local.events(execution, next_cursor, 100)
+```
+
+`Journal.decode/1` and `from_map/1` are pure decoders. Events carry sequence,
+elapsed milliseconds, optional trace/span strings, and a tagged `kind` tuple:
+`{:run_started, task_count}`, `{:task_state, fields}`, `{:log, fields}`, or
+`{:run_finished, success}`. Task statuses and the four streams (`:stdout`, `:stderr`,
+`:probe_stdout`, `:probe_stderr`) use fixed atoms. All unsigned 64-bit counters retain
+exact precision. Unknown fields and cache outcome strings are accepted; unknown
+event/status/stream variants are errors. No atoms are created from input.
+
+`Local.events/3` reads the handle's retained journal directly, including after
+`close`; `Journal.read(run_directory, cursor, limit)` also reads saved runs. The
+limit defaults to 100 records and accepts 1–1000. Each read buffers at most 4 MiB
+plus one lookahead byte in 16 KiB chunks, stops reading once enough complete lines
+are present, and returns at most 4 MiB of complete records. A single record,
+including its newline, cannot exceed 4 MiB. This bounds raw page input; decoded
+Elixir terms have additional memory overhead.
+
+Persist `next_cursor` as a byte offset. The reader never advances over a partial
+last line, so appending its remaining bytes makes it readable on the next poll.
+A missing journal at cursor zero yields an empty page while workspace setup or
+engine startup is in progress. Empty pages do not prove completion: observe
+`{:run_finished, success}` or await the handle's terminal report. If the engine
+crashes without finishing the journal, awaiting the local handle reports that
+failure; polling alone does not manufacture a completion event.
+
+Negative/out-of-range or mid-record cursors, truncation past the cursor,
+nonregular journal files, oversized records, and malformed complete records
+return `%Journal.Error{}`. Sequence numbers must be contiguous within each page,
+and reads from zero require sequence zero. An error returns no partial page; its
+cursor identifies the offending position, not an acknowledgement of earlier records.
+Error metadata does not contain malformed JSON or log text. Reads assume an
+append-only journal in trusted run storage; file replacement races are not a
+sandbox boundary. There is no automatic polling task or HTTP transport yet.
+
+Journal text is the engine's UTF-8 display representation. Exact binary task and
+probe output remains in the report's log files. Caller code controls polling and
+retention of returned batches; keep the execution's owning process alive while
+following a live run.
+
 ## Terminal result decoding
 
 ```elixir
@@ -216,7 +270,10 @@ precision. Local-runner tests cover concurrent cwd/env isolation, repeatable res
 live output, cancellation and descendant cleanup, owner death, OTP termination,
 service/health/consumer cancellation with lease reuse, early cancellation, private
 files, malformed or oversized reports, bounded waiters, and absence of automatic
-replay after handle termination. Package-manager encoding tests perform
+replay after handle termination. Journal tests cover all variants, exact counters,
+partial writes, Unicode byte cursors, bounded and boundary-sized pages, invalid
+records/cursors, live local reads, and service-probe events after cancellation.
+Package-manager encoding tests perform
 no installation. The workflow
 includes these tests on Ubuntu with Elixir 1.18.4/OTP 27.3.4; local validation also
 runs on macOS ARM64. A configured CI job is not evidence of a completed remote run.
