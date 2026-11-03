@@ -20,10 +20,11 @@ instead of rebuilding the CLIs; the provider tests still use the compiler caches
 
 BSD VM jobs restore `.ci-cache/bsd-rust` before boot and copy it back after the
 VM run. Cache keys separate guest OS/release/architecture and manifest/source
-hashes. The sourced script sets guest-local Cargo home, target and sccache paths.
-Native sccache packages are attempted; where unavailable, Cargo download/artifact
-caching remains active. Linux sccache binaries and credentials are not copied into
-guests. A failed VM run may not reach the action's copyback phase, so only cache
+hashes. The sourced script sets guest-local Cargo home and target paths.
+sccache is disabled on FreeBSD, NetBSD, and OpenBSD, including inherited compiler
+wrappers, because packaged wrappers can fail to spawn rustc (NetBSD: bad file
+descriptor). Cargo download and compiled artifact caching remain enabled, as does
+the release toolchain cache. No sccache package is installed in BSD guests. A failed VM run may not reach the action's copyback phase, so only cache
 data actually synchronized back can be saved.
 
 Linux release packaging still runs in its existing Dagger container. The release

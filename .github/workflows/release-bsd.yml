@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/release-bsd.yml'
       - '.github/scripts/*bsd-release*'
+      - '.github/scripts/bsd-rust-cache.sh'
       - '.github/scripts/create-bsd-smoke-fixtures.py'
       - '.github/scripts/check-openbsd-msrv.py'
       - 'vendor/**'
@@ -15,6 +16,7 @@ on:
     paths:
       - '.github/workflows/release-bsd.yml'
       - '.github/scripts/*bsd-release*'
+      - '.github/scripts/bsd-rust-cache.sh'
       - '.github/scripts/create-bsd-smoke-fixtures.py'
       - '.github/scripts/check-openbsd-msrv.py'
       - 'crates/**'
@@ -111,7 +113,7 @@ jobs:
         with:
           name: bsd-smoke-fixtures
           path: .release-smoke
-      - name: Restore native compiler, Cargo, and sccache caches
+      - name: Restore native compiler and Cargo artifact caches
         uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
           path: .ci-cache/bsd-rust

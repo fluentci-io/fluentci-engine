@@ -270,7 +270,6 @@ jobs:
           prepare: |
             set -eu
             pkg install -y rust git pkgconf
-            pkg install -y sccache || echo "sccache package unavailable; using Cargo artifact cache"
           run: |
             set -eu
             . .github/scripts/bsd-rust-cache.sh
@@ -321,7 +320,6 @@ jobs:
             printf '%s\n' "$repositories" | tr ';' '\n' > /usr/pkg/etc/pkgin/repositories.conf
             /usr/pkg/bin/pkgin -y update
             /usr/pkg/bin/pkgin -y install rust git pkgconf
-            /usr/pkg/bin/pkgin -y install sccache || echo "sccache package unavailable; using Cargo artifact cache"
           run: |
             set -eu
             export PATH=/usr/pkg/bin:/usr/pkg/sbin:$PATH
@@ -360,7 +358,6 @@ jobs:
           prepare: |
             set -eu
             pkg_add -I rust git pkgconf
-            pkg_add -I sccache || echo "sccache package unavailable; using Cargo artifact cache"
           run: |
             set -eu
             export PATH=/usr/local/bin:/usr/local/sbin:$PATH
