@@ -9,6 +9,8 @@ on:
       - 'sdk/**'
       - 'sdk/elixir/**'
       - '.github/workflows/host-executor.yml'
+      - '.github/actions/rust-cache/**'
+      - '.github/scripts/**'
       - 'rust-toolchain.toml'
   push:
     branches: [main]
@@ -36,6 +38,9 @@ jobs:
         with:
           toolchain: '1.99.1'
           components: clippy
+      - uses: ./.github/actions/rust-cache
+        with:
+          key: host-${{ matrix.os }}
       - name: Executor, cache, server lifecycle, and legacy regression tests
         run: cargo test --release --locked -p fluentci-executor -p fluentci-core -p fluentci-server --lib --tests
       - name: Require native workspace clones on APFS
@@ -152,6 +157,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # pinned action; toolchain selected below
         with:
           toolchain: '1.99.1'
+      - uses: ./.github/actions/rust-cache
+        with:
+          key: macports-${{ matrix.os }}-${{ matrix.backend }}
       - name: Checkout pinned MacPorts base
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -177,6 +185,15 @@ jobs:
           ref: 5942733500137883ba642db6e8261f57907c531e
           path: .ci/macports-rs
           persist-credentials: false
+      - name: Cache Rust MacPorts backend dependencies
+        if: matrix.backend == 'rust'
+        uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31
+        with:
+          env-vars: CARGO CC CFLAGS CXX CMAKE RUSTFLAGS RUSTDOCFLAGS RUSTUP_TOOLCHAIN
+          shared-key: macports-backend-${{ matrix.os }}
+          workspaces: .ci/macports-rs -> target
+          cache-on-failure: 'true'
+          cache-bin: 'false'
       - name: Build and install release Rust backend
         if: matrix.backend == 'rust'
         working-directory: .ci/macports-rs
@@ -208,18 +225,28 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Restore native freebsd Rust caches
+        uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
+        with:
+          path: .ci-cache/bsd-rust
+          key: bsd-rust-v1-freebsd-14.3-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-${{ hashFiles('crates/**/*.rs') }}
+          restore-keys: |
+            bsd-rust-v1-freebsd-14.3-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-
+            bsd-rust-v1-freebsd-14.3-x86_64-
       - uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc # v1
         with:
           release: '14.3'
           arch: x86_64
           mem: 8192
           cpu: 2
-          copyback: false
+          copyback: true
           prepare: |
             set -eu
             pkg install -y rust git pkgconf
+            pkg install -y sccache || echo "sccache package unavailable; using Cargo artifact cache"
           run: |
             set -eu
+            . .github/scripts/bsd-rust-cache.sh
             export CARGO_BUILD_JOBS=2
             uname -a
             rustc --version
@@ -234,13 +261,21 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Restore native netbsd Rust caches
+        uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
+        with:
+          path: .ci-cache/bsd-rust
+          key: bsd-rust-v1-netbsd-10.1-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-${{ hashFiles('crates/**/*.rs') }}
+          restore-keys: |
+            bsd-rust-v1-netbsd-10.1-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-
+            bsd-rust-v1-netbsd-10.1-x86_64-
       - uses: vmactions/netbsd-vm@c8a0d7ddb84619a7a8cc4e652efa7950b3fd9f92 # v1
         with:
           release: '10.1'
           arch: x86_64
           mem: 8192
           cpu: 2
-          copyback: false
+          copyback: true
           prepare: |
             set -eu
             export PATH=/usr/pkg/bin:/usr/pkg/sbin:/usr/bin:/usr/sbin:/bin:/sbin
@@ -257,9 +292,11 @@ jobs:
             printf '%s\n' "$repositories" | tr ';' '\n' > /usr/pkg/etc/pkgin/repositories.conf
             /usr/pkg/bin/pkgin -y update
             /usr/pkg/bin/pkgin -y install rust git pkgconf
+            /usr/pkg/bin/pkgin -y install sccache || echo "sccache package unavailable; using Cargo artifact cache"
           run: |
             set -eu
             export PATH=/usr/pkg/bin:/usr/pkg/sbin:$PATH
+            . .github/scripts/bsd-rust-cache.sh
             export CARGO_BUILD_JOBS=2
             uname -a
             rustc --version
@@ -274,19 +311,29 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Restore native openbsd Rust caches
+        uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
+        with:
+          path: .ci-cache/bsd-rust
+          key: bsd-rust-v1-openbsd-7.8-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-${{ hashFiles('crates/**/*.rs') }}
+          restore-keys: |
+            bsd-rust-v1-openbsd-7.8-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-
+            bsd-rust-v1-openbsd-7.8-x86_64-
       - uses: vmactions/openbsd-vm@f1ca8bc8ecc5b6ef7218e5b914836e067e1546d3 # v1
         with:
           release: '7.8'
           arch: x86_64
           mem: 8192
           cpu: 2
-          copyback: false
+          copyback: true
           prepare: |
             set -eu
             pkg_add -I rust git pkgconf
+            pkg_add -I sccache || echo "sccache package unavailable; using Cargo artifact cache"
           run: |
             set -eu
             export PATH=/usr/local/bin:/usr/local/sbin:$PATH
+            . .github/scripts/bsd-rust-cache.sh
             export CARGO_BUILD_JOBS=2
             uname -a
             rustc --version
@@ -304,6 +351,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
         with:
           toolchain: '1.99.1'
+      - uses: ./.github/actions/rust-cache
+        with:
+          key: flox-bootstrap-ubuntu-24.04
       - name: Bootstrap Flox and activate jq through the extension
         env:
           FLOX_VERSION: '1.19.3'

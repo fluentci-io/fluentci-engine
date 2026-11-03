@@ -1,0 +1,32 @@
+name: Rust build caches
+description: Cache Cargo dependencies and use sccache for release compilation
+inputs:
+  key:
+    description: Platform/target cache partition
+    required: true
+  workspaces:
+    description: Cargo workspace and target mappings
+    default: '. -> target'
+runs:
+  using: composite
+  steps:
+    - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba
+      with:
+        version: v0.16.0
+    - name: Enable compiler cache
+      shell: bash
+      run: |
+        echo "RUSTC_WRAPPER=$SCCACHE_PATH" >> "$GITHUB_ENV"
+        echo 'SCCACHE_GHA_ENABLED=true' >> "$GITHUB_ENV"
+        echo 'CARGO_INCREMENTAL=0' >> "$GITHUB_ENV"
+    - uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31
+      with:
+        # SCCACHE_PATH may live in a per-run directory; do not hash that
+        # wrapper path into the dependency cache key. Compiler identity is
+        # already included by rust-cache itself.
+        env-vars: CARGO CC CFLAGS CXX CMAKE RUSTFLAGS RUSTDOCFLAGS RUSTUP_TOOLCHAIN
+        shared-key: ${{ inputs.key }}
+        workspaces: ${{ inputs.workspaces }}
+        cache-on-failure: 'true'
+        cache-bin: 'false'
+        save-if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}

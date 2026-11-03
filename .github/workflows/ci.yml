@@ -50,14 +50,20 @@ jobs:
         uses: fluentci-io/setup-fluentci@v5
         with:
           wasm: true
-          pipeline: rust
-          args: build --release
           engine-version: 0.4.12
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: '1.99.1'
+          targets: wasm32-unknown-unknown
+      - uses: ./.github/actions/rust-cache
+        with:
+          key: legacy-ci-ubuntu-24.04
+      - name: Build release engine
+        run: cargo build --release --locked -p fluentci-engine
       - name: Run Build and e2e tests
         run: |
           export PATH=${HOME}/.cargo/bin:${PATH}
           ls -ltr ../target
-          rm -rf ../target/release/build target/release/deps target/release/examples target/release/incremental
           sudo cp ../target/release/fluentci-engine $HOME/.local/bin
           fluentci-engine run -- deno run -A ../.fluentci/e2e.ts
         working-directory: fixtures

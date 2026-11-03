@@ -5,7 +5,7 @@ on:
 jobs:
   release:
     name: release x86_64-apple-darwin
-    runs-on: macos-12
+    runs-on: macos-15-intel
     strategy:
       fail-fast: false
       matrix:
@@ -15,20 +15,23 @@ jobs:
 
     steps:
       - name: Installing needed dependencies
-        run: brew install protobuf sccache
+        run: brew install protobuf
       - name: Checking out sources
-        uses: actions/checkout@v1
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: '1.99.1'
+          targets: ${{ matrix.target }}
+      - uses: ./.github/actions/rust-cache
+        with:
+          key: release-macos-intel-${{ matrix.target }}
       - name: Setup Fluent CI
         uses: fluentci-io/setup-fluentci@v5
         with:
           wasm: true
           engine-version: 0.4.0
-          pipeline: rust
-          args: |
-            target_add aarch64-apple-darwin
-            build --release --target ${{ matrix.target }}
-        env:
-          RUSTC_WRAPPER: /usr/local/bin/sccache
+      - name: Build cached release binary
+        run: cargo build --release --locked -p fluentci-engine --target ${{ matrix.target }}
       - name: Set env
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: Packaging final binary
@@ -37,7 +40,7 @@ jobs:
           cd target/${{ matrix.target }}/release
           tar czvf ../../../fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz fluentci-engine
           shasum -a 256 ../../../fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz > ../../../fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256
-          cd ../../../ && rm -rf target
+          cd ../../../
       - name: Upload assets to Cloudflare R2
         run: |
           mkdir -p r2/fluentci-engine/${{ env.RELEASE_VERSION }}
