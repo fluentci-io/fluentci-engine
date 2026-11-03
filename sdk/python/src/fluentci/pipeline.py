@@ -81,17 +81,17 @@ class Pipeline:
 
     def _emit(self, services: dict[int, str]) -> None:
         from . import _imports as api
-        ids: list[str] = []
+        service_ids: list[str] = []
         for service in self.services:
-            identity = id(service)
-            if identity not in services:
+            object_id = id(service)
+            if object_id not in services:
                 service.pipeline._emit(services)
-                services[identity] = _id(api.as_service(service.name))
-            ids.append(services[identity])
+                services[object_id] = _id(api.as_service(service.name))
+            service_ids.append(services[object_id])
         api.set_runner("default")
         api.pipeline(self.name)
-        for identity in ids:
-            api.with_service(identity)
+        for service_id in service_ids:
+            api.with_service(service_id)
         for step in self.steps:
             if step.kind == "exec":
                 api.with_exec(json.dumps([_quote(value) for value in step.values]))
@@ -102,8 +102,8 @@ class Pipeline:
             elif step.kind == "env":
                 api.set_envs(json.dumps([step.values]))
             elif step.kind == "cache":
-                identity = _id(api.cache(step.values[0]))
-                api.with_cache(json.dumps({"id": identity, "key": step.values[0], "path": step.values[1]}))
+                cache_id = _id(api.cache(step.values[0]))
+                api.with_cache(json.dumps({"id": cache_id, "key": step.values[0], "path": step.values[1]}))
             elif step.kind == "provider":
                 name, impure = step.values
                 api.set_runner(name)
