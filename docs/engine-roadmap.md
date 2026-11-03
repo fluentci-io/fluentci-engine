@@ -66,7 +66,10 @@ milestones do not establish a claim of being the fastest engine.
    Extend cache support with contained symlinks, remote storage, live cache inspection,
    retention/GC, and scalable hashing/transfer scheduling. Overlapping input declarations
    now reuse entries within a single snapshot, with unchanged snapshot digests and
-   independent content reads across preparation/publication checks.
+   independent content reads across preparation/publication checks. Cache regressions
+   also cover missing/corrupt stdout and stderr blobs: verification preserves existing
+   destinations, rejected log bytes never enter the journal, and re-execution repairs
+   the entry for a subsequent verified hit.
 6. Validate the GitHub matrix on actual remote runners. Add native provisioning
    and integration jobs for MacPorts and macports-rs. Homebrew and BSD native
    package-plan installation tests are configured but await remote verification.

@@ -448,3 +448,80 @@ fn overlap_validation_matches_four_node_forward_dags_in_both_plan_orders() {
         }
     }
 }
+
+#[test]
+fn invalid_cached_logs_preserve_outputs_and_never_reach_the_live_journal() {
+    for stream in ["stdout", "stderr"] {
+        for missing in [false, true] {
+            let dir = TempDir::new().unwrap();
+            let p = plan(dir.path());
+            let cold = run(&p, dir.path(), "cold");
+            let key = cold.tasks[0].cache.key.as_ref().unwrap();
+            let record: serde_json::Value = serde_json::from_slice(
+                &fs::read(dir.path().join("cache/actions").join(format!("{key}.json"))).unwrap(),
+            )
+            .unwrap();
+            let hash = record["manifest"][stream].as_str().unwrap();
+            let blob = dir.path().join("cache/blobs").join(hash);
+            if missing {
+                fs::remove_file(&blob).unwrap();
+            } else {
+                fs::write(&blob, "untrusted-cache-log").unwrap();
+            }
+            // Direct restoration must validate both log blobs before changing
+            // any caller-owned output or destination log, including stderr failure
+            // after stdout and workspace artifacts have already been staged.
+            fs::write(dir.path().join("output"), "workspace-preserved").unwrap();
+            let stdout = dir.path().join("existing.stdout");
+            let stderr = dir.path().join("existing.stderr");
+            fs::write(&stdout, "stdout-preserved").unwrap();
+            fs::write(&stderr, "stderr-preserved").unwrap();
+            {
+                let prepared = fluentci_executor::cache::prepare(
+                    p.cache_dir.as_ref().unwrap(),
+                    &p.tasks[0],
+                    &[],
+                )
+                .unwrap()
+                .unwrap();
+                assert!(prepared.restore(&p.tasks[0], &stdout, &stderr).is_err());
+                assert_eq!(
+                    fs::read_to_string(dir.path().join("output")).unwrap(),
+                    "workspace-preserved"
+                );
+                assert_eq!(fs::read_to_string(&stdout).unwrap(), "stdout-preserved");
+                assert_eq!(fs::read_to_string(&stderr).unwrap(), "stderr-preserved");
+            }
+            // Normal execution treats the rejected entry as a miss, emits only
+            // the new command's logs, and replaces the invalid cache blob.
+            let repaired = run(&p, dir.path(), "repaired");
+            assert_eq!(repaired.tasks[0].cache.outcome, "stored");
+            assert!(repaired.tasks[0].cache.reason.contains("cache rejected"));
+            let mut logs = BTreeMap::<String, String>::new();
+            for line in fs::read_to_string(dir.path().join("repaired/events.jsonl"))
+                .unwrap()
+                .lines()
+            {
+                let event: fluentci_executor::events::Event = serde_json::from_str(line).unwrap();
+                if let fluentci_executor::events::EventKind::Log { stream, text, .. } = event.kind {
+                    logs.entry(stream).or_default().push_str(&text);
+                }
+            }
+            assert_eq!(logs.get("stdout").unwrap(), "log");
+            assert_eq!(logs.get("stderr").unwrap(), "error");
+            assert_eq!(logs.len(), 2);
+            let warm = run(&p, dir.path(), "warm");
+            assert_eq!(warm.tasks[0].cache.outcome, "hit");
+            assert_eq!(fs::read_to_string(&warm.tasks[0].stdout).unwrap(), "log");
+            assert_eq!(fs::read_to_string(&warm.tasks[0].stderr).unwrap(), "error");
+            assert_eq!(
+                fs::read_to_string(dir.path().join("output")).unwrap(),
+                "hello"
+            );
+            assert_eq!(
+                fs::read_to_string(dir.path().join("executions")).unwrap(),
+                "executedexecuted"
+            );
+        }
+    }
+}
