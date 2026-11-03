@@ -2,6 +2,15 @@ name: release
 on:
   release:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to rebuild and upload Linux assets for'
+        required: true
+        type: string
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -13,21 +22,28 @@ jobs:
           - x86_64-unknown-linux-gnu
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Verify cache snapshot export using temporary data
+        run: python3 .github/scripts/test-rust-cache-snapshot.py -v
       - name: Cache container Rust compiler results and Cargo downloads
         uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
           path: .ci-cache/linux-release
-          key: container-rust-v1-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.fluentci/src/jobs.ts', '.fluentci/src/helpers.ts') }}-${{ hashFiles('crates/**/*.rs', 'vendor/**/*.rs', 'vendor/**/Cargo.toml') }}
+          key: container-rust-v1-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.fluentci/src/jobs.ts', '.fluentci/src/helpers.ts', '.github/scripts/snapshot-rust-cache.sh') }}-${{ hashFiles('crates/**/*.rs', 'vendor/**/*.rs', 'vendor/**/Cargo.toml') }}
           restore-keys: |
-            container-rust-v1-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.fluentci/src/jobs.ts', '.fluentci/src/helpers.ts') }}-
+            container-rust-v1-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.fluentci/src/jobs.ts', '.fluentci/src/helpers.ts', '.github/scripts/snapshot-rust-cache.sh') }}-
             container-rust-v1-${{ matrix.target }}-
       - name: Prepare compiler-cache transfer directory
         run: mkdir -p .ci-cache/linux-release
       - uses: fluentci-io/setup-fluentci@v5
         with:
           engine-version: 0.4.12
-      - name: Set env
-        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - name: Select existing release
+        env:
+          RELEASE_VERSION: ${{ github.event.release.tag_name || inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$RELEASE_VERSION" >/dev/null
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
       - name: Build
         run: |
           fluentci run . build
@@ -37,23 +53,12 @@ jobs:
           TARGET: ${{ matrix.target }}
           FLUENTCI_RUST_CACHE_DIR: .ci-cache/linux-release
           DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}
-      #- name: Upload assets to Cloudflare R2
-      #  run: |
-      #    mkdir -p r2/fluentci-engine/${{ env.RELEASE_VERSION }}
-      #    cp fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz r2/fluentci-engine/${{ env.RELEASE_VERSION }}
-      #    cp fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.tar.gz.sha256 r2/fluentci-engine/${{ env.RELEASE_VERSION }}
-      #    cd r2 && fluentci run --wasm r2-sync upload --endpoint-url https://$ACCOUNT_ID.r2.cloudflarestorage.com s3://assets
-      #  env:
-      #    TAG: ${{ env.RELEASE_VERSION }}
-      #    AWS_ACCESS_KEY_ID: ${{ secrets.R2_AWS_ACCESS_KEY_ID }}
-      #    AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_AWS_SECRET_ACCESS_KEY }}
-      #    ACCOUNT_ID: fe5b1e2ce9f94f4c0415ab94ce402012
       - name: Upload release assets
-        run: |
-          for ext in tar.gz tar.gz.sha256; do
-            export FILE=/assets/fluentci-engine_${{ env.RELEASE_VERSION }}_${{ matrix.target }}.$ext
-            fluentci run github_pipeline release_upload
-          done
         env:
-          TAG: ${{ env.RELEASE_VERSION }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
+          TARGET: ${{ matrix.target }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$RELEASE_VERSION" \
+            "fluentci-engine_${RELEASE_VERSION}_${TARGET}.tar.gz" \
+            "fluentci-engine_${RELEASE_VERSION}_${TARGET}.tar.gz.sha256" --clobber
