@@ -3,9 +3,9 @@ name: Plugin PDKs
 on:
   push:
     branches: [main]
-    paths: ['sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'tests/e2e_guest_pdks.py', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
+    paths: ['examples/sccache/**', 'tests/e2e_sccache.py', 'sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'tests/e2e_guest_pdks.py', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
   pull_request:
-    paths: ['sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'tests/e2e_guest_pdks.py', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
+    paths: ['examples/sccache/**', 'tests/e2e_sccache.py', 'sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'tests/e2e_guest_pdks.py', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
   workflow_dispatch:
 
 permissions:
@@ -74,6 +74,9 @@ jobs:
           npm install --global purescript@0.15.16 spago@1.0.5
           npm ci
           npm run build
+      - name: Compile and test the PureScript sccache example
+        working-directory: examples/sccache
+        run: npm ci && npm run build && npm test
       - name: Compile TypeScript guest to Wasm
         working-directory: sdk/typescript/demo-plugin
         run: npm ci && npm run build
@@ -82,6 +85,7 @@ jobs:
           cargo build --release --locked -p fluentci-engine
           python3 tests/e2e_guest_pdks.py -v
           python3 tests/e2e_matrix.py -v
+          python3 tests/e2e_sccache.py -v
       - name: Preserve compiled guests and generated entry source
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -90,5 +94,6 @@ jobs:
           path: |
             sdk/*/demo-plugin/dist/
             sdk/python/dist/
+            examples/sccache/dist/
           if-no-files-found: ignore
           retention-days: 7

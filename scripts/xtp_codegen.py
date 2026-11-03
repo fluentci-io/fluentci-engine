@@ -73,8 +73,12 @@ def generated():
         yield ROOT / f'sdk/{language}/demo-plugin/imports.d.ts', '\n'.join(declarations)
     for name, exports in plugins.items():
         if name != 'xtp-smoke':
-            source = (ROOT / f'examples/{name}/src/lib.rs').read_text()
-            actual = set(re.findall(r'#\[plugin_fn\]\s*pub fn (\w+)', source))
+            rust = ROOT / f'examples/{name}/src/lib.rs'
+            if rust.exists():
+                actual = set(re.findall(r'#\[plugin_fn\]\s*pub fn (\w+)', rust.read_text()))
+            else:
+                source = (ROOT / f'examples/{name}/src/Main.purs').read_text()
+                actual = set(re.findall(r'^(\w+) :: Effect Unit$', source, re.MULTILINE))
             if actual != exports.keys():
                 raise ValueError(f'Plugin exports differ from XTP: {name}: {actual ^ exports.keys()}')
         document = dict(schema, exports=exports)

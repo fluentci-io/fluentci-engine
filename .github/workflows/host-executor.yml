@@ -98,10 +98,9 @@ jobs:
       - name: Compile and exercise legacy and XTP-generated Wasm plugins
         run: |
           python3 scripts/xtp_codegen.py --check
-          cargo build --release --locked --target wasm32-unknown-unknown -p env -p hash -p archive -p chmod -p devbox -p flox -p git -p hermit -p http -p mise -p module -p nix -p pixi -p pkgx -p proto -p vault -p xtp-smoke -p uv -p sccache
+          cargo build --release --locked --target wasm32-unknown-unknown -p env -p hash -p archive -p chmod -p devbox -p flox -p git -p hermit -p http -p mise -p module -p nix -p pixi -p pkgx -p proto -p vault -p xtp-smoke -p uv
           python3 tests/e2e_wasm.py -v
           python3 tests/e2e_uv.py -v
-          python3 tests/e2e_sccache.py -v
 
       - name: Set up Gleam for JavaScript host plans
         uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1

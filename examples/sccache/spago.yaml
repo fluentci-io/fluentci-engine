@@ -1,0 +1,20 @@
+package:
+  name: sccache-example
+  dependencies:
+    - argonaut-codecs
+    - argonaut-core
+    - arrays
+    - effect
+    - either
+    - exceptions
+    - fluentci
+    - maybe
+    - prelude
+    - strings
+workspace:
+  packageSet:
+    registry: 81.11.0
+  extraPackages:
+    fluentci:
+      git: https://github.com/fluentci-io/purescript-fluentci.git
+      ref: aa7540b55cc1d42873c8eb7d378d53f96da8e2eb

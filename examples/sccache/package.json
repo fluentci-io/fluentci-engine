@@ -1,0 +1,12 @@
+{
+  "name": "fluentci-sccache-plugin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.3"
+  }
+}
