@@ -392,6 +392,58 @@ impl Runs {
         }
         Ok(path)
     }
+    fn cancel_run(&self, id: &str) -> Result<(), String> {
+        // Shutdown drains active workers before it joins them. Wait for that
+        // cleanup before treating a missing worker as an inactive run.
+        let _shutdown = self.shutdown_lock.lock().unwrap();
+        let control = {
+            let mut active = self.active.lock().unwrap();
+            if active.get(id).is_some_and(|run| run.worker.is_finished()) {
+                let run = active.remove(id).unwrap();
+                let _ = run.worker.join();
+            }
+            active.get(id).map(|run| run.control.clone())
+        };
+        if let Some(control) = control {
+            return control.cancel();
+        }
+        // A failed final state write can outlive its worker (and admission may
+        // already have pruned that worker). Do not acknowledge stale queued
+        // state that a later --resume-queued restart would execute.
+        let path = self.root.join(id);
+        let mut state: RunState =
+            serde_json::from_slice(&fs::read(path.join("state.json")).map_err(|e| e.to_string())?)
+                .map_err(|e| e.to_string())?;
+        if state.id != id {
+            return Err("run state identity mismatch".into());
+        }
+        match state.status.as_str() {
+            "queued" => {
+                state.status = "cancelled".into();
+                state.error = Some("run cancelled before execution".into());
+            }
+            "running" => {
+                // An inactive running record may have a durable result. Late
+                // cancellation must not replace its outcome with cancellation.
+                match recovered_outcome(&path) {
+                    Some(outcome) => {
+                        state.status = outcome.into();
+                        state.error = None;
+                    }
+                    None => {
+                        state.status = "interrupted".into();
+                        state.error = Some(
+                            "run worker stopped without a complete result matching the saved plan"
+                                .into(),
+                        );
+                    }
+                }
+            }
+            "succeeded" | "failed" | "cancelled" | "interrupted" => return Ok(()),
+            _ => return Err("unknown run state".into()),
+        }
+        save(&path.join("state.json"), &state)
+    }
     pub fn shutdown(&self) {
         // Serialize shutdown callers so each returns only after cleanup finishes.
         let _shutdown = self.shutdown_lock.lock().unwrap();
@@ -805,23 +857,7 @@ async fn cancel(
         return response;
     }
     let id = id.into_inner();
-    match tokio::task::spawn_blocking(move || {
-        // Shutdown drains the active map before cancelling and joining workers.
-        // Wait for it rather than acknowledging a run it has not yet cancelled.
-        let _shutdown = runs.shutdown_lock.lock().unwrap();
-        let control = runs
-            .active
-            .lock()
-            .unwrap()
-            .get(&id)
-            .map(|run| run.control.clone());
-        match control {
-            Some(control) => control.cancel(),
-            None => Ok(()),
-        }
-    })
-    .await
-    {
+    match tokio::task::spawn_blocking(move || runs.cancel_run(&id)).await {
         Ok(Ok(())) => HttpResponse::Accepted().finish(),
         _ => HttpResponse::InternalServerError().finish(),
     }
@@ -1038,6 +1074,143 @@ mod lifecycle_tests {
         )
         .unwrap();
         path
+    }
+
+    #[test]
+    fn cancellation_repairs_failed_final_write_before_and_after_worker_pruning() {
+        for prune in [false, true] {
+            let root = tempfile::tempdir().unwrap();
+            let runs = Runs::new(root.path(), "test-cancellation-token".into(), 1).unwrap();
+            let path = seed_queued(root.path(), 1, 1);
+            let state_path = path.join("state.json");
+            let original = fs::read(&state_path).unwrap();
+            let state: RunState = serde_json::from_slice(&original).unwrap();
+            let id = state.id.clone();
+            let control = Arc::new(RunControl {
+                admission: runs.admission.clone(),
+                cancel: Cancellation::default(),
+                path: state_path.clone(),
+                state: Mutex::new(state),
+            });
+            // Force the worker's final atomic replacement to fail, then restore
+            // the stale queued record that a failed write would leave behind.
+            fs::remove_file(&state_path).unwrap();
+            fs::create_dir(&state_path).unwrap();
+            let worker_control = control.clone();
+            let (sent, received) = std::sync::mpsc::channel();
+            let worker = std::thread::spawn(move || {
+                sent.send(worker_control.finish("failed", Some("start failed".into())))
+                    .unwrap();
+            });
+            assert!(received
+                .recv_timeout(std::time::Duration::from_secs(5))
+                .unwrap()
+                .is_err());
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+            while !worker.is_finished() {
+                assert!(std::time::Instant::now() < deadline);
+                std::thread::sleep(std::time::Duration::from_millis(1));
+            }
+            fs::remove_dir(&state_path).unwrap();
+            fs::write(&state_path, original).unwrap();
+            runs.active
+                .lock()
+                .unwrap()
+                .insert(id.clone(), Active { control, worker });
+            if prune {
+                runs.active
+                    .lock()
+                    .unwrap()
+                    .retain(|_, run| !run.worker.is_finished());
+            }
+            runs.cancel_run(&id).unwrap();
+            assert!(!runs.active.lock().unwrap().contains_key(&id));
+            let cancelled: RunState =
+                serde_json::from_slice(&fs::read(&state_path).unwrap()).unwrap();
+            assert_eq!(cancelled.status, "cancelled");
+            drop(runs);
+            let restarted =
+                Runs::with_recovery(root.path(), "test-cancellation-token".into(), 1, 1, true)
+                    .unwrap();
+            assert!(restarted.recovered.lock().unwrap().is_empty());
+            assert!(!path.join("execution").exists());
+        }
+    }
+
+    #[actix_web::test]
+    async fn inactive_cancellation_reconciles_outcomes_and_rejects_unreadable_state() {
+        let root = tempfile::tempdir().unwrap();
+        let runs =
+            web::Data::new(Runs::new(root.path(), "test-cancellation-token".into(), 1).unwrap());
+        let app =
+            actix_web::test::init_service(App::new().app_data(runs.clone()).configure(configure))
+                .await;
+        for (number, mode, expected) in [
+            (1, "queued", "cancelled"),
+            (2, "running", "interrupted"),
+            (3, "result", "succeeded"),
+            (4, "cancelled", "cancelled"),
+            (5, "succeeded", "succeeded"),
+            (6, "failed", "failed"),
+            (7, "interrupted", "interrupted"),
+            (8, "malformed", ""),
+            (9, "mismatched", ""),
+            (10, "unknown", ""),
+            (11, "missing", ""),
+        ] {
+            let path = seed_queued(root.path(), number, number as u64);
+            let id = Uuid::from_u128(number).to_string();
+            let state_path = path.join("state.json");
+            let mut state: RunState =
+                serde_json::from_slice(&fs::read(&state_path).unwrap()).unwrap();
+            state.status = if mode == "result" { "running" } else { mode }.into();
+            if mode == "mismatched" {
+                state.id = Uuid::new_v4().to_string();
+            }
+            save(&state_path, &state).unwrap();
+            if mode == "malformed" {
+                fs::write(&state_path, b"{").unwrap();
+            }
+            if mode == "missing" {
+                fs::remove_file(&state_path).unwrap();
+            }
+            if mode == "result" {
+                fs::create_dir(path.join("execution")).unwrap();
+                save(
+                    &path.join("execution/result.json"),
+                    &serde_json::json!({
+                        "outcome":"succeeded", "tasks":[{"id":"work", "status":"succeeded"}]
+                    }),
+                )
+                .unwrap();
+            }
+            let before = fs::read(&state_path).ok();
+            let request = actix_web::test::TestRequest::post()
+                .uri(&format!("/v1/runs/{id}/cancel"))
+                .insert_header(("Authorization", "Bearer test-cancellation-token"))
+                .to_request();
+            let response = actix_web::test::call_service(&app, request).await;
+            if expected.is_empty() {
+                assert_eq!(
+                    response.status(),
+                    actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    "{mode}"
+                );
+                assert_eq!(fs::read(&state_path).ok(), before);
+            } else {
+                assert_eq!(
+                    response.status(),
+                    actix_web::http::StatusCode::ACCEPTED,
+                    "{mode}"
+                );
+                let after: RunState =
+                    serde_json::from_slice(&fs::read(&state_path).unwrap()).unwrap();
+                assert_eq!(after.status, expected, "{mode}");
+                if ["succeeded", "failed", "cancelled", "interrupted"].contains(&mode) {
+                    assert_eq!(fs::read(&state_path).ok(), before);
+                }
+            }
+        }
     }
 
     #[test]

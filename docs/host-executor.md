@@ -413,7 +413,13 @@ cancellation response for a still-queued run means its cancelled state has been
 atomically persisted and synced before acknowledgement. Cancellation and execution
 startup are serialized; if startup wins, cancellation remains cooperative and the
 worker publishes the final outcome after cleanup. Persistence failures return 500
-and still prevent that queued run from starting in the current process. Queue waiting
+and still prevent that queued run from starting in the current process. If the
+worker has already exited (including a failed final state write), cancellation
+checks the durable record: queued runs are cancelled before acknowledgement;
+running records are reconciled with their saved result or marked interrupted when
+no matching complete result exists. Existing terminal outcomes remain unchanged.
+Unreadable, malformed, or mismatched state returns 500 instead of acknowledging an
+unverified cancellation. Queue waiting
 does not consume task execution timeouts or perform workspace copying; plan
 validation still happens at admission and execution validates again when starting.
 Accepted plans, idempotency associations, admission sequence, and W3C parent trace
