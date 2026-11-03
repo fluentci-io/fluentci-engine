@@ -39,3 +39,5 @@ export const run = (plan, directory, ok, error) => result(ok, error, () => {
 });
 
 export const cached = (task, inputs, outputs, toolchain) => frozen({ ...task, cache: frozen({ inputs: frozen([...inputs]), outputs: frozen([...outputs]), toolchain }) });
+
+export const withCacheDirectory = (plan, cache_dir) => frozen({ ...plan, cache_dir });

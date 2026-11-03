@@ -12,7 +12,11 @@ struct Request {
 }
 
 host_fn!(pub execute_plan(user_data: State; request: String) -> String {
-    let request: Request = serde_json::from_str(&request)?;
+    let mut request: Request = serde_json::from_str(&request)?;
+    let base = std::env::current_dir()?;
+    request.plan.resolve_paths(&base).map_err(Error::msg)?;
+    if request.run_dir.as_os_str().is_empty() { return Err(Error::msg("run_dir must name a fresh directory")); }
+    if request.run_dir.is_relative() { request.run_dir = base.join(&request.run_dir); }
     let cancellation = {
         let state = user_data.get()?;
         let state = state.lock().unwrap();

@@ -22,6 +22,14 @@ The plugin PDK CI workflow builds each language and invokes the compiled Wasm
 through the release engine. Run `python3 scripts/xtp_codegen.py --check` to verify
 that guest ABI declarations match the canonical schema.
 
+## Parallel matrices (unreleased)
+
+All six language examples expose native matrix execution. Case construction is
+pure; one `execute_plan` PDK call runs the complete plan. See the
+[matrix guide](../docs/matrix.md) for products, typed include/exclude, stable IDs,
+prerequisites, joins, caching and cancellation. Use matching engine/SDK source
+builds; the published 0.6.0 engine lacks this new import.
+
 ## Existing host APIs
 
 # SDK development

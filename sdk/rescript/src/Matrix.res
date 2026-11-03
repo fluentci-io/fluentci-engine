@@ -14,6 +14,7 @@ type runResult = {outcome: string, tasks: array<taskResult>}
 @module("./matrix_ffi.mjs") external cached: (task, array<string>, array<string>, string) => task = "cached"
 @module("./matrix_ffi.mjs") external afterJobs: (task, array<task>) => task = "after"
 @module("./matrix_ffi.mjs") external parallel: (array<task>, int) => plan = "parallel"
+@module("./matrix_ffi.mjs") external withCacheDirectory: (plan, string) => plan = "withCacheDirectory"
 @module("./matrix_ffi.mjs") external withFailFast: (plan, bool) => plan = "withFailFast"
 @module("./matrix_ffi.mjs") external compile: plan => string = "compile"
 @module("./matrix_ffi.mjs") external productImpl: (array<matrixCase<'a>>, array<matrixCase<'b>>, array<matrixCase<('a, 'b)>> => result<array<matrixCase<('a, 'b)>>, string>, string => result<array<matrixCase<('a, 'b)>>, string>) => result<array<matrixCase<('a, 'b)>>, string> = "product"

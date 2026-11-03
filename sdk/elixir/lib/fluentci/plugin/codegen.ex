@@ -40,17 +40,34 @@ defmodule FluentCI.Plugin.Codegen do
     "#{initial}\n#{steps}\nOk(pipeline.#{pipeline.capture}()?)"
   end
 
-  defp expression(%FluentCI.Plugin.Execution{plan: plan, run_dir: directory}) do
+  defp expression(%FluentCI.Plugin.Execution{
+         plan: plan,
+         run_dir: directory,
+         fail_on_error: strict
+       }) do
     encoded =
       case FluentCI.Host.compile(plan) do
         {:ok, value} -> value
         {:error, error} -> raise ArgumentError, "invalid execution plan: #{inspect(error)}"
       end
 
+    check =
+      if strict do
+        ~S"""
+        if serde_json::from_str::<serde_json::Value>(&response)?["outcome"] != "succeeded" {
+          return Err(Error::msg("matrix jobs failed; see the run result").into());
+        }
+        """
+      else
+        ""
+      end
+
     """
     let plan: serde_json::Value = serde_json::from_str(&#{value(encoded)})?;
     let request = serde_json::json!({"plan": plan, "run_dir": #{value(directory)}});
-    Ok(unsafe { execute_plan(request.to_string()) }?)
+    let response = unsafe { execute_plan(request.to_string()) }?;
+    #{check}
+    Ok(response)
     """
   end
 

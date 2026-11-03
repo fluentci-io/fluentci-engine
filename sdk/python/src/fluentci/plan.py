@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, replace
 import json
-from typing import Any
+from typing import Any, Literal
 
 @dataclass(frozen=True, slots=True)
 class Cache:
@@ -36,7 +36,7 @@ class Task:
 @dataclass(frozen=True, slots=True)
 class TaskResult:
     id: str
-    status: str
+    status: Literal["succeeded", "failed", "skipped", "cancelled", "timed_out"]
     exit_code: int | None
     stdout: str
     stderr: str
@@ -44,14 +44,19 @@ class TaskResult:
 
 @dataclass(frozen=True, slots=True)
 class RunResult:
-    outcome: str
+    outcome: Literal["succeeded", "failed", "cancelled"]
     tasks: tuple[TaskResult, ...]
+
+    @property
+    def succeeded(self) -> bool:
+        return self.outcome == "succeeded"
 
 @dataclass(frozen=True, slots=True)
 class Plan:
     tasks: tuple[Task, ...]
     jobs: int = 1
     fail_fast: bool = True
+    cache_dir: str | None = None
 
     def to_json(self) -> str:
         if self.jobs < 1:
@@ -59,8 +64,11 @@ class Plan:
         ids = [task.id for task in self.tasks]
         if len(ids) != len(set(ids)) or any(not key for key in ids):
             raise ValueError("tasks require unique, nonempty IDs")
-        return json.dumps({"version": 1, "inherit_env": False, "jobs": self.jobs,
-                           "fail_fast": self.fail_fast, "tasks": [task.to_dict() for task in self.tasks]})
+        value: dict[str, Any] = {"version": 1, "inherit_env": False, "jobs": self.jobs,
+                                 "fail_fast": self.fail_fast, "tasks": [task.to_dict() for task in self.tasks]}
+        if self.cache_dir is not None:
+            value["cache_dir"] = self.cache_dir
+        return json.dumps(value)
 
     def run(self, run_dir: str) -> RunResult:
         from . import _imports as api

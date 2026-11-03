@@ -41,3 +41,11 @@ inside Wasm. Arbitrary Elixir functions and OTP processes cannot run in the gues
 Exports return a pipeline, `input()`, or a string. Code outside the DSL has normal
 Elixir build-time effects. The separate [host-plan adapter](HOST_PLANS.md) remains
 available for JSON plan clients.
+
+## Parallel matrix jobs (unreleased)
+
+See the [matrix guide](../../docs/matrix.md) and the `matrix` export in this SDK's
+plugin example. The API expands named typed cases into native tasks and submits
+one complete plan via `execute_plan`. It supports bounded concurrency, independent
+case caching/logs, prerequisites, joins, failure reports and owning-run cancellation.
+Use matching engine/SDK source builds; engine 0.6.0 does not contain this new import.

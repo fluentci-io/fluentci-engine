@@ -51,7 +51,14 @@ pub fn matrix(directory: String) -> Result(reports.RunResult, String) {
     |> parallel.after_jobs([prepare])
     |> parallel.after_jobs(jobs)
   let tasks = list.append([prepare], list.append(jobs, [join]))
-  parallel.parallel(tasks, 2)
-  |> host.with_fail_fast(False)
-  |> parallel.run(directory)
+  use report <- result.try(
+    parallel.parallel(tasks, 2)
+    |> host.with_cache_directory("action-cache")
+    |> host.with_fail_fast(False)
+    |> parallel.run(directory),
+  )
+  case reports.succeeded(report) {
+    True -> Ok(report)
+    False -> Error("matrix jobs failed; see the run result")
+  }
 }

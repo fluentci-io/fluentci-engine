@@ -16,27 +16,7 @@ async fn execute_inner(path: &str, run_dir: &str, progress: &str) -> Result<(), 
     let base = plan_path
         .parent()
         .ok_or_else(|| anyhow!("plan has no parent directory"))?;
-    if let Some(cache_dir) = &mut plan.cache_dir {
-        if cache_dir.is_relative() {
-            *cache_dir = base.join(&cache_dir);
-        }
-    }
-    if let Some(root) = &mut plan.resource_dir {
-        if root.is_relative() {
-            *root = base.join(&root);
-        }
-    }
-    if let Some(workspace) = &mut plan.workspace {
-        if workspace.source.is_relative() {
-            workspace.source = base.join(&workspace.source);
-        }
-    } else {
-        for task in &mut plan.tasks {
-            if task.cwd.is_relative() {
-                task.cwd = base.join(&task.cwd);
-            }
-        }
-    }
+    plan.resolve_paths(base).map_err(|error| anyhow!(error))?;
     let cancel = Cancellation::default();
     let worker_cancel = cancel.clone();
     let run_dir = PathBuf::from(run_dir);

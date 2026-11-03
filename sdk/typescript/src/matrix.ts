@@ -6,7 +6,7 @@ export type Task = Readonly<{
   timeout_ms?: number;
   cache?: Readonly<{ inputs: readonly string[]; outputs: readonly string[]; toolchain: string }>;
 }>;
-export type Plan = Readonly<{ version: 1; tasks: readonly Task[]; jobs: number; inherit_env: false; fail_fast: boolean }>;
+export type Plan = Readonly<{ version: 1; tasks: readonly Task[]; jobs: number; inherit_env: false; fail_fast: boolean; cache_dir?: string }>;
 export type TaskResult = Readonly<{ id: string; status: string; exit_code: number | null; stdout: string; stderr: string; error: string | null }>;
 export type RunResult = Readonly<{ outcome: "succeeded" | "failed" | "cancelled"; tasks: readonly TaskResult[] }>;
 const component = (value: string) => encodeURIComponent(value).replace(/[!'()*]/g, char => "%" + char.charCodeAt(0).toString(16).toUpperCase());

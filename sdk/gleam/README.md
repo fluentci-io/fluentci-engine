@@ -320,3 +320,11 @@ To verify external toolchain files, compose
 attaching the cache to a task. Paths identify absolute regular-file targets.
 The engine checks their contents and permissions before publishing a cached result.
 The `demo` package uses the SDK from this checkout; run `cd demo && gleam build`.
+
+## Parallel matrix jobs (unreleased)
+
+See the [matrix guide](../../docs/matrix.md) and the `matrix` export in this SDK's
+plugin example. The API expands named typed cases into native tasks and submits
+one complete plan via `execute_plan`. It supports bounded concurrency, independent
+case caching/logs, prerequisites, joins, failure reports and owning-run cancellation.
+Use matching engine/SDK source builds; engine 0.6.0 does not contain this new import.

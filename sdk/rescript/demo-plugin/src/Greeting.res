@@ -30,9 +30,9 @@ let matrix = () => {
   }
   let join = Matrix.task("join", "/usr/bin/python3", ["-c", "from pathlib import Path; Path('joined').write_text('done')"], ".")
     ->Matrix.afterJobs([prepare])->Matrix.afterJobs(jobs)
-  let plan = Matrix.parallel(Array.concat([prepare], Array.concat(jobs, [join])), 2)->Matrix.withFailFast(false)
+  let plan = Matrix.parallel(Array.concat([prepare], Array.concat(jobs, [join])), 2)->Matrix.withFailFast(false)->Matrix.withCacheDirectory("action-cache")
   switch Matrix.run(plan, input()) {
-  | Ok(_) => output("matrix complete")
+  | Ok(report) => if report.outcome == "succeeded" { output("matrix complete") } else { JsError.throwWithMessage("matrix jobs failed; see the run result") }
   | Error(error) => JsError.throwWithMessage(error)
   }
 }

@@ -2,6 +2,7 @@ package:
   name: demo-plugin
   dependencies:
     - aff
+    - arrays
     - console
     - effect
     - either

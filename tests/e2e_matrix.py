@@ -26,7 +26,11 @@ class MatrixGuests(unittest.TestCase):
         (root / "mode.txt").write_text(mode)
         result = subprocess.run([str(BINARY), "call", "-m", str(plugin(language)), "matrix", str(root / run)],
                                 cwd=root, capture_output=True, text=True, timeout=60)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotEqual(result.returncode, 101, result.stdout + result.stderr)
+        if mode == "fail":
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        else:
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return json.loads((root / run / "result.json").read_text())
 
     def test_each_guest_expands_schedules_joins_and_caches_its_matrix(self):
@@ -56,12 +60,28 @@ class MatrixGuests(unittest.TestCase):
                 self.assertEqual(warm["outcome"], "succeeded")
                 self.assertTrue(all(task["cache"]["outcome"] == "hit" for task in warm["tasks"] if task["id"] in expected))
                 self.assertEqual(len(list(root.glob("out-*"))), 4, "cached case outputs were not restored")
+                (root / "joined").unlink()
                 failed = self.invoke(language, root, "failed", mode="fail")
+                self.assertFalse((root / "joined").exists(), "failed matrix executed its success-only join")
                 self.assertEqual(failed["outcome"], "failed")
                 statuses = {task["id"]: task["status"] for task in failed["tasks"]}
                 self.assertEqual(statuses["test[node=22,suite=unit]"], "failed")
                 self.assertEqual(statuses["join"], "skipped")
                 self.assertTrue(all(statuses[key] == "succeeded" for key in expected - {"test[node=22,suite=unit]"}), "fail_fast=false did not allow independent cases to finish")
+
+    def test_python_host_preflight_error_does_not_panic_or_start_jobs(self):
+        with tempfile.TemporaryDirectory(prefix="fluentci invalid matrix ") as directory:
+            root = Path(directory)
+            for source in (ROOT / "fixtures/matrix-demo").iterdir():
+                shutil.copy2(source, root / source.name)
+            existing = root / "already-exists"
+            existing.mkdir()
+            result = subprocess.run([str(BINARY), "call", "-m", str(plugin("python")), "matrix", str(existing)],
+                                    cwd=root, capture_output=True, text=True, timeout=30)
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotEqual(result.returncode, 101, result.stdout + result.stderr)
+            self.assertNotIn("Cannot start a runtime", result.stderr)
+            self.assertFalse(list(root.glob("pid-*")), "invalid run directory started matrix jobs")
 
     def test_cancelled_matrix_reaps_all_running_case_processes(self):
         with tempfile.TemporaryDirectory(prefix="fluentci cancel matrix ") as directory:
@@ -76,6 +96,9 @@ class MatrixGuests(unittest.TestCase):
                 while len(list(root.glob("pid-*"))) < 2 and proc.poll() is None and time.monotonic() < deadline:
                     time.sleep(0.02)
                 self.assertEqual(len(list(root.glob("pid-*"))), 2, "matrix cases never started")
+                # A pid file can become visible between open() and write().
+                while any(not path.read_text().strip().isdigit() for path in root.glob("pid-*")) and time.monotonic() < deadline:
+                    time.sleep(0.01)
                 proc.send_signal(signal.SIGINT)
                 proc.communicate(timeout=15)
                 self.assertNotEqual(proc.returncode, 0)

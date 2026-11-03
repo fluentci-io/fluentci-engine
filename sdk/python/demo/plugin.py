@@ -24,6 +24,8 @@ def matrix() -> None:
             cache=Cache(("seed.txt", "mode.txt", "job.py"), (f"out-{node}-{suite}",), "matrix-v1")))
     jobs = M.matrix("test", cases, build)
     join = M.after(jobs, Task("join", "/usr/bin/python3", ("-c", "from pathlib import Path; Path('joined').write_text('done')"), needs=("prepare",)))
-    plan = Plan((prepare, *jobs, join), jobs=2, fail_fast=False)
-    plan.run(extism.input_str())
+    plan = Plan((prepare, *jobs, join), jobs=2, fail_fast=False, cache_dir="action-cache")
+    report = plan.run(extism.input_str())
+    if not report.succeeded:
+        raise RuntimeError("matrix jobs failed; see the run result")
     extism.output_str("matrix complete")

@@ -14,6 +14,7 @@ export function matrix() {
     cache: { inputs: ["seed.txt", "mode.txt", "job.py"], outputs: [`out-${node}-${suite}`], toolchain: "matrix-v1" },
   }));
   const join = M.after(jobs, { ...M.task("join", "/usr/bin/python3", ["-c", "from pathlib import Path; Path('joined').write_text('done')"]), needs: ["prepare"] });
-  M.run({ ...M.parallel([prepare, ...jobs, join], 2), fail_fast: false }, Host.inputString());
+  const report = M.run({ ...M.parallel([prepare, ...jobs, join], 2), fail_fast: false, cache_dir: "action-cache" }, Host.inputString());
+  if (report.outcome !== "succeeded") throw Error("matrix jobs failed; see the run result");
   Host.outputString("matrix complete");
 }

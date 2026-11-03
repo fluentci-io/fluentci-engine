@@ -37,6 +37,11 @@ defmodule DemoPlugin do
       |> M.after_jobs([prepare])
       |> M.after_jobs(jobs)
 
-    run_plan(M.parallel([prepare | jobs] ++ [join], 2) |> H.fail_fast(false), input())
+    run_plan(
+      M.parallel([prepare | jobs] ++ [join], 2)
+      |> H.fail_fast(false)
+      |> H.cache_dir("action-cache"),
+      input()
+    )
   end
 end

@@ -7,6 +7,8 @@ import Effect.Exception (throw)
 import FluentCI.Plugin as P
 import FluentCI.Host.Plan as Plan
 import FluentCI.Matrix as M
+import FluentCI.Host.Client as Reports
+import Data.Array as Array
 import Data.Tuple (Tuple(..))
 
 unwrap :: forall a. P.Result a -> Effect a
@@ -116,6 +118,8 @@ matrix = do
     join = Plan.task "join" "/usr/bin/python3" "."
       # Plan.withArgs ["-c", "from pathlib import Path; Path('joined').write_text('done')"]
       # M.after [prepare] # M.after jobs
-    plan = M.parallel 2 ([prepare] <> jobs <> [join]) # Plan.withFailFast false
-  _ <- P.runPlan directory plan >>= unwrap
-  send "matrix complete"
+    plan = M.parallel 2 ([prepare] <> jobs <> [join]) # Plan.withFailFast false # Plan.withCacheDirectory "action-cache"
+  report <- P.runPlan directory plan >>= unwrap
+  if Array.all (\task -> task.status == Reports.TaskSucceeded) report.tasks then
+    send "matrix complete"
+  else throw "matrix jobs failed; see the run result"

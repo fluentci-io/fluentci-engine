@@ -73,6 +73,10 @@ pub fn jobs(mut plan: Plan, concurrency: usize) -> Plan {
     plan.jobs = concurrency;
     plan
 }
+pub fn fail_fast(mut plan: Plan, enabled: bool) -> Plan {
+    plan.fail_fast = enabled;
+    plan
+}
 pub fn run(
     plan: &Plan,
     directory: &Path,

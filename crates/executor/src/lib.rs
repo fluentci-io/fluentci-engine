@@ -261,6 +261,36 @@ fn release_resources(
 }
 
 impl Plan {
+    /// Resolve declarative paths against the caller's base without filesystem IO.
+    /// Workspace task directories remain relative to the materialized workspace.
+    pub fn resolve_paths(&mut self, base: &Path) -> Result<(), String> {
+        if !base.is_absolute() {
+            return Err("plan path base must be absolute".into());
+        }
+        fn resolve(path: &mut PathBuf, base: &Path) -> Result<(), String> {
+            if path.as_os_str().is_empty() {
+                return Err("plan paths must not be empty".into());
+            }
+            if path.is_relative() {
+                *path = base.join(&*path);
+            }
+            Ok(())
+        }
+        if let Some(path) = &mut self.cache_dir {
+            resolve(path, base)?;
+        }
+        if let Some(path) = &mut self.resource_dir {
+            resolve(path, base)?;
+        }
+        if let Some(workspace) = &mut self.workspace {
+            resolve(&mut workspace.source, base)?;
+        } else {
+            for task in &mut self.tasks {
+                resolve(&mut task.cwd, base)?;
+            }
+        }
+        Ok(())
+    }
     pub fn validate(&self) -> Result<DependencyGraph, String> {
         if let Some(workspace) = &self.workspace {
             return workspace.validate(self);

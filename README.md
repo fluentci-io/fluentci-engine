@@ -52,6 +52,15 @@ Version **0.6.0** provides unified execution and legacy API
 compatibility. See the [0.6.0 compatibility notes](docs/compatibility-0.6.md) for
 migration guidance, legacy scheduling/service limits, and supported guest build paths.
 
+## Parallel matrix jobs (unreleased)
+
+Pure matrix builders expand named cases and Cartesian products into native tasks,
+with include/exclude filters, stable IDs, prerequisites and joins. `jobs` bounds
+concurrency; each case uses normal execution, caching, logs and cancellation.
+Matching guest SDKs submit a complete independent plan through `execute_plan`.
+See [matrix jobs](docs/matrix.md) for all six language APIs and current boundaries.
+This API requires a source build after the published 0.6.0 release.
+
 ## 🚀 Quick Start
 
 ```bash

@@ -153,4 +153,22 @@ mod tests {
         assert!(product(&many, &many).is_err());
         assert_eq!(named("a,b=世界", ()).key, "a%2Cb%3D%E4%B8%96%E7%95%8C");
     }
+    #[cfg(unix)]
+    #[test]
+    fn resolving_guest_plan_paths_is_pure_and_preserves_explicit_cache_storage() {
+        let mut plan = parallel(vec![exec("job", "/missing", vec![], ".")], 2);
+        plan.cache_dir = Some("cache".into());
+        plan.resource_dir = Some("leases".into());
+        plan.resolve_paths(std::path::Path::new("/workspace"))
+            .unwrap();
+        assert_eq!(plan.tasks[0].cwd, std::path::Path::new("/workspace/."));
+        assert_eq!(
+            plan.cache_dir.unwrap(),
+            std::path::Path::new("/workspace/cache")
+        );
+        assert_eq!(
+            plan.resource_dir.unwrap(),
+            std::path::Path::new("/workspace/leases")
+        );
+    }
 }

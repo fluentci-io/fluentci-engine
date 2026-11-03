@@ -54,6 +54,14 @@ processes and waits for cleanup before returning.
 
 For release-specific migration boundaries, see [0.6.0 compatibility notes](compatibility-0.6.md).
 
+## Matrix expansion
+
+[Matrix primitives](matrix.md) expand pure named/typed Cartesian cases into the
+same task graph. Include/exclude helpers, deterministic IDs and fan-in joins share
+the plan-wide `jobs` and `fail_fast` controls. The `execute_plan` guest import accepts
+a complete independent plan and fresh run directory, providing parallel execution
+without concurrent mutation of the legacy graph. This is an unreleased source API.
+
 ## Plan version 1
 
 A plan contains `version` (currently 1), `jobs` (positive concurrency bound),

@@ -42,3 +42,11 @@ The SDK ships `py.typed` and strict mypy guest stubs. CPython 3.12 is embedded b
 the compiler; dependencies must be pure Python. Native extensions and arbitrary
 host OS access are unavailable inside the guest. See the plugin PDK CI workflow
 for isolated compiler setup and real engine validation.
+
+## Parallel matrix jobs (unreleased)
+
+See the [matrix guide](../../docs/matrix.md) and the `matrix` export in this SDK's
+plugin example. The API expands named typed cases into native tasks and submits
+one complete plan via `execute_plan`. It supports bounded concurrency, independent
+case caching/logs, prerequisites, joins, failure reports and owning-run cancellation.
+Use matching engine/SDK source builds; engine 0.6.0 does not contain this new import.

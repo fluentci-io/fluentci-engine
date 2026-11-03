@@ -15,7 +15,7 @@ end
 defmodule FluentCI.Plugin.Execution do
   @moduledoc "A complete independent host plan executed as one guest effect."
   @enforce_keys [:plan, :run_dir]
-  defstruct [:plan, :run_dir]
+  defstruct [:plan, :run_dir, fail_on_error: true]
 end
 
 defmodule FluentCI.Plugin do
@@ -62,8 +62,11 @@ defmodule FluentCI.Plugin do
   def input, do: %Input{}
 
   @doc "Execute an independent host plan; matrix members run under the shared scheduler."
-  def run_plan(%FluentCI.Host.Plan{} = plan, run_dir),
-    do: %FluentCI.Plugin.Execution{plan: plan, run_dir: value!(run_dir)}
+  def run_plan(%FluentCI.Host.Plan{} = plan, run_dir, options \\ []) do
+    strict = Keyword.get(options, :fail_on_error, true)
+    unless is_boolean(strict), do: raise(ArgumentError, "fail_on_error must be boolean")
+    %FluentCI.Plugin.Execution{plan: plan, run_dir: value!(run_dir), fail_on_error: strict}
+  end
 
   @spec pipeline(value()) :: Pipeline.t()
   def pipeline(name), do: %Pipeline{name: value!(name)}

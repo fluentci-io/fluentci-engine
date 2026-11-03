@@ -11,7 +11,8 @@
             "either",
             "fluentci",
             "prelude",
-            "tuples"
+            "tuples",
+            "arrays"
           ]
         },
         "test": {

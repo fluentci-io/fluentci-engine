@@ -198,10 +198,11 @@ async fn main() -> Result<(), Error> {
             serve(listen).await?;
         }
         Some(("call", args)) => {
-            let module = args.value_of("module").unwrap();
+            let module = args.value_of("module").unwrap().to_owned();
             let command = args.values_of("command").unwrap();
             let command = command.collect::<Vec<_>>().join(" ");
-            call(module, &command)?;
+            // Extism's synchronous WASI shims may block on Tokio internally.
+            tokio::task::spawn_blocking(move || call(&module, &command)).await??;
         }
         _ => cli().print_help()?,
     };
