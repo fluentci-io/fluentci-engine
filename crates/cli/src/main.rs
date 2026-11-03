@@ -64,6 +64,7 @@ fn cli() -> Command<'static> {
                 .arg(Arg::new("listen").long("listen").takes_value(true).default_value("127.0.0.1:6881"))
                 .arg(Arg::new("data-dir").long("data-dir").takes_value(true).required(true))
                 .arg(Arg::new("max-runs").long("max-runs").takes_value(true).default_value("4"))
+                .arg(Arg::new("max-queued").long("max-queued").takes_value(true).default_value("0"))
                 .about("Serves authenticated independent host pipeline runs"),
         )
         .subcommand(
@@ -88,7 +89,7 @@ async fn main() -> Result<(), Error> {
             run(&command.collect::<Vec<_>>().join(" ")).await?;
         }
         Some(("serve-runs", args)) => {
-            fluentci_server::runs::start(args.value_of("listen").unwrap(), std::path::Path::new(args.value_of("data-dir").unwrap()), args.value_of("max-runs").unwrap().parse()?).await?;
+            fluentci_server::runs::start_with_queue(args.value_of("listen").unwrap(), std::path::Path::new(args.value_of("data-dir").unwrap()), args.value_of("max-runs").unwrap().parse()?, args.value_of("max-queued").unwrap().parse()?).await?;
         }
         Some(("serve", args)) => {
             let listen = args.value_of("listen").unwrap();

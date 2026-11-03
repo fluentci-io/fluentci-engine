@@ -54,8 +54,10 @@ milestones do not establish a claim of being the fastest engine.
    the legacy SDK migration path.
 3. Independent authenticated server runs now support submission, status, cancellation,
    persisted results, authenticated cursor-paginated history, resumable events/raw logs, restart reconciliation, and remote
-   trace context and durable keyed submission replay. Follow through with SDK migration, durable
-   admission queues, an on-disk history index, and run-store retention. History now
+   trace context and durable keyed submission replay. Optional bounded FIFO admission
+   queues now support cancellation before execution and expose queued state in the
+   PureScript/Gleam clients. Queue recovery currently marks unstarted runs interrupted;
+   follow through with durable resumption, SDK migration, an on-disk history index, and run-store retention. History now
    uses an ordered in-memory index rebuilt at startup and updated on admission. The legacy GraphQL
    server remains separate.
 4. Cross-run resource leases now coordinate declared resource names across local

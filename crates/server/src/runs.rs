@@ -1,4 +1,6 @@
 //! Independent, authenticated run API. No mutable current-pipeline state.
+mod admission;
+
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use fluentci_executor::{Cancellation, Plan};
 use opentelemetry::propagation::TextMapPropagator;
@@ -40,7 +42,7 @@ pub struct Runs {
     _store_lock: fs::File,
     root: PathBuf,
     token: String,
-    max_runs: usize,
+    admission: std::sync::Arc<admission::Admission>,
     active: Mutex<HashMap<String, Active>>,
     closing: AtomicBool,
     shutdown_lock: Mutex<()>,
@@ -93,6 +95,14 @@ fn recovered_outcome(path: &Path) -> Option<&'static str> {
 
 impl Runs {
     pub fn new(root: &Path, token: String, max_runs: usize) -> Result<Self, String> {
+        Self::with_queue(root, token, max_runs, 0)
+    }
+    pub fn with_queue(
+        root: &Path,
+        token: String,
+        max_runs: usize,
+        max_queued: usize,
+    ) -> Result<Self, String> {
         if token.len() < 16 || max_runs == 0 {
             return Err(
                 "run server requires a token of at least 16 bytes and positive max-runs".into(),
@@ -156,7 +166,14 @@ impl Runs {
                     return Err("run state identity mismatch".into());
                 }
                 history_index.insert((state.created_at_ms, state.id.clone()));
-                if state.status == "running" {
+                if state.status == "queued" {
+                    state.status = "interrupted".into();
+                    state.error = Some(
+                        "server stopped before queued run execution; submit a new run explicitly"
+                            .into(),
+                    );
+                    save(&path, &state)?;
+                } else if state.status == "running" {
                     match recovered_outcome(&entry.path()) {
                         Some(outcome) => {
                             state.status = outcome.into();
@@ -178,7 +195,7 @@ impl Runs {
             _store_lock: store_lock,
             root,
             token,
-            max_runs,
+            admission: admission::Admission::new(max_runs, max_queued),
             active: Mutex::new(HashMap::new()),
             closing: AtomicBool::new(false),
             shutdown_lock: Mutex::new(()),
@@ -373,10 +390,12 @@ fn admit(
         return Ok(existing);
     }
     active.retain(|_, run| !run.worker.is_finished());
-    if active.len() >= runs.max_runs {
-        return Err((429, "run capacity reached".into()));
-    }
     let id = Uuid::new_v4().to_string();
+    let mut reservation = runs
+        .admission
+        .reserve(id.clone())
+        .ok_or_else(|| (429, "run and queue capacity reached".to_owned()))?;
+    let queued = reservation.queued();
     let path = runs.root.join(&id);
     let created_at_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -386,7 +405,7 @@ fn admit(
     let state = RunState {
         created_at_ms,
         id: id.clone(),
-        status: "running".into(),
+        status: if queued { "queued" } else { "running" }.into(),
         error: None,
     };
     let preparation = (|| {
@@ -444,6 +463,18 @@ fn admit(
         .spawn(move || {
             let _guard = parent.attach();
             let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                reservation.wait(&worker_cancel)?;
+                if queued {
+                    save(
+                        &worker_path.join("state.json"),
+                        &RunState {
+                            created_at_ms,
+                            id: worker_id.clone(),
+                            status: "running".into(),
+                            error: None,
+                        },
+                    )?;
+                }
                 plan.execute(&worker_path.join("execution"), &worker_cancel)
             }));
             let (status, error) = match outcome {
@@ -738,9 +769,20 @@ pub fn configure(config: &mut web::ServiceConfig) {
         .route("/v1/runs/{id}/logs/{index}/{stream}", web::get().to(logs));
 }
 pub async fn start(listen: &str, root: &Path, max_runs: usize) -> anyhow::Result<()> {
+    start_with_queue(listen, root, max_runs, 0).await
+}
+
+pub async fn start_with_queue(
+    listen: &str,
+    root: &Path,
+    max_runs: usize,
+    max_queued: usize,
+) -> anyhow::Result<()> {
     let token = std::env::var("FLUENTCI_RUN_TOKEN")
         .map_err(|_| anyhow::anyhow!("set FLUENTCI_RUN_TOKEN to authenticate run requests"))?;
-    let runs = web::Data::new(Runs::new(root, token, max_runs).map_err(anyhow::Error::msg)?);
+    let runs = web::Data::new(
+        Runs::with_queue(root, token, max_runs, max_queued).map_err(anyhow::Error::msg)?,
+    );
     fluentci_core::init_tracer().map_err(|e| anyhow::anyhow!(e.to_string()))?;
     let app_runs = runs.clone();
     let server = HttpServer::new(move || {

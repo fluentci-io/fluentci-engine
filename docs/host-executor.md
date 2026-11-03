@@ -389,7 +389,7 @@ Use a TLS/authenticated gateway when accessing it over an untrusted network.
 | Request | Behavior |
 | --- | --- |
 | `POST /v1/runs` with a plan | Validates and persists the plan; returns 202, a run ID, and `Location` |
-| `GET /v1/runs/{id}` | Reads persisted running/succeeded/failed/cancelled/interrupted state |
+| `GET /v1/runs/{id}` | Reads persisted queued/running/succeeded/failed/cancelled/interrupted state |
 | `GET /v1/runs/{id}/result` | Reads the executor result; 404 until it exists |
 | `POST /v1/runs/{id}/cancel` | Requests cancellation and service teardown; repeat requests are safe |
 | `GET /v1/runs/{id}/events?cursor=0` | Reads up to 4 MiB of complete JSONL events |
@@ -403,11 +403,24 @@ The original binary logs remain on disk; JSON event text remains a lossy UTF-8
 view. Events include trace/span IDs when OpenTelemetry is enabled. Incoming W3C
 `traceparent`/`tracestate` headers become the parent context for run and step spans.
 
-Admission is bounded by `--max-runs`; excess submissions return 429 with
-`Retry-After: 1`. Each plan is limited to 64 ordinary jobs, 32 service slots,
+Execution is bounded by `--max-runs`. Optional `--max-queued N` admits up to N
+additional waiting runs in FIFO admission order; the default is zero, retaining
+immediate rejection when execution slots are full. A full execution/queue capacity
+returns 429 with `Retry-After: 1`. Queued runs expose `status: "queued"` in submission,
+state and history responses. Cancellation before they acquire a slot creates no
+execution directory or result report (result retrieval returns 404). Queue waiting
+does not consume task execution timeouts or perform workspace copying; plan
+validation still happens at admission and execution validates again when starting.
+Accepted queued plans and their idempotency associations are persisted, and their
+parent trace context is retained in memory until execution. Waiting workers are
+bounded by the configured queue capacity and use a condition variable, with
+cancellation checks at most every 25 ms while waiting for a slot. This is an
+in-process queue, not a durable execution scheduler: graceful shutdown cancels
+waiting runs; after a crash, persisted queued states become `interrupted` rather
+than automatically executing. Explicitly submit a new run/key to retry them. Each plan is limited to 64 ordinary jobs, 32 service slots,
 10,000 tasks, and a 1 MiB JSON body. Plan validation and durable admission run on
 blocking workers, leaving HTTP workers available for status and log requests.
-There is no durable waiting queue. `POST /v1/runs` accepts an optional
+`POST /v1/runs` accepts an optional
 `Idempotency-Key` header (1–128 ASCII letters, digits, hyphens, or underscores).
 The server records the key before executing commands. Retrying with the same key
 and plan (after applying field defaults; object-key order is ignored, array order

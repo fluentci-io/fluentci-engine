@@ -25,6 +25,8 @@ class RunServer(unittest.TestCase):
         self.log = open(self.root / "server.log", "w+")
         self.proc = None
         self.extra_env = {}
+        self.max_runs = 2
+        self.max_queued = 0
         self.start()
 
     def start(self):
@@ -35,7 +37,7 @@ class RunServer(unittest.TestCase):
         env = {k:v for k,v in os.environ.items() if not k.startswith("OTEL_")}
         env["FLUENTCI_RUN_TOKEN"] = TOKEN
         env.update(self.extra_env)
-        self.proc = subprocess.Popen([str(BINARY), "serve-runs", "--listen", f"127.0.0.1:{port}", "--data-dir", str(self.root / "runs"), "--max-runs", "2"], env=env, stdout=self.log, stderr=self.log)
+        self.proc = subprocess.Popen([str(BINARY), "serve-runs", "--listen", f"127.0.0.1:{port}", "--data-dir", str(self.root / "runs"), "--max-runs", str(self.max_runs), "--max-queued", str(self.max_queued)], env=env, stdout=self.log, stderr=self.log)
         deadline = time.monotonic() + 10
         while time.monotonic() < deadline:
             self.assertIsNone(self.proc.poll(), "server exited during startup")
@@ -89,10 +91,56 @@ class RunServer(unittest.TestCase):
             code, body, _ = self.request("GET", path)
             self.assertEqual(code, 200)
             state = json.loads(body)
-            if state["status"] != "running":
+            if state["status"] not in ("running", "queued"):
                 return state
             time.sleep(0.02)
         self.fail("run did not reach terminal state")
+
+    def test_bounded_fifo_queue_cancel_and_keyed_replay(self):
+        self.stop()
+        self.max_runs, self.max_queued = 1, 2
+        self.start()
+        first = self.submit(self.plan("while [ ! -f release ]; do /bin/sleep 0.02; done; echo first >> order"))
+        queued_plan = self.plan("echo cancelled >> order")
+        code, body, headers = self.request("POST", "/v1/runs", queued_plan, extra_headers={"Idempotency-Key": "queued-key"})
+        self.assertEqual(code, 202, body)
+        second = headers["Location"]
+        self.assertEqual(json.loads(body)["status"], "queued")
+        third = self.submit(self.plan("echo third >> order"))
+        self.assertEqual(self.request("POST", "/v1/runs", self.plan("echo overflow"))[0], 429)
+        code, replay, _ = self.request("POST", "/v1/runs", queued_plan, extra_headers={"Idempotency-Key": "queued-key"})
+        self.assertEqual(code, 202, replay)
+        self.assertEqual(json.loads(replay)["id"], second.rsplit("/", 1)[1])
+        self.assertFalse((self.root / "runs" / json.loads(replay)["id"] / "execution").exists())
+        self.assertEqual(self.request("POST", second + "/cancel")[0], 202)
+        self.assertEqual(self.terminal(second)["status"], "cancelled")
+        self.assertEqual(self.request("GET", second + "/result")[0], 404)
+        fourth = self.submit(self.plan("echo fourth >> order"))
+        _, history, _ = self.request("GET", "/v1/runs")
+        self.assertEqual(sum(run["status"] == "queued" for run in json.loads(history)["runs"]), 2)
+        (self.root / "release").touch()
+        for path in [first, third, fourth]:
+            self.assertEqual(self.terminal(path)["status"], "succeeded")
+        self.assertEqual((self.root / "order").read_text().splitlines(), ["first", "third", "fourth"])
+
+    def test_shutdown_cancels_queued_runs_and_restart_never_silently_executes_them(self):
+        self.stop()
+        self.max_runs, self.max_queued = 1, 1
+        self.start()
+        self.submit(self.plan("while :; do /bin/sleep 0.02; done"))
+        queued = self.submit(self.plan("touch unexpected"))
+        self.assertEqual(json.loads(self.request("GET", queued)[1])["status"], "queued")
+        self.stop()
+        state_path = self.root / "runs" / queued.rsplit("/", 1)[1] / "state.json"
+        self.assertEqual(json.loads(state_path.read_text())["status"], "cancelled")
+        # Model a crash before the queued worker could persist its cancellation.
+        state = json.loads(state_path.read_text())
+        state["status"], state["error"] = "queued", None
+        state_path.write_text(json.dumps(state))
+        self.start()
+        self.assertEqual(self.terminal(queued)["status"], "interrupted")
+        self.assertFalse((self.root / "unexpected").exists())
+        self.assertFalse((state_path.parent / "execution").exists())
 
     def test_workspace_runs_keep_source_and_artifacts_separate(self):
         (self.root / "input").write_text("original")
