@@ -538,8 +538,13 @@ can execute concurrently. This is coordination for cooperating processes, not
 filesystem isolation: all writers must declare the same names and namespace.
 
 Tasks may set `resource_wait_timeout_ms` to bound contention separately from
-execution `timeout_ms`. The default is no wait deadline. Cancellation remains
-available while waiting. JSON events/results expose `wait_reason`; plain/TUI
+execution `timeout_ms`. The default is no wait deadline. The timer starts on the
+first contended lease attempt and continues across lease retry backoff and later
+job/service-slot saturation. Once expired, a waiter is timed out before it can
+acquire a newly available lease or start its command. Scheduler/dependency queueing
+before the first lease attempt does not start this contention timer. Deadline
+checks have scheduler-loop granularity; they do not promise real-time preemption.
+Cancellation remains available while waiting. JSON events/results expose `wait_reason`; plain/TUI
 output displays contention, and step spans record resource waiting. Retry cadence
 is 50 ms; ordering is not FIFO and starvation freedom is not guaranteed. Use a
 wait deadline when service dependencies across runs could form a cycle.

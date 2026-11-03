@@ -836,6 +836,17 @@ impl Plan {
                     results[i].cache.outcome = "cancelled".into();
                     results[i].error = Some("cache preparation timeout".into());
                     failed = true;
+                } else if waiting_since[i].is_some_and(|since| {
+                    self.tasks[i]
+                        .resource_wait_timeout_ms
+                        .is_some_and(|limit| since.elapsed() >= Duration::from_millis(limit))
+                }) {
+                    // Once contention starts, its deadline keeps running even
+                    // while another task occupies the job/service slot or a
+                    // lease retry is backed off. Never admit an expired waiter.
+                    results[i].status = Status::TimedOut;
+                    results[i].error = Some("resource wait timeout".into());
+                    failed = true;
                 } else if remaining[i] == 0
                     && if self.tasks[i].service.is_some() {
                         running

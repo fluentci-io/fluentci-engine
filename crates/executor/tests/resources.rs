@@ -255,3 +255,114 @@ fn shared_readers_overlap_across_runs_and_each_reader_blocks_writers() {
     });
     assert!(root.path().join("written").exists());
 }
+
+#[test]
+fn resource_wait_deadlines_continue_while_job_or_service_capacity_is_full() {
+    for service_slots in [false, true] {
+        let root = tempfile::tempdir().unwrap();
+        let mut holder = plan(
+            root.path(),
+            "touch holding; while :; do sleep 0.02; done",
+            &["shared"],
+        );
+        holder.tasks[0].timeout_ms = Some(15_000);
+        let holder_cancel = Cancellation::default();
+        thread::scope(|scope| {
+            let holding = scope.spawn(|| {
+                holder
+                    .execute(&root.path().join("holder"), &holder_cancel)
+                    .unwrap()
+            });
+            wait(&root.path().join("holding"));
+            let mut waiting = plan(root.path(), "touch unexpected", &["shared"]);
+            waiting.fail_fast = false;
+            waiting.max_services = 1;
+            waiting.tasks[0].id = "waiter".into();
+            waiting.tasks[0].resource_wait_timeout_ms = Some(80);
+            waiting.tasks[0].timeout_ms = Some(15_000);
+            let mut independent = plan(
+                root.path(),
+                "touch occupied; while [ ! -f release ]; do sleep 0.02; done",
+                &[],
+            )
+            .tasks
+            .remove(0);
+            independent.id = "independent".into();
+            independent.timeout_ms = Some(15_000);
+            if service_slots {
+                let service = serde_json::from_value(json!({
+                    "readiness":{"program":"/bin/sh","args":["-c","exit 0"],"interval_ms":10},
+                    "shutdown_timeout_ms":100
+                }))
+                .unwrap();
+                waiting.tasks[0].service = Some(service);
+                independent.service = waiting.tasks[0].service.clone();
+                independent.args = vec!["-c".into(), "while :; do sleep 0.02; done".into()];
+                let mut consumer = plan(
+                    root.path(),
+                    "touch occupied; while [ ! -f release ]; do sleep 0.02; done",
+                    &[],
+                )
+                .tasks
+                .remove(0);
+                consumer.id = "consumer".into();
+                consumer.needs = vec!["independent".into()];
+                consumer.timeout_ms = Some(15_000);
+                waiting.tasks.push(independent);
+                waiting.tasks.push(consumer);
+            } else {
+                waiting.tasks.push(independent);
+            }
+            let waiting_dir = root.path().join("waiting");
+            let running = scope.spawn(move || {
+                waiting
+                    .execute(&waiting_dir, &Cancellation::default())
+                    .unwrap()
+            });
+            wait(&root.path().join("occupied"));
+            let deadline = Instant::now() + Duration::from_secs(2);
+            let observed = loop {
+                let journal = fs::read_to_string(root.path().join("waiting/events.jsonl")).unwrap();
+                let timeout = journal
+                    .lines()
+                    .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+                    .any(|event| {
+                        event["type"] == "task_state"
+                            && event["id"] == "waiter"
+                            && event["status"] == "timed_out"
+                    });
+                if timeout || Instant::now() >= deadline {
+                    break timeout;
+                }
+                thread::sleep(Duration::from_millis(5));
+            };
+            let occupied_when_timed_out = !running.is_finished();
+            // Release both blockers before assertions, including regression failures.
+            fs::write(root.path().join("release"), b"go").unwrap();
+            holder_cancel.cancel();
+            holding.join().unwrap();
+            let result = running.join().unwrap();
+            assert!(
+                observed,
+                "deadline was blocked by capacity: services={service_slots}; {result:?}"
+            );
+            assert!(occupied_when_timed_out);
+            assert_eq!(result.tasks[0].status, Status::TimedOut);
+            assert_eq!(
+                result.tasks[0].error.as_deref(),
+                Some("resource wait timeout")
+            );
+            assert!(
+                result.tasks[1..]
+                    .iter()
+                    .all(|task| task.status == Status::Succeeded),
+                "{result:?}"
+            );
+            assert!(!root.path().join("unexpected").exists());
+        });
+        assert!(plan(root.path(), "echo reusable", &["shared"])
+            .execute(&root.path().join("reuse"), &Cancellation::default())
+            .unwrap()
+            .success());
+    }
+}
