@@ -50,3 +50,24 @@ This is a targeted workload, not a general pipeline speedup claim. Overlap candi
 enumeration is still quadratic for a shared path with many writers; scratch graph
 reachability storage no longer grows with the number of compared pairs. Run on the
 same machine/toolchain to compare changes; filesystem validation remains included.
+
+## Overlapping input snapshot workload
+
+```sh
+cargo test --release -p fluentci-executor --lib overlapping_input_snapshot_benchmark -- --ignored --nocapture
+```
+
+This opt-in benchmark snapshots one 8 MiB file through 32 alternating declarations
+of its containing directory and the file itself, checking exact snapshot equality
+against the single-root case. Five samples are printed; no timing threshold is
+used. In one local release comparison, the median dropped from 478.906 ms to
+15.144 ms after skipping paths already visited within the same snapshot (about
+32× for this deliberately overlapping workload). This does not imply a similar
+speedup for ordinary pipelines with disjoint declarations.
+
+The snapshot map is local to each traversal. Input hashing before execution and
+before cache publication still reads file contents independently, as do workspace
+copy verification snapshots. There is no cross-task or metadata-only digest cache.
+Regression coverage checks both parent-first and child-first declarations,
+unchanged snapshot digests, subsequent content mutations, missing paths and
+cancellation. Re-run on the same idle host to compare; OS page caches are not flushed.

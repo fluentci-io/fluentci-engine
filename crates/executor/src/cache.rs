@@ -353,6 +353,13 @@ pub(crate) fn snapshot(
         cancel: &Cancellation,
     ) -> Result<(), String> {
         check_cancel(cancel)?;
+        // Input declarations can overlap (e.g. a source tree and a selected
+        // generated file). Each entry already contains a content hash from this
+        // traversal; revisiting it only repeats I/O. Do not retain this map
+        // between snapshots: preparation/publication must re-read live inputs.
+        if entries.contains_key(relative) {
+            return Ok(());
+        }
         let path = checked_path(base, relative)?;
         let meta = fs::symlink_metadata(&path)
             .map_err(|e| format!("declared path {}: {e}", path.display()))?;
@@ -916,5 +923,72 @@ mod cancellation_tests {
             matches!(prepare_cancellable(&root.path().join("unused"), &task, &[], &cancel), Err(e) if e.contains("cancelled"))
         );
         assert!(!root.path().join("unused").exists());
+    }
+}
+
+#[cfg(test)]
+mod snapshot_tests {
+    use super::*;
+
+    #[test]
+    fn overlapping_roots_preserve_snapshot_and_detect_later_changes() {
+        let root = tempfile::tempdir().unwrap();
+        fs::create_dir_all(root.path().join("tree/nested")).unwrap();
+        fs::write(root.path().join("tree/nested/data"), b"first").unwrap();
+        fs::write(root.path().join("tree/other"), b"other").unwrap();
+        let cancel = Cancellation::default();
+        let expected = snapshot(root.path(), &["tree".into()], &cancel).unwrap();
+        for paths in [
+            vec!["tree", "tree", "tree/nested", "tree/nested/data"],
+            vec!["tree/nested/data", "tree/nested", "tree", "tree"],
+        ] {
+            let paths = paths.into_iter().map(PathBuf::from).collect::<Vec<_>>();
+            assert_eq!(snapshot(root.path(), &paths, &cancel).unwrap(), expected);
+            assert_eq!(
+                encoded_digest(&snapshot(root.path(), &paths, &cancel).unwrap()).unwrap(),
+                encoded_digest(&expected).unwrap()
+            );
+        }
+        fs::write(root.path().join("tree/nested/data"), b"later").unwrap();
+        assert_ne!(
+            snapshot(
+                root.path(),
+                &["tree".into(), "tree/nested/data".into()],
+                &cancel
+            )
+            .unwrap(),
+            expected
+        );
+        assert!(snapshot(
+            root.path(),
+            &["tree".into(), "tree/missing".into()],
+            &cancel
+        )
+        .is_err());
+        cancel.cancel();
+        assert!(snapshot(root.path(), &["tree".into(), "tree".into()], &cancel).is_err());
+    }
+
+    #[test]
+    #[ignore = "release-only snapshot benchmark; no timing threshold"]
+    fn overlapping_input_snapshot_benchmark() {
+        let root = tempfile::tempdir().unwrap();
+        fs::create_dir(root.path().join("tree")).unwrap();
+        fs::write(root.path().join("tree/data"), vec![42; 8 * 1024 * 1024]).unwrap();
+        let paths = (0..32)
+            .map(|i| PathBuf::from(if i % 2 == 0 { "tree" } else { "tree/data" }))
+            .collect::<Vec<_>>();
+        let cancel = Cancellation::default();
+        let expected = snapshot(root.path(), &["tree".into()], &cancel).unwrap();
+        for _ in 0..5 {
+            let start = std::time::Instant::now();
+            let actual = snapshot(root.path(), &paths, &cancel).unwrap();
+            let elapsed = start.elapsed();
+            assert_eq!(actual, expected);
+            eprintln!(
+                "overlapping_input_snapshot seconds={:.6}",
+                elapsed.as_secs_f64()
+            );
+        }
     }
 }
