@@ -24,7 +24,7 @@
   };
 
   outputs = { self, nixpkgs, crane, fenix, flake-utils, advisory-db, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
+    flake-utils.lib.eachSystem [ "aarch64-darwin" "aarch64-linux" "x86_64-linux" ] (system:
       let
         pkgs = import nixpkgs {
           inherit system;
@@ -40,7 +40,7 @@
           inherit src;
           
           pname = "fluentci-engine";
-          version = "0.4.11";
+          version = "0.5.0";
           cargoExtraArgs = "--package=fluentci-engine";
 
           buildInputs = [
