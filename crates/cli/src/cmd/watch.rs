@@ -11,9 +11,13 @@ pub async fn watch(
     mode: &str,
     follow: bool,
     timeout_ms: Option<u64>,
+    server: Option<&str>,
 ) -> Result<(), Error> {
     if timeout_ms == Some(0) {
         return Err(anyhow!("timeout-ms must be positive"));
+    }
+    if let Some(server) = server {
+        return super::watch_remote::watch(server, run_dir, mode, follow, timeout_ms).await;
     }
     let run = std::fs::canonicalize(Path::new(run_dir))?;
     if !run.is_dir() {

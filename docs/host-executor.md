@@ -320,7 +320,7 @@ records. This is an observation result, not proof that an unfinished run succeed
 A `run_finished` event reports the pipeline's logical result; result-file
 publication follows it. If an engine crashes without a finish event, follow mode
 waits until detached or timed out. `watch` does not independently supervise the
-engine, recover runs, or connect to an HTTP server yet.
+engine or recover runs.
 
 Journal reading is limited to 64 KiB per poll and records to 4 MiB, with partial
 records retained for the next append. Truncation, disappearance, nonregular files,
@@ -328,6 +328,32 @@ unordered records, and inode replacement on Unix are reported as errors. This
 assumes trusted local run storage, not protection against malicious filesystem
 races. Renderer write failures return errors: during `execute` they trigger normal
 cancellation and child cleanup; during `watch` they only stop the observer.
+
+### Watch a remote run
+
+```sh
+# Set FLUENTCI_RUN_TOKEN in the environment before connecting.
+fluentci-engine watch <run-uuid> --server https://ci.example.org --follow --progress tui
+fluentci-engine watch <run-uuid> --server https://ci.example.org --progress json
+```
+
+Remote watch uses authenticated GET requests for journal pages and durable run
+state. It never submits work or requests cancellation; Ctrl-C and `--timeout-ms`
+only detach the observer. Plain/TUI modes show queued and terminal state even
+when execution has not created a journal. JSON stdout contains only events.
+Failed, cancelled, and interrupted states return a nonzero exit. Follow mode
+waits for durable terminal state and requires a successful finish event before
+reporting success. It does not wait indefinitely for a cancelled queued run.
+
+Without `--follow`, the first page's `X-Journal-Length` bounds the snapshot;
+subsequent appends are excluded and incomplete trailing records are deferred.
+Older servers without this header support follow mode only. Each invocation
+replays from sequence zero. Requests have a 30-second deadline, event pages are
+limited to 4 MiB, and state responses to 64 KiB. Transport/protocol errors stop
+the viewer without automatic retries. Redirects are rejected; use an HTTP(S)
+origin without credentials, path, query, or fragment. HTTPS uses certificate
+verification. Tokens and HTTP error bodies are excluded from transport errors;
+pipeline log contents themselves may contain secrets and remain visible.
 
 ## BSD package managers and native CI
 
@@ -478,8 +504,9 @@ Use a TLS/authenticated gateway when accessing it over an untrusted network.
 | `GET /v1/runs/{id}/logs/{index}/stdout?cursor=0` | Reads up to 1 MiB of exact stdout bytes; `stderr` also supported |
 
 `index` is the task's zero-based position in the submitted plan. Journal/log reads
-return `X-Next-Cursor`; pass it on the next poll to resume without replaying old
-bytes. Event cursors must be at newline boundaries. Poll run state to determine
+return `X-Next-Cursor`; event pages also return `X-Journal-Length`, the full
+journal byte length captured before reading (including an incomplete tail). Pass
+the next cursor on the next poll to resume without replaying old bytes. Event cursors must be at newline boundaries. Poll run state to determine
 completion, then drain remaining events/logs. Responses are marked `no-store`.
 The original binary logs remain on disk; JSON event text remains a lossy UTF-8
 view. Events include trace/span IDs when OpenTelemetry is enabled. Incoming W3C

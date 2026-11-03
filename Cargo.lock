@@ -2256,6 +2256,7 @@ dependencies = [
  "get-port",
  "md5",
  "regex",
+ "reqwest 0.12.5",
  "serde_json",
  "sha256",
  "tokio",

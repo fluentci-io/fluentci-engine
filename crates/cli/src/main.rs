@@ -33,7 +33,8 @@ fn cli() -> Command<'static> {
         )
         .subcommand(
             Command::new("watch")
-                .arg(Arg::new("run-dir").required(true))
+                .arg(Arg::new("run-dir").required(true).help("Local run directory, or run UUID with --server"))
+                .arg(Arg::new("server").long("server").takes_value(true).help("Run API origin; reads FLUENTCI_RUN_TOKEN"))
                 .arg(Arg::new("follow").long("follow").help("Follow until the run-finished event; Ctrl-C only detaches"))
                 .arg(Arg::new("timeout-ms").long("timeout-ms").takes_value(true))
                 .arg(Arg::new("progress").long("progress").takes_value(true).possible_values(["auto", "plain", "tui", "json"]).default_value("auto"))
@@ -91,7 +92,7 @@ async fn main() -> Result<(), Error> {
             cmd::cache_diff::compare(std::path::Path::new(args.value_of("before").unwrap()), std::path::Path::new(args.value_of("after").unwrap()), args.is_present("json"))?;
         }
         Some(("watch", args)) => {
-            cmd::watch::watch(args.value_of("run-dir").unwrap(), args.value_of("progress").unwrap(), args.is_present("follow"), args.value_of("timeout-ms").map(str::parse).transpose()?).await?;
+            cmd::watch::watch(args.value_of("run-dir").unwrap(), args.value_of("progress").unwrap(), args.is_present("follow"), args.value_of("timeout-ms").map(str::parse).transpose()?, args.value_of("server")).await?;
         }
         Some(("execute", args)) => {
             cmd::execute::execute(args.value_of("plan").unwrap(), args.value_of("run-dir").unwrap(), args.value_of("progress").unwrap()).await?;

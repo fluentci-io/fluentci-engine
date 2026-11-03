@@ -6,3 +6,4 @@ mod progress;
 pub mod cache_diff;
 
 pub mod watch;
+mod watch_remote;

@@ -97,6 +97,69 @@ class RunServer(unittest.TestCase):
             time.sleep(0.02)
         self.fail("run did not reach terminal state")
 
+    def watch_command(self, path, *args):
+        return [str(BINARY), "watch", path.rsplit("/", 1)[1], "--server", self.base,
+                "--progress", "json", *args]
+
+    def test_remote_watch_replay_and_terminal_without_journal(self):
+        env = dict(os.environ, FLUENTCI_RUN_TOKEN=TOKEN)
+        for script, expected in [("echo watched", 0), ("echo failed; exit 7", 1)]:
+            path = self.submit(self.plan(script))
+            self.terminal(path)
+            result = subprocess.run(self.watch_command(path, "--follow"), env=env,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, expected, result.stderr)
+            journal = self.root / "runs" / path.rsplit("/", 1)[1] / "execution/events.jsonl"
+            self.assertEqual([json.loads(x) for x in result.stdout.splitlines()],
+                             [json.loads(x) for x in journal.read_bytes().splitlines()])
+            _, body, headers = self.request("GET", path + "/events")
+            self.assertEqual(int(headers["X-Journal-Length"]), journal.stat().st_size)
+            self.assertEqual(int(headers["X-Next-Cursor"]), len(body))
+        self.stop()
+        self.max_runs, self.max_queued = 1, 1
+        self.start()
+        active = self.submit(self.plan("while [ ! -f release ]; do /bin/sleep 0.02; done"))
+        queued = self.submit(self.plan("echo never"))
+        self.request("POST", queued + "/cancel")
+        result = subprocess.run(self.watch_command(queued, "--follow"), env=env,
+                                capture_output=True, timeout=5)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b"remote run cancelled", result.stderr)
+        self.assertEqual(result.stdout, b"")
+        (self.root / "release").touch()
+        self.terminal(active)
+
+    def test_remote_watch_detaches_without_cancelling(self):
+        env = dict(os.environ, FLUENTCI_RUN_TOKEN=TOKEN)
+        path = self.submit(self.plan("echo live; while [ ! -f release ]; do /bin/sleep 0.02; done"))
+        watcher = subprocess.Popen(self.watch_command(path, "--follow"), env=env,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            # A snapshot proves the journal is available before signalling the observer.
+            snapshot = subprocess.run(self.watch_command(path), env=env, capture_output=True, timeout=5)
+            self.assertEqual(snapshot.returncode, 0, snapshot.stderr)
+            time.sleep(0.2)
+            watcher.send_signal(signal.SIGINT)
+            output, error = watcher.communicate(timeout=5)
+            self.assertEqual(watcher.returncode, 0, error)
+            self.assertIn(b"run_started", output)
+            self.assertEqual(json.loads(self.request("GET", path)[1])["status"], "running")
+            timed = subprocess.run(self.watch_command(path, "--follow", "--timeout-ms", "100"),
+                                   env=env, capture_output=True, timeout=5)
+            self.assertNotEqual(timed.returncode, 0)
+            self.assertIn(b"timed out", timed.stderr)
+            self.assertEqual(json.loads(self.request("GET", path)[1])["status"], "running")
+            (self.root / "release").touch()
+            self.terminal(path)
+            done = subprocess.run(self.watch_command(path, "--follow"), env=env,
+                                  capture_output=True, timeout=5)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            self.assertEqual(json.loads(done.stdout.splitlines()[-1])["type"], "run_finished")
+        finally:
+            if watcher.poll() is None:
+                watcher.kill()
+            watcher.communicate(timeout=5)
+
     def test_bounded_fifo_queue_cancel_and_keyed_replay(self):
         self.stop()
         self.max_runs, self.max_queued = 1, 2
@@ -508,6 +571,103 @@ class RunServer(unittest.TestCase):
             os.kill(pid, 0)
         self.start()
         self.assertEqual(self.terminal(path)["status"], "cancelled")
+
+class RemoteWatchProtocol(unittest.TestCase):
+    def test_protocol_validation_and_bounded_snapshots(self):
+        run_id = "12345678-1234-1234-1234-123456789abc"
+        event = json.dumps(dict(sequence=0, elapsed_ms=0, type="run_started", tasks=0)).encode() + b"\n"
+        requests = []
+        config = {}
+        class Handler(http.server.BaseHTTPRequestHandler):
+            protocol_version = "HTTP/1.1"
+            def log_message(self, *args):
+                pass
+            def do_GET(self):
+                requests.append(self.path)
+                is_events = "/events?" in self.path
+                code = config.get("code", 200)
+                self.send_response(code)
+                self.send_header("Connection", "close")
+                if code == 302:
+                    self.send_header("Location", "/redirect-target")
+                if is_events:
+                    cursor = int(self.path.rsplit("=", 1)[1])
+                    payload = config.get("payload", event)
+                    if config.pop("empty_first", False):
+                        payload = b""
+                    data = payload[cursor:cursor + 4 * 1024 * 1024]
+                    data = data[:data.rfind(b"\n") + 1]
+                    if not config.get("missing_cursor"):
+                        self.send_header("X-Next-Cursor", str(config.get("next", cursor + len(data))))
+                    self.send_header("X-Journal-Length", str(len(payload)))
+                else:
+                    data = json.dumps(dict(id=config.get("id", run_id), status=config.get("status", "running"))).encode()
+                if code != 200:
+                    data = b"secret-server-error"
+                chunked = config.get("chunked", False)
+                if chunked:
+                    self.send_header("Transfer-Encoding", "chunked")
+                else:
+                    self.send_header("Content-Length", str(config.get("length", len(data))))
+                self.end_headers()
+                try:
+                    if config.get("slow"):
+                        time.sleep(0.3)
+                    if chunked:
+                        chunk = b"x" * 65536
+                        for _ in range(65):
+                            self.wfile.write(b"10000\r\n" + chunk + b"\r\n")
+                        self.wfile.write(b"0\r\n\r\n")
+                    else:
+                        self.wfile.write(data)
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            command = [str(BINARY), "watch", run_id, "--server",
+                       f"http://127.0.0.1:{server.server_port}", "--progress", "json", "--timeout-ms", "2000"]
+            env = dict(os.environ, FLUENTCI_RUN_TOKEN=TOKEN)
+            for case, expected in [({"code": 302}, b"HTTP 302"),
+                                   ({"code": 401}, b"HTTP 401"),
+                                   ({"next": 999}, b"cursor"),
+                                   ({"missing_cursor": True}, b"cursor"),
+                                   ({"payload": b"invalid\n"}, b"invalid remote execution event"),
+                                   ({"payload": event.replace(b'"sequence": 0', b'"sequence": 5')}, b"not ordered"),
+                                   ({"length": 5 * 1024 * 1024}, b"byte limit"),
+                                   ({"chunked": True}, b"byte limit"),
+                                   ({"id": "other"}, b"invalid remote run state"),
+                                   ({"status": "unknown"}, b"invalid remote run state")]:
+                with self.subTest(case=list(case)):
+                    config.clear(); config.update(case); requests.clear()
+                    result = subprocess.run(command, env=env, capture_output=True, timeout=5)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(expected, result.stderr)
+                    self.assertNotIn(TOKEN.encode(), result.stderr)
+                    self.assertNotIn(b"secret-server-error", result.stderr)
+                    self.assertNotIn("/redirect-target", requests)
+            config.clear(); config["slow"] = True
+            result = subprocess.run(command[:-1] + ["100"], env=env, capture_output=True, timeout=5)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(b"timed out", result.stderr)
+            time.sleep(0.35)
+            # Completion between the first empty event page and state fetch.
+            config.clear(); config.update(empty_first=True, status="succeeded", payload=event +
+                json.dumps(dict(sequence=1, elapsed_ms=1, type="run_finished", success=True)).encode() + b"\n")
+            result = subprocess.run(command + ["--follow"], env=env, capture_output=True, timeout=5)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(len(result.stdout.splitlines()), 2)
+            # More than one server page, plus an incomplete trailing event.
+            records = [event] + [json.dumps(dict(sequence=i, elapsed_ms=i, type="log", id="task",
+                         stream="stdout", text="x" * 65536)).encode() + b"\n" for i in range(1, 70)]
+            config.clear(); config["payload"] = b"".join(records) + b'{"partial"'; requests.clear()
+            result = subprocess.run(command, env=env, capture_output=True, timeout=5)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual([json.loads(x) for x in result.stdout.splitlines()], [json.loads(x) for x in records])
+            self.assertGreaterEqual(sum("/events?" in x for x in requests), 2)
+        finally:
+            server.shutdown(); server.server_close(); thread.join(timeout=5)
 
 if __name__ == "__main__":
     unittest.main()

@@ -51,6 +51,7 @@ pub struct Progress {
     observed: Instant,
     finished: Option<bool>,
     task_count: usize,
+    remote_status: Option<String>,
     caught_up: bool,
     read_limit: Option<u64>,
     next_sequence: u64,
@@ -92,6 +93,7 @@ impl Progress {
             mode,
             rows: ids.iter().map(|id| (id.clone(), Row::pending())).collect(),
             task_count: ids.len(),
+            remote_status: None,
             order: ids,
             tail: VecDeque::new(),
             offset: 0,
@@ -199,6 +201,25 @@ impl Progress {
     pub fn finish_display(&mut self) -> Result<(), String> {
         if self.mode == Mode::Tui {
             self.render()?;
+        }
+        Ok(())
+    }
+    pub fn ingest(&mut self, events: Vec<Event>) -> Result<(), String> {
+        for event in events {
+            self.event(event)?;
+        }
+        if self.mode == Mode::Tui && self.last_render.elapsed() >= Duration::from_millis(100) {
+            self.render()?;
+        }
+        Ok(())
+    }
+    pub fn remote_state(&mut self, state: &str) -> Result<(), String> {
+        if self.remote_status.as_deref() != Some(state) {
+            self.remote_status = Some(state.into());
+            self.dirty = true;
+            if self.mode == Mode::Plain {
+                writeln!(io::stdout().lock(), "[run] {state}").map_err(|e| e.to_string())?;
+            }
         }
         Ok(())
     }
@@ -344,6 +365,9 @@ impl Progress {
             self.task_count.max(self.rows.len()),
             elapsed as f64 / 1000.0
         )];
+        if let Some(status) = &self.remote_status {
+            lines[0].push_str(&format!(" [{status}]"));
+        }
         // Keep failures and active tasks visible when the plan exceeds the terminal.
         let mut ids: Vec<_> = self.order.iter().collect();
         ids.sort_by_key(|id| visibility(&self.rows[*id].status));
