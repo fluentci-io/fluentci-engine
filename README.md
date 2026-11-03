@@ -48,7 +48,7 @@ versioned plan format, functional SDK direction, and current limitations.
 [Elixir host plans](sdk/elixir/HOST_PLANS.md) provide immutable `|>` builders, pure
 JSON compilation, typed results, and managed local execution with cancellation.
 
-The development version is **0.6.0**, with unified execution and legacy API
+Version **0.6.0** provides unified execution and legacy API
 compatibility. See the [0.6.0 compatibility notes](docs/compatibility-0.6.md) for
 migration guidance, legacy scheduling/service limits, and supported guest build paths.
 
@@ -72,11 +72,10 @@ cargo run --release -p fluentci-engine -- serve
 
 ## 📦 Downloads
 
-The links below are for the published **0.5.0** release. Version **0.6.0** is in
-preparation; its artifacts will be linked after publication.
+Download **FluentCI Engine v0.6.0** for your platform:
 
-- `Mac`: arm64: [fluentci-engine_v0.5.0_aarch64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.5.0/fluentci-engine_v0.5.0_aarch64-apple-darwin.tar.gz) intel: [fluentci-engine_v0.5.0_x86_64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.5.0/fluentci-engine_v0.5.0_x86_64-apple-darwin.tar.gz)
-- `Linux`: intel: [fluentci-engine_v0.5.0_x86_64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.5.0/fluentci-engine_v0.5.0_x86_64-unknown-linux-gnu.tar.gz) arm64: [fluentci-engine_v0.5.0_aarch64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.5.0/fluentci-engine_v0.5.0_aarch64-unknown-linux-gnu.tar.gz)
+- `Mac`: arm64: [fluentci-engine_v0.6.0_aarch64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.0/fluentci-engine_v0.6.0_aarch64-apple-darwin.tar.gz) intel: [fluentci-engine_v0.6.0_x86_64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.0/fluentci-engine_v0.6.0_x86_64-apple-darwin.tar.gz)
+- `Linux`: intel: [fluentci-engine_v0.6.0_x86_64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.0/fluentci-engine_v0.6.0_x86_64-unknown-linux-gnu.tar.gz) arm64: [fluentci-engine_v0.6.0_aarch64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.0/fluentci-engine_v0.6.0_aarch64-unknown-linux-gnu.tar.gz)
 
 ## 📚 Documentation
 

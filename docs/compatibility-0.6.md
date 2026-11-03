@@ -64,9 +64,8 @@ helpers when passing untrusted text.
 
 ## Release preparation
 
-The source engine and Nix package version are 0.6.0. Until its artifacts are
-published, workflow bootstrap pins and README binary download links use the
-published 0.5.0 release. Update those references after release publication.
+The source engine, Nix package, and README download links target 0.6.0. Workflow
+bootstrap pins use the published 0.5.0 engine until 0.6.0 artifacts are available.
 Bumping source versions does not tag a release, publish crates, or establish that
 all platform CI jobs have passed. Build and smoke-test release artifacts on the
 supported platform matrix before publishing them.
