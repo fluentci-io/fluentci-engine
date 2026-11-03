@@ -5,7 +5,7 @@ use std::{
     sync::{mpsc, Arc, Mutex},
 };
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use extism::{Manifest, PluginBuilder, UserData, Wasm};
 use fluentci_core::deps::Graph;
 use fluentci_ext::{pkgx::Pkgx, runner::Runner, Extension};
@@ -53,15 +53,10 @@ pub fn call(module: &str, command: &str) -> Result<(), Error> {
     if func.is_empty() {
         return Err(anyhow::anyhow!("a plugin export name is required"));
     }
-    match plugin.call::<&str, &str>(func, args) {
-        Ok(res) => {
-            println!("{}", res);
-        }
-        Err(err) => {
-            println!("{}", err);
-            std::process::exit(1);
-        }
-    };
+    let response = plugin
+        .call::<&str, &str>(func, args)
+        .with_context(|| format!("Wasm export {func:?} failed"))?;
+    println!("{response}");
     Ok(())
 }
 

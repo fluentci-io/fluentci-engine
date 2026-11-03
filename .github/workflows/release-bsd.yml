@@ -155,6 +155,20 @@ jobs:
           envs: 'RELEASE_TAG RELEASE_TARGET'
           prepare: sh .github/scripts/prepare-bsd-release.sh
           run: sh .github/scripts/build-bsd-release.sh
+      - name: Preserve copied-back BSD smoke-test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: bsd-release-failure-${{ matrix.target }}
+          path: |
+            .release-smoke/*.log
+            .bsd-release-smoke.*/**/*.json
+            .bsd-release-smoke.*/**/*.jsonl
+            .bsd-release-smoke.*/**/*.stdout
+            .bsd-release-smoke.*/**/*.stderr
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Verify copied-back release assets
         id: assets
         shell: bash

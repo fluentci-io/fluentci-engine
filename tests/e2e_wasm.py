@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -54,6 +55,19 @@ class WasmContracts(unittest.TestCase):
     def test_nested_xtp_generated_plugin_host_imports(self):
         command = f"{WASM / 'xtp_smoke.wasm'} env_roundtrip nested-unicode-世界"
         self.assertEqual(self.call("module", "call", command), "nested-unicode-世界")
+
+    def test_wasm_traps_report_the_root_cause_on_stderr(self):
+        with tempfile.TemporaryDirectory(prefix="fluentci-traps-") as directory:
+            script = Path(__file__).resolve().parents[1] / ".github/scripts/create-bsd-smoke-fixtures.py"
+            subprocess.run([sys.executable, str(script), directory], check=True, timeout=5)
+            for function, cause in [("unreachable", "wasm `unreachable` instruction executed"),
+                                    ("memory_oob", "out of bounds memory access")]:
+                with self.subTest(function=function):
+                    result = subprocess.run([str(BINARY), "call", "-m", str(Path(directory) / f"{function}.wasm"), function],
+                                            capture_output=True, text=True, timeout=30)
+                    self.assertNotEqual(result.returncode, 0, result.stdout)
+                    self.assertIn("Wasm export", result.stderr)
+                    self.assertIn(cause, result.stderr)
 
     def test_invalid_json_export_input_fails(self):
         self.call("xtp_smoke", "echo_json", "not-json", success=False)
