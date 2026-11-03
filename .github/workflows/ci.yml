@@ -62,9 +62,11 @@ jobs:
         run: cargo build --release --locked -p fluentci-engine
       - name: Run Build and e2e tests
         run: |
-          export PATH=${HOME}/.cargo/bin:${PATH}
+          export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
           ls -ltr ../target
-          sudo cp ../target/release/fluentci-engine $HOME/.local/bin
+          install -d "$HOME/.local/bin"
+          install -m 755 ../target/release/fluentci-engine "$HOME/.local/bin/fluentci-engine"
+          "$HOME/.local/bin/fluentci-engine" --version
           fluentci-engine run -- deno run -A ../.fluentci/e2e.ts
         working-directory: fixtures
         env:
