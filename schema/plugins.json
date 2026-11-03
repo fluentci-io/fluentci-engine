@@ -207,6 +207,22 @@
         "type": "string",
         "contentType": "text/plain; charset=utf-8"
       }
+    },
+    "exec": {
+      "input": {
+        "type": "string"
+      },
+      "output": {
+        "type": "string"
+      }
+    },
+    "service_smoke": {
+      "input": {
+        "type": "string"
+      },
+      "output": {
+        "type": "string"
+      }
     }
   },
   "devbox": {

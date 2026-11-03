@@ -17,8 +17,11 @@ milestones do not establish a claim of being the fastest engine.
 - Explicit versioned plans with dependency validation, bounded parallel tasks,
   task-local environments, timeouts, process-group cancellation, resource names,
   disk-backed logs, and structured results.
-- Legacy graph dependency/order/output regression fixes; legacy APIs remain
-  sequential pending migration to the explicit plan runtime.
+- Legacy GraphQL/Wasm execution compiles to the explicit plan runtime, including
+  eager operations, isolated provider workers, managed services and cache finalization.
+  Compatibility plans preserve serial ordering; pure host plans declare parallelism.
+- Small immutable Rust primitives share that kernel with functional SDK plans.
+  No provider setup occurs during pipeline construction.
 - Opt-in local content-addressed action cache, verified artifact restoration,
   invalidation components, Unix action-lock deduplication, rollback on restoration
   errors, preflight rejection of unordered overlapping declared cache paths, and

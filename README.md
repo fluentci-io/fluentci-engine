@@ -40,7 +40,8 @@ FluentCI Engine is a programmable CI/CD engine (used by [FluentCI](https://githu
 
 ## Host execution plans
 
-An explicit host executor is available through `fluentci-engine execute`, with
+A shared host executor powers `fluentci-engine execute` and the legacy GraphQL/Wasm
+adapters, with
 bounded parallelism, dependency validation, per-task environments, cancellation,
 and structured results. See [host execution plans](docs/host-executor.md) for the
 versioned plan format, functional SDK direction, and current limitations.

@@ -2,9 +2,42 @@
 
 The `execute` command runs an explicit dependency graph on the host. This is the
 first execution-core milestone toward a non-containerized Dagger alternative.
-The existing GraphQL/Wasm APIs remain available and sequential; they do not yet
-compile to this plan format. Their graph execution now validates dependencies
-and runs joins only after all predecessors.
+The GraphQL/Wasm compatibility APIs compile into this same executor. Full graphs,
+eager file/hash/cache operations, provider initialization, service lifecycles and
+cache finalization use executor-managed tasks. Compatibility plans retain serial
+command ordering; explicit host plans opt into parallelism with `jobs`.
+
+New APIs should compose immutable task and plan values, with execution as an
+explicit effect. Rust exposes small functions through `fluentci_executor::primitives`:
+`exec`, `env`, `needs`, `cache`, `service`, `timeout`, `resources`, `plan`, `jobs`,
+and `run`. Construction reads no host environment, provisions no tools, and runs
+no commands. `exec` preserves argument boundaries; shell execution requires an
+explicit shell program and arguments. PureScript's `#` and Gleam/Elixir's `|>`
+compose the corresponding immutable host-plan builders.
+
+```rust
+use fluentci_executor::{primitives as ci, Cancellation};
+use std::path::Path;
+
+let greet = ci::exec("greet", "/usr/bin/printf", vec!["%s\n".into(), "hello pipeline".into()], "/tmp");
+let pipeline = ci::plan(vec![greet]); // data only; no effects
+let result = ci::run(&pipeline, Path::new("/tmp/fresh-run"), &Cancellation::default());
+```
+
+Compatibility provider hooks run in isolated `provider-worker` child processes.
+Their configuration travels in private request files, with explicit task-local
+environments, rather than modifying the multithreaded server's environment.
+Library embedders must set `Graph.worker_executable` to the matching engine binary;
+the CLI selects its own executable automatically. Provider hooks are execution
+backends, not schedulers, and cannot bypass kernel failure/dependency handling.
+
+Legacy service APIs have no protocol readiness configuration. Their adapters
+preserve the five-second startup grace after the command starts, supervise process
+liveness, and clean up process groups through the executor. For database readiness,
+use an explicit host `service.readiness` probe. Compatibility run/request files
+are private and temporary; durable history remains available through explicit
+CLI/server runs. Cache finalization uses bounded executor tasks on success/failure
+and is skipped after explicit cancellation.
 
 ```sh
 cargo run --release -p fluentci-engine -- execute fixtures/plans/diamond.json --run-dir /tmp/fluentci-example-run
