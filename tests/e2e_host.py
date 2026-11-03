@@ -152,20 +152,45 @@ class HostExecution(unittest.TestCase):
                 process.kill()
                 process.wait()
 
+    def execution_diagnostics(self, result, run="run"):
+        # Capture evidence before TemporaryDirectory teardown removes a failed run.
+        artifacts = os.environ.get("FLUENTCI_E2E_ARTIFACTS")
+        destination = Path(artifacts) / self.id() if artifacts else None
+        details = [f"CLI exit: {result.returncode}", result.stderr]
+        if destination:
+            destination.mkdir(parents=True, exist_ok=True)
+        for path in sorted((self.root / run).rglob("*")):
+            if path.is_symlink() or not path.is_file() or path.suffix not in {".json", ".jsonl", ".stdout", ".stderr"}:
+                continue
+            with path.open("rb") as source:
+                source.seek(0, os.SEEK_END)
+                source.seek(max(0, source.tell() - 65536))
+                text = source.read().decode("utf-8", errors="replace")
+            relative = path.relative_to(self.root)
+            details.append(f"{relative}:\n{text}")
+            if destination:
+                saved = destination / relative
+                saved.parent.mkdir(parents=True, exist_ok=True)
+                saved.write_text(text)
+        return "\n".join(details)
+
     def test_service_readiness_and_cleanup_with_single_job(self):
         daemon = "import http.server, pathlib, os; s=http.server.HTTPServer(('127.0.0.1',0),http.server.SimpleHTTPRequestHandler); pathlib.Path('port').write_text(str(s.server_port)); pathlib.Path('pid').write_text(str(os.getpid())); print('service-ready', flush=True); s.serve_forever()"
-        probe = "import pathlib, urllib.request; urllib.request.urlopen('http://127.0.0.1:'+pathlib.Path('port').read_text()+'/health', timeout=0.2).read()"
+        # Direct loopback HTTP avoids macOS system-proxy discovery in urllib.
+        # This tests lifecycle scheduling, not cold Python import performance.
+        probe = "import http.client,pathlib; c=http.client.HTTPConnection('127.0.0.1',int(pathlib.Path('port').read_text()),timeout=2); c.request('GET','/health'); r=c.getresponse(); assert r.status==200 and r.read()==b'healthy'; c.close()"
         (self.root / "health").write_text("healthy")
-        service = dict(id="http", program=sys.executable, args=["-c", daemon], cwd=".",
-                       service=dict(readiness=dict(program=sys.executable, args=["-c", probe], interval_ms=20, timeout_ms=1000),
-                                    startup_timeout_ms=3000, shutdown_timeout_ms=200))
-        client = dict(id="client", needs=["http"], program=sys.executable, args=["-c", probe], cwd=".")
+        service = dict(id="http", program=sys.executable, args=["-I", "-S", "-c", daemon], cwd=".",
+                       service=dict(readiness=dict(program=sys.executable, args=["-I", "-S", "-c", probe], interval_ms=100, timeout_ms=5000),
+                                    startup_timeout_ms=20000, shutdown_timeout_ms=1000))
+        client = dict(id="client", needs=["http"], program=sys.executable, args=["-I", "-S", "-c", probe], cwd=".", timeout_ms=10000)
         plan = self.plan([service, client])
         document = json.loads(plan.read_text())
         document["jobs"] = 1
         plan.write_text(json.dumps(document))
-        result = subprocess.run(self.command(plan), capture_output=True, text=True, timeout=15)
-        self.assertEqual(result.returncode, 0, result.stderr)
+        result = subprocess.run(self.command(plan), capture_output=True, text=True, timeout=45)
+        if result.returncode != 0:
+            self.fail(self.execution_diagnostics(result))
         events = [json.loads(line) for line in result.stdout.splitlines()]
         self.assertTrue(any(e.get("status") == "ready" for e in events))
         self.assertTrue(any(e.get("status") == "stopping" for e in events))

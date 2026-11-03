@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - 'crates/**'
-      - 'vendor/superconsole/**'
+      - 'vendor/**'
       - 'Cargo.*'
       - 'tests/**'
       - 'examples/**'
@@ -79,10 +79,21 @@ jobs:
       - name: Executor lint
         run: cargo clippy --release --locked -p fluentci-executor --all-targets -- -D warnings
       - name: Build CLI and run end-to-end tests
+        env:
+          FLUENTCI_E2E_ARTIFACTS: .ci-artifacts/host-e2e
         run: |
           cargo build --release --locked -p fluentci-engine
           python3 tests/e2e_host.py -v
           python3 tests/e2e_server.py -v
+      - name: Preserve failed native service diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-host-e2e-${{ matrix.os }}
+          path: .ci-artifacts/host-e2e
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Compile and exercise legacy and XTP-generated Wasm plugins
         run: |
           python3 scripts/xtp_codegen.py --check
@@ -245,7 +256,7 @@ jobs:
         uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
           path: .ci-cache/bsd-rust
-          key: bsd-rust-v1-freebsd-14.3-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-${{ hashFiles('crates/**/*.rs', 'vendor/superconsole/**/*.rs', 'vendor/superconsole/Cargo.toml') }}
+          key: bsd-rust-v1-freebsd-14.3-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-${{ hashFiles('crates/**/*.rs', 'vendor/**/*.rs', 'vendor/**/Cargo.toml') }}
           restore-keys: |
             bsd-rust-v1-freebsd-14.3-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-
             bsd-rust-v1-freebsd-14.3-x86_64-
@@ -283,7 +294,7 @@ jobs:
         uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
           path: .ci-cache/bsd-rust
-          key: bsd-rust-v1-netbsd-10.1-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-${{ hashFiles('crates/**/*.rs', 'vendor/superconsole/**/*.rs', 'vendor/superconsole/Cargo.toml') }}
+          key: bsd-rust-v1-netbsd-10.1-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-${{ hashFiles('crates/**/*.rs', 'vendor/**/*.rs', 'vendor/**/Cargo.toml') }}
           restore-keys: |
             bsd-rust-v1-netbsd-10.1-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-
             bsd-rust-v1-netbsd-10.1-x86_64-
@@ -335,7 +346,7 @@ jobs:
         uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
           path: .ci-cache/bsd-rust
-          key: bsd-rust-v1-openbsd-7.8-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-${{ hashFiles('crates/**/*.rs', 'vendor/superconsole/**/*.rs', 'vendor/superconsole/Cargo.toml') }}
+          key: bsd-rust-v1-openbsd-7.8-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-${{ hashFiles('crates/**/*.rs', 'vendor/**/*.rs', 'vendor/**/Cargo.toml') }}
           restore-keys: |
             bsd-rust-v1-openbsd-7.8-x86_64-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/Cargo.toml') }}-
             bsd-rust-v1-openbsd-7.8-x86_64-
