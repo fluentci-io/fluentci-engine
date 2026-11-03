@@ -416,13 +416,30 @@ worker publishes the final outcome after cleanup. Persistence failures return 50
 and still prevent that queued run from starting in the current process. Queue waiting
 does not consume task execution timeouts or perform workspace copying; plan
 validation still happens at admission and execution validates again when starting.
-Accepted queued plans and their idempotency associations are persisted, and their
-parent trace context is retained in memory until execution. Waiting workers are
-bounded by the configured queue capacity and use a condition variable, with
-cancellation checks at most every 25 ms while waiting for a slot. This is an
-in-process queue, not a durable execution scheduler: graceful shutdown cancels
-waiting runs; after a crash, persisted queued states become `interrupted` rather
-than automatically executing. Explicitly submit a new run/key to retry them. Each plan is limited to 64 ordinary jobs, 32 service slots,
+Accepted plans, idempotency associations, admission sequence, and W3C parent trace
+context are persisted. An `admitted.json` record is written last, after the plan,
+initial state, and any idempotency association have been synced. Waiting workers
+are bounded by configured capacity and use a condition variable; cancellation
+releases a waiting queue position before acknowledgement.
+
+By default, queued runs become `interrupted` after a crash and require an explicit
+new run/key. Start with `--resume-queued` to recover fully admitted, never-started
+queued runs in their original admission order, retaining IDs, keys, and trace
+context. Recovery validates saved plans against server limits and checks that no
+execution directory exists. Missing/malformed admission records (including older
+stores), invalid plans, and evidence of prior execution produce `interrupted`
+without running commands. Ambiguous admission ordering or insufficient configured
+capacity fails startup; increase `--max-runs`/`--max-queued` to retry without losing
+the valid queue. Recovery starts workers only after the HTTP listener binds.
+
+Graceful shutdown still cancels waiting runs durably. Running/interrupted runs are
+never automatically re-executed: a crash may have left side effects or orphaned
+processes, and queue resumption does not provide orphan supervision. Before using
+recovery after a hard stop, ensure previously running processes have stopped.
+The transition from queued to running is synced before any execution begins;
+a crash after that transition can leave an interrupted run even if no command
+started. This provides conservative recovery, not exactly-once side effects.
+Each plan is limited to 64 ordinary jobs, 32 service slots,
 10,000 tasks, and a 1 MiB JSON body. Plan validation and durable admission run on
 blocking workers, leaving HTTP workers available for status and log requests.
 `POST /v1/runs` accepts an optional
@@ -688,7 +705,8 @@ plan validation while holding the same lock used to register workers, so a reque
 that was validating during shutdown cannot start work afterward. Such submissions
 receive HTTP 503 (`run server is shutting down`). Concurrent shutdown callers wait
 for the same cleanup to finish. Restart with a new store/server instance to admit
-new runs; this does not introduce a durable admission queue or crash supervision.
+new runs; this does not introduce crash supervision. Optional queued-run recovery
+is described above.
 
 ## Result publication and restart recovery
 

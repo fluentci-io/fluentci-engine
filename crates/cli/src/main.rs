@@ -64,6 +64,7 @@ fn cli() -> Command<'static> {
                 .arg(Arg::new("listen").long("listen").takes_value(true).default_value("127.0.0.1:6881"))
                 .arg(Arg::new("data-dir").long("data-dir").takes_value(true).required(true))
                 .arg(Arg::new("max-runs").long("max-runs").takes_value(true).default_value("4"))
+                .arg(Arg::new("resume-queued").long("resume-queued").help("Resume fully admitted, never-started queued runs after restart"))
                 .arg(Arg::new("max-queued").long("max-queued").takes_value(true).default_value("0"))
                 .about("Serves authenticated independent host pipeline runs"),
         )
@@ -89,7 +90,7 @@ async fn main() -> Result<(), Error> {
             run(&command.collect::<Vec<_>>().join(" ")).await?;
         }
         Some(("serve-runs", args)) => {
-            fluentci_server::runs::start_with_queue(args.value_of("listen").unwrap(), std::path::Path::new(args.value_of("data-dir").unwrap()), args.value_of("max-runs").unwrap().parse()?, args.value_of("max-queued").unwrap().parse()?).await?;
+            fluentci_server::runs::start_with_recovery(args.value_of("listen").unwrap(), std::path::Path::new(args.value_of("data-dir").unwrap()), args.value_of("max-runs").unwrap().parse()?, args.value_of("max-queued").unwrap().parse()?, args.is_present("resume-queued")).await?;
         }
         Some(("serve", args)) => {
             let listen = args.value_of("listen").unwrap();

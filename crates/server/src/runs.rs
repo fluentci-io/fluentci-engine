@@ -13,7 +13,7 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc, Mutex, RwLock,
     },
     thread::JoinHandle,
@@ -34,9 +34,24 @@ struct Submission {
     run_id: String,
 }
 
+// Written last: its presence proves plan, initial state and any idempotency
+// association were persisted before the admission was committed.
+#[derive(Serialize, Deserialize)]
+struct Admitted {
+    sequence: u64,
+    trace: HashMap<String, String>,
+}
+struct Recoverable {
+    sequence: u64,
+    state: RunState,
+    plan: Plan,
+    parent: opentelemetry::Context,
+}
+
 // Serialize cancellation with the queued-to-running transition. A queued
 // cancellation is durable before acknowledgement and cannot be started afterward.
 struct RunControl {
+    admission: Arc<admission::Admission>,
     cancel: Cancellation,
     path: PathBuf,
     state: Mutex<RunState>,
@@ -52,6 +67,7 @@ impl RunControl {
             cancelled.error = Some("run cancelled before execution".into());
             save(&self.path, &cancelled)?;
             *state = cancelled;
+            self.admission.cancel_queued(&state.id);
         }
         Ok(())
     }
@@ -94,6 +110,8 @@ pub struct Runs {
     closing: AtomicBool,
     shutdown_lock: Mutex<()>,
     history_index: RwLock<BTreeSet<(u64, String)>>,
+    sequence: AtomicU64,
+    recovered: Mutex<Vec<Recoverable>>,
 }
 fn save(path: &Path, value: &impl Serialize) -> Result<(), String> {
     let mut file =
@@ -150,6 +168,15 @@ impl Runs {
         max_runs: usize,
         max_queued: usize,
     ) -> Result<Self, String> {
+        Self::with_recovery(root, token, max_runs, max_queued, false)
+    }
+    fn with_recovery(
+        root: &Path,
+        token: String,
+        max_runs: usize,
+        max_queued: usize,
+        resume_queued: bool,
+    ) -> Result<Self, String> {
         if token.len() < 16 || max_runs == 0 {
             return Err(
                 "run server requires a token of at least 16 bytes and positive max-runs".into(),
@@ -198,12 +225,20 @@ impl Runs {
         // A previous process cannot own live runs in this store. Never silently
         // report them as running after a restart.
         let mut history_index = BTreeSet::new();
+        let mut sequence = 0;
+        let mut recovered = Vec::new();
         for entry in fs::read_dir(&root).map_err(|e| e.to_string())? {
             let entry = entry.map_err(|e| e.to_string())?;
             if Uuid::parse_str(&entry.file_name().to_string_lossy()).is_err()
                 || !entry.file_type().map_err(|e| e.to_string())?.is_dir()
             {
                 continue;
+            }
+            let admitted = fs::read(entry.path().join("admitted.json"))
+                .ok()
+                .and_then(|bytes| serde_json::from_slice::<Admitted>(&bytes).ok());
+            if let Some(record) = &admitted {
+                sequence = sequence.max(record.sequence);
             }
             let path = entry.path().join("state.json");
             if let Ok(bytes) = fs::read(&path) {
@@ -214,6 +249,57 @@ impl Runs {
                 }
                 history_index.insert((state.created_at_ms, state.id.clone()));
                 if state.status == "queued" {
+                    if resume_queued {
+                        let candidate = (|| {
+                            let record =
+                                admitted.ok_or("queued run has no valid admission record")?;
+                            match entry.path().join("execution").symlink_metadata() {
+                                Ok(_) => {
+                                    return Err(
+                                        "queued run already has an execution directory".to_owned()
+                                    )
+                                }
+                                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                                Err(error) => {
+                                    return Err(format!(
+                                        "cannot inspect queued execution path: {error}"
+                                    ))
+                                }
+                            }
+                            let plan: Plan = serde_json::from_slice(
+                                &fs::read(entry.path().join("plan.json"))
+                                    .map_err(|e| e.to_string())?,
+                            )
+                            .map_err(|e| e.to_string())?;
+                            if plan.inherit_env
+                                || plan.jobs > 64
+                                || plan.max_services > 32
+                                || plan.tasks.len() > 10_000
+                            {
+                                return Err("saved queued plan exceeds server policy".into());
+                            }
+                            plan.validate()?;
+                            Ok(Recoverable {
+                                sequence: record.sequence,
+                                state: state.clone(),
+                                plan,
+                                parent: TraceContextPropagator::new().extract(&record.trace),
+                            })
+                        })();
+                        match candidate {
+                            Ok(run) => {
+                                recovered.push(run);
+                                continue;
+                            }
+                            Err(error) => {
+                                state.status = "interrupted".into();
+                                state.error =
+                                    Some(format!("queued run cannot be resumed: {error}"));
+                                save(&path, &state)?;
+                                continue;
+                            }
+                        }
+                    }
                     state.status = "interrupted".into();
                     state.error = Some(
                         "server stopped before queued run execution; submit a new run explicitly"
@@ -238,6 +324,16 @@ impl Runs {
                 }
             }
         }
+        recovered.sort_by_key(|run| run.sequence);
+        if recovered
+            .windows(2)
+            .any(|pair| pair[0].sequence == pair[1].sequence)
+        {
+            return Err("queued admission sequence is ambiguous".into());
+        }
+        if recovered.len() > max_runs.saturating_add(max_queued) {
+            return Err("persisted queue exceeds configured capacity; increase max-runs/max-queued before resuming".into());
+        }
         Ok(Self {
             _store_lock: store_lock,
             root,
@@ -247,7 +343,28 @@ impl Runs {
             closing: AtomicBool::new(false),
             shutdown_lock: Mutex::new(()),
             history_index: RwLock::new(history_index),
+            sequence: AtomicU64::new(sequence),
+            recovered: Mutex::new(recovered),
         })
+    }
+    fn resume_queued(&self) -> Result<(), String> {
+        let mut active = self.active.lock().unwrap();
+        let pending = std::mem::take(&mut *self.recovered.lock().unwrap());
+        let mut reserved = Vec::with_capacity(pending.len());
+        for run in pending {
+            let ticket = self
+                .admission
+                .reserve(run.state.id.clone())
+                .ok_or("persisted queue exceeds available capacity")?;
+            reserved.push((run, ticket));
+        }
+        for (run, ticket) in reserved {
+            let id = run.state.id.clone();
+            let path = self.root.join(&id);
+            let worker = spawn_run(run.plan, run.parent, &path, run.state, ticket)?;
+            active.insert(id, worker);
+        }
+        Ok(())
     }
     fn authorized(&self, request: &HttpRequest) -> bool {
         let Some(token) = request
@@ -440,7 +557,7 @@ fn admit(
     }
     active.retain(|_, run| !run.worker.is_finished());
     let id = Uuid::new_v4().to_string();
-    let mut reservation = runs
+    let reservation = runs
         .admission
         .reserve(id.clone())
         .ok_or_else(|| (429, "run and queue capacity reached".to_owned()))?;
@@ -483,6 +600,16 @@ fn admit(
                 &Submission { run_id: id.clone() },
             )?;
         }
+        // Admission holds the active-map lock, so allocation is serialized.
+        let sequence = runs
+            .sequence
+            .load(Ordering::Relaxed)
+            .checked_add(1)
+            .ok_or("admission sequence exhausted")?;
+        runs.sequence.store(sequence, Ordering::Relaxed);
+        let mut trace = HashMap::new();
+        TraceContextPropagator::new().inject_context(&parent, &mut trace);
+        save(&path.join("admitted.json"), &Admitted { sequence, trace })?;
         Ok::<_, String>(())
     })();
     if preparation.is_err() {
@@ -503,17 +630,33 @@ fn admit(
         }
         return Err((500, "could not persist run".into()));
     }
+    match spawn_run(plan, parent, &path, state.clone(), reservation) {
+        Ok(worker) => {
+            active.insert(id, worker);
+            Ok(state)
+        }
+        Err(error) => Err((500, error)),
+    }
+}
+fn spawn_run(
+    plan: Plan,
+    parent: opentelemetry::Context,
+    path: &Path,
+    state: RunState,
+    mut reservation: admission::Reservation,
+) -> Result<Active, String> {
     let cancel = Cancellation::default();
     let worker_cancel = cancel.clone();
-    let worker_path = path.clone();
+    let worker_path = path.to_path_buf();
     let control = Arc::new(RunControl {
+        admission: reservation.admission(),
         cancel,
         path: path.join("state.json"),
         state: Mutex::new(state.clone()),
     });
     let worker_control = control.clone();
     let worker = std::thread::Builder::new()
-        .name(format!("run-{id}"))
+        .name(format!("run-{}", state.id))
         .spawn(move || {
             let _guard = parent.attach();
             let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -532,21 +675,10 @@ fn admit(
             }
         });
     match worker {
-        Ok(worker) => {
-            active.insert(id.clone(), Active { control, worker });
-            Ok(state)
-        }
+        Ok(worker) => Ok(Active { control, worker }),
         Err(_) => {
-            let _ = save(
-                &path.join("state.json"),
-                &RunState {
-                    created_at_ms,
-                    id,
-                    status: "failed".into(),
-                    error: Some("could not start run worker".into()),
-                },
-            );
-            Err((500, "could not start run worker".into()))
+            control.finish("failed", Some("could not start run worker".into()))?;
+            Err("could not start run worker".into())
         }
     }
 }
@@ -831,10 +963,21 @@ pub async fn start_with_queue(
     max_runs: usize,
     max_queued: usize,
 ) -> anyhow::Result<()> {
+    start_with_recovery(listen, root, max_runs, max_queued, false).await
+}
+
+pub async fn start_with_recovery(
+    listen: &str,
+    root: &Path,
+    max_runs: usize,
+    max_queued: usize,
+    resume_queued: bool,
+) -> anyhow::Result<()> {
     let token = std::env::var("FLUENTCI_RUN_TOKEN")
         .map_err(|_| anyhow::anyhow!("set FLUENTCI_RUN_TOKEN to authenticate run requests"))?;
     let runs = web::Data::new(
-        Runs::with_queue(root, token, max_runs, max_queued).map_err(anyhow::Error::msg)?,
+        Runs::with_recovery(root, token, max_runs, max_queued, resume_queued)
+            .map_err(anyhow::Error::msg)?,
     );
     fluentci_core::init_tracer().map_err(|e| anyhow::anyhow!(e.to_string()))?;
     let app_runs = runs.clone();
@@ -844,8 +987,9 @@ pub async fn start_with_queue(
             .app_data(app_runs.clone())
             .configure(configure)
     })
-    .bind(listen)?
-    .run();
+    .bind(listen)?;
+    runs.resume_queued().map_err(anyhow::Error::msg)?;
+    let server = server.run();
     let outcome = server.await;
     tokio::task::spawn_blocking(move || {
         runs.shutdown();
@@ -870,6 +1014,99 @@ mod lifecycle_tests {
         .unwrap()
     }
 
+    fn seed_queued(root: &Path, number: u128, sequence: u64) -> PathBuf {
+        let id = Uuid::from_u128(number).to_string();
+        let path = root.join(&id);
+        fs::create_dir(&path).unwrap();
+        save(
+            &path.join("state.json"),
+            &RunState {
+                created_at_ms: 1,
+                id,
+                status: "queued".into(),
+                error: None,
+            },
+        )
+        .unwrap();
+        save(&path.join("plan.json"), &plan(root)).unwrap();
+        save(
+            &path.join("admitted.json"),
+            &Admitted {
+                sequence,
+                trace: HashMap::new(),
+            },
+        )
+        .unwrap();
+        path
+    }
+
+    #[test]
+    fn recovery_requires_committed_admission_valid_plan_and_no_execution() {
+        let root = tempfile::tempdir().unwrap();
+        let valid = seed_queued(root.path(), 1, 9);
+        let missing = seed_queued(root.path(), 2, 2);
+        fs::remove_file(missing.join("admitted.json")).unwrap();
+        let malformed = seed_queued(root.path(), 3, 3);
+        fs::write(malformed.join("admitted.json"), b"{").unwrap();
+        let started = seed_queued(root.path(), 4, 4);
+        fs::create_dir(started.join("execution")).unwrap();
+        let bad_plan = seed_queued(root.path(), 5, 5);
+        fs::write(bad_plan.join("plan.json"), b"{").unwrap();
+        let inherited = seed_queued(root.path(), 6, 6);
+        let mut unsafe_plan = plan(root.path());
+        unsafe_plan.inherit_env = true;
+        save(&inherited.join("plan.json"), &unsafe_plan).unwrap();
+        let earlier = seed_queued(root.path(), 7, 8);
+        let runs =
+            Runs::with_recovery(root.path(), "test-recovery-token".into(), 1, 1, true).unwrap();
+        let pending = runs.recovered.lock().unwrap();
+        assert_eq!(
+            pending.iter().map(|run| run.sequence).collect::<Vec<_>>(),
+            vec![8, 9]
+        );
+        assert!(!valid.join("execution").exists());
+        assert!(!earlier.join("execution").exists());
+        drop(pending);
+        for path in [missing, malformed, started, bad_plan, inherited] {
+            let state: RunState =
+                serde_json::from_slice(&fs::read(path.join("state.json")).unwrap()).unwrap();
+            assert_eq!(state.status, "interrupted");
+            assert!(state.error.unwrap().contains("cannot be resumed"));
+        }
+    }
+
+    #[test]
+    fn recovery_capacity_failure_preserves_queue_for_reconfigured_restart() {
+        let root = tempfile::tempdir().unwrap();
+        let first = seed_queued(root.path(), 1, 2);
+        let second = seed_queued(root.path(), 2, 1);
+        assert!(
+            Runs::with_recovery(root.path(), "test-recovery-token".into(), 1, 0, true).is_err()
+        );
+        for path in [&first, &second] {
+            let state: RunState =
+                serde_json::from_slice(&fs::read(path.join("state.json")).unwrap()).unwrap();
+            assert_eq!(state.status, "queued");
+            assert!(!path.join("execution").exists());
+        }
+        let runs =
+            Runs::with_recovery(root.path(), "test-recovery-token".into(), 1, 1, true).unwrap();
+        assert_eq!(runs.recovered.lock().unwrap().len(), 2);
+        drop(runs);
+        save(
+            &second.join("admitted.json"),
+            &Admitted {
+                sequence: 2,
+                trace: HashMap::new(),
+            },
+        )
+        .unwrap();
+        assert!(
+            Runs::with_recovery(root.path(), "test-recovery-token".into(), 1, 1, true).is_err()
+        );
+        assert!(!first.join("execution").exists());
+    }
+
     fn queued_control(root: &Path) -> RunControl {
         let state = RunState {
             created_at_ms: 1,
@@ -880,6 +1117,7 @@ mod lifecycle_tests {
         let path = root.join("state.json");
         save(&path, &state).unwrap();
         RunControl {
+            admission: admission::Admission::new(1, 1),
             cancel: Cancellation::default(),
             path,
             state: Mutex::new(state),
@@ -905,6 +1143,23 @@ mod lifecycle_tests {
             state.error.as_deref(),
             Some("run cancelled before execution")
         );
+    }
+
+    #[test]
+    fn queued_cancellation_releases_capacity_before_worker_reaps_ticket() {
+        let root = tempfile::tempdir().unwrap();
+        let control = queued_control(root.path());
+        let running = control.admission.reserve("running".into()).unwrap();
+        let id = control.state.lock().unwrap().id.clone();
+        let mut waiting = control.admission.reserve(id).unwrap();
+        assert!(control.admission.reserve("full".into()).is_none());
+        control.cancel().unwrap();
+        let replacement = control.admission.reserve("replacement".into()).unwrap();
+        assert!(waiting.wait(&control.cancel).is_err());
+        drop(waiting);
+        assert!(control.admission.reserve("still-full".into()).is_none());
+        drop(replacement);
+        drop(running);
     }
 
     #[test]

@@ -27,6 +27,7 @@ class RunServer(unittest.TestCase):
         self.extra_env = {}
         self.max_runs = 2
         self.max_queued = 0
+        self.resume_queued = False
         self.start()
 
     def start(self):
@@ -37,7 +38,7 @@ class RunServer(unittest.TestCase):
         env = {k:v for k,v in os.environ.items() if not k.startswith("OTEL_")}
         env["FLUENTCI_RUN_TOKEN"] = TOKEN
         env.update(self.extra_env)
-        self.proc = subprocess.Popen([str(BINARY), "serve-runs", "--listen", f"127.0.0.1:{port}", "--data-dir", str(self.root / "runs"), "--max-runs", str(self.max_runs), "--max-queued", str(self.max_queued)], env=env, stdout=self.log, stderr=self.log)
+        self.proc = subprocess.Popen([str(BINARY), "serve-runs", "--listen", f"127.0.0.1:{port}", "--data-dir", str(self.root / "runs"), "--max-runs", str(self.max_runs), "--max-queued", str(self.max_queued)] + (["--resume-queued"] if self.resume_queued else []), env=env, stdout=self.log, stderr=self.log)
         deadline = time.monotonic() + 10
         while time.monotonic() < deadline:
             self.assertIsNone(self.proc.poll(), "server exited during startup")
@@ -141,6 +142,67 @@ class RunServer(unittest.TestCase):
         self.assertEqual(self.terminal(queued)["status"], "interrupted")
         self.assertFalse((self.root / "unexpected").exists())
         self.assertFalse((state_path.parent / "execution").exists())
+
+    def test_crash_restart_resumes_committed_queue_once_in_admission_order(self):
+        self.stop()
+        self.max_runs, self.max_queued = 1, 3
+        self.start()
+        blocker = self.submit(self.plan("echo started > started; while [ ! -f release ]; do /bin/sleep 0.02; done; echo stopped > stopped"))
+        deadline = time.monotonic() + 5
+        while not (self.root / "started").exists() and time.monotonic() < deadline:
+            time.sleep(0.02)
+        self.assertTrue((self.root / "started").exists())
+        queued = []
+        trace_id = "1234567890abcdef1234567890abcdef"
+        for i in range(3):
+            plan = self.plan(f"echo {i} >> resumed")
+            code, body, headers = self.request("POST", "/v1/runs", plan, extra_headers={
+                "Idempotency-Key": f"resume-{i}",
+                "traceparent": f"00-{trace_id}-1234567890abcdef-01",
+            })
+            self.assertEqual(code, 202, body)
+            self.assertEqual(json.loads(body)["status"], "queued")
+            queued.append((headers["Location"], plan))
+        # Kill only the server. Explicitly release the old child before recovery:
+        # independent orphan supervision is not provided by queue resumption.
+        self.proc.kill()
+        self.proc.wait(timeout=5)
+        (self.root / "release").touch()
+        deadline = time.monotonic() + 5
+        while not (self.root / "stopped").exists() and time.monotonic() < deadline:
+            time.sleep(0.02)
+        self.assertTrue((self.root / "stopped").exists())
+        # A failed listener bind must not start recovered commands.
+        with socket.socket() as occupied:
+            occupied.bind(("127.0.0.1", 0))
+            occupied.listen()
+            address = f"127.0.0.1:{occupied.getsockname()[1]}"
+            env = {k:v for k,v in os.environ.items() if not k.startswith("OTEL_")}
+            env["FLUENTCI_RUN_TOKEN"] = TOKEN
+            failed = subprocess.run([str(BINARY), "serve-runs", "--listen", address,
+                "--data-dir", str(self.root / "runs"), "--max-runs", "1",
+                "--max-queued", "3", "--resume-queued"], env=env,
+                capture_output=True, timeout=10)
+            self.assertNotEqual(failed.returncode, 0)
+        self.assertFalse((self.root / "resumed").exists())
+        for location, _ in queued:
+            state = json.loads((self.root / "runs" / location.rsplit("/", 1)[1] / "state.json").read_text())
+            self.assertEqual(state["status"], "queued")
+        self.resume_queued = True
+        self.start()
+        self.assertEqual(self.terminal(blocker)["status"], "interrupted")
+        for i, (location, plan) in enumerate(queued):
+            self.assertEqual(self.terminal(location)["status"], "succeeded")
+            code, body, headers = self.request("POST", "/v1/runs", plan, extra_headers={"Idempotency-Key": f"resume-{i}"})
+            self.assertEqual(code, 202, body)
+            self.assertEqual(headers["Location"], location)
+            events = self.request("GET", location + "/events")[1].decode().splitlines()
+            self.assertTrue(events)
+            self.assertTrue(all(json.loads(event)["trace_id"] == trace_id for event in events))
+        self.assertEqual((self.root / "resumed").read_text().splitlines(), ["0", "1", "2"])
+        self.stop()
+        self.start()
+        self.assertEqual((self.root / "resumed").read_text().splitlines(), ["0", "1", "2"])
 
     def test_workspace_runs_keep_source_and_artifacts_separate(self):
         (self.root / "input").write_text("original")

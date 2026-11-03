@@ -34,6 +34,11 @@ impl Admission {
             changed: Condvar::new(),
         })
     }
+    pub fn cancel_queued(&self, id: &str) {
+        let mut state = self.state.lock().unwrap();
+        state.queued.retain(|queued| queued != id);
+        self.changed.notify_all();
+    }
     pub fn reserve(self: &Arc<Self>, id: String) -> Option<Reservation> {
         let mut state = self.state.lock().unwrap();
         let acquired = state.running < self.max_running && state.queued.is_empty();
@@ -52,6 +57,9 @@ impl Admission {
     }
 }
 impl Reservation {
+    pub fn admission(&self) -> Arc<Admission> {
+        self.admission.clone()
+    }
     pub fn queued(&self) -> bool {
         !self.acquired
     }
