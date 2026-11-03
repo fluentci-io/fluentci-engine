@@ -32,6 +32,14 @@ fn cli() -> Command<'static> {
                 .about("Compares cache key components in saved run results"),
         )
         .subcommand(
+            Command::new("watch")
+                .arg(Arg::new("run-dir").required(true))
+                .arg(Arg::new("follow").long("follow").help("Follow until the run-finished event; Ctrl-C only detaches"))
+                .arg(Arg::new("timeout-ms").long("timeout-ms").takes_value(true))
+                .arg(Arg::new("progress").long("progress").takes_value(true).possible_values(["auto", "plain", "tui", "json"]).default_value("auto"))
+                .about("Displays an existing local execution without rerunning its plan"),
+        )
+        .subcommand(
             Command::new("execute")
                 .arg(Arg::new("progress").long("progress").takes_value(true).possible_values(["auto", "plain", "tui", "json"]).default_value("auto"))
                 .arg(Arg::new("plan").required(true))
@@ -81,6 +89,9 @@ async fn main() -> Result<(), Error> {
     match matches.subcommand() {
         Some(("cache-diff", args)) => {
             cmd::cache_diff::compare(std::path::Path::new(args.value_of("before").unwrap()), std::path::Path::new(args.value_of("after").unwrap()), args.is_present("json"))?;
+        }
+        Some(("watch", args)) => {
+            cmd::watch::watch(args.value_of("run-dir").unwrap(), args.value_of("progress").unwrap(), args.is_present("follow"), args.value_of("timeout-ms").map(str::parse).transpose()?).await?;
         }
         Some(("execute", args)) => {
             cmd::execute::execute(args.value_of("plan").unwrap(), args.value_of("run-dir").unwrap(), args.value_of("progress").unwrap()).await?;

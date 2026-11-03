@@ -25,6 +25,19 @@ struct Row {
     started_ms: Option<u128>,
 }
 
+impl Row {
+    fn pending() -> Self {
+        Self {
+            status: Status::Pending,
+            cache: "disabled".into(),
+            wait_reason: None,
+            error: None,
+            duration_ms: 0,
+            started_ms: None,
+        }
+    }
+}
+
 /// One renderer for the whole execution; never one terminal per command.
 pub struct Progress {
     mode: Mode,
@@ -34,12 +47,29 @@ pub struct Progress {
     offset: u64,
     pending: Vec<u8>,
     rendered_lines: usize,
-    started: Instant,
+    elapsed_ms: u128,
+    observed: Instant,
+    finished: Option<bool>,
+    task_count: usize,
+    caught_up: bool,
+    read_limit: Option<u64>,
+    next_sequence: u64,
+    #[cfg(unix)]
+    identity: Option<(u64, u64)>,
     last_render: Instant,
     dirty: bool,
 }
 impl Progress {
     pub fn new(plan: &Plan, mode: &str) -> Result<Self, String> {
+        Self::with_ids(
+            plan.tasks.iter().map(|task| task.id.clone()).collect(),
+            mode,
+        )
+    }
+    pub fn replay(mode: &str) -> Result<Self, String> {
+        Self::with_ids(Vec::new(), mode)
+    }
+    fn with_ids(ids: Vec<String>, mode: &str) -> Result<Self, String> {
         let terminal =
             io::stdout().is_terminal() && std::env::var("TERM").unwrap_or_default() != "dumb";
         let mode =
@@ -55,64 +85,99 @@ impl Progress {
                 _ => return Err("progress must be auto, plain, tui, or json".into()),
             };
         if mode == Mode::Tui {
-            print!("\x1b[?25l");
+            write!(io::stdout().lock(), "\x1b[?25l").map_err(|e| e.to_string())?;
             io::stdout().flush().map_err(|e| e.to_string())?;
         }
         Ok(Self {
             mode,
-            rows: plan
-                .tasks
-                .iter()
-                .map(|t| {
-                    (
-                        t.id.clone(),
-                        Row {
-                            status: Status::Pending,
-                            cache: "disabled".into(),
-                            wait_reason: None,
-                            error: None,
-                            duration_ms: 0,
-                            started_ms: None,
-                        },
-                    )
-                })
-                .collect(),
-            order: plan.tasks.iter().map(|t| t.id.clone()).collect(),
+            rows: ids.iter().map(|id| (id.clone(), Row::pending())).collect(),
+            task_count: ids.len(),
+            order: ids,
             tail: VecDeque::new(),
             offset: 0,
             pending: Vec::new(),
             rendered_lines: 0,
-            started: Instant::now(),
+            elapsed_ms: 0,
+            observed: Instant::now(),
+            finished: None,
+            caught_up: false,
+            read_limit: None,
+            next_sequence: 0,
+            #[cfg(unix)]
+            identity: None,
             last_render: Instant::now() - Duration::from_secs(1),
             dirty: true,
         })
     }
     pub fn poll(&mut self, path: &Path, final_read: bool) -> Result<(), String> {
+        match std::fs::symlink_metadata(path) {
+            Ok(metadata) if !metadata.is_file() => {
+                return Err("execution journal must be a regular file".into())
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.to_string()),
+        }
         match File::open(path) {
             Ok(mut file) => {
+                let metadata = file.metadata().map_err(|e| e.to_string())?;
+                if metadata.len() < self.offset
+                    || self.read_limit.is_some_and(|end| metadata.len() < end)
+                {
+                    return Err("execution journal was truncated".into());
+                }
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::MetadataExt;
+                    let identity = (metadata.dev(), metadata.ino());
+                    if self.identity.is_some_and(|previous| previous != identity) {
+                        return Err("execution journal was replaced".into());
+                    }
+                    self.identity = Some(identity);
+                }
+                let end = metadata.len().min(self.read_limit.unwrap_or(u64::MAX));
                 file.seek(SeekFrom::Start(self.offset))
                     .map_err(|e| e.to_string())?;
                 let mut buffer = [0u8; 65536];
                 loop {
-                    let n = file.read(&mut buffer).map_err(|e| e.to_string())?;
-                    if n == 0 {
+                    let amount =
+                        (end.saturating_sub(self.offset)).min(buffer.len() as u64) as usize;
+                    if amount == 0 {
                         break;
+                    }
+                    let n = file
+                        .read(&mut buffer[..amount])
+                        .map_err(|e| e.to_string())?;
+                    if n == 0 {
+                        return Err("execution journal was truncated during reading".into());
                     }
                     self.offset += n as u64;
                     self.pending.extend_from_slice(&buffer[..n]);
                     while let Some(end) = self.pending.iter().position(|b| *b == b'\n') {
+                        if end + 1 > 4 * 1024 * 1024 {
+                            return Err("execution event exceeds 4 MiB".into());
+                        }
                         let line: Vec<_> = self.pending.drain(..=end).collect();
                         let event: Event = serde_json::from_slice(&line)
                             .map_err(|e| format!("invalid execution event: {e}"))?;
                         self.event(event)?;
+                    }
+                    if self.pending.len() > 4 * 1024 * 1024 {
+                        return Err("execution event exceeds 4 MiB".into());
                     }
                     // Bound work per UI tick; the journal remains lossless on disk.
                     if !final_read {
                         break;
                     }
                 }
+                self.caught_up = self.offset >= end;
             }
-            Err(e) if e.kind() == io::ErrorKind::NotFound => (),
+            Err(e) if e.kind() == io::ErrorKind::NotFound && self.offset == 0 => {
+                self.caught_up = true
+            }
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                return Err("execution journal disappeared".into())
+            }
             Err(e) => return Err(e.to_string()),
         }
         if self.mode == Mode::Tui
@@ -122,10 +187,38 @@ impl Progress {
         }
         Ok(())
     }
+    pub fn caught_up(&self) -> bool {
+        self.caught_up
+    }
+    pub fn completed(&self) -> Option<bool> {
+        self.finished
+    }
+    pub fn limit(&mut self, end: u64) {
+        self.read_limit = Some(end);
+    }
+    pub fn finish_display(&mut self) -> Result<(), String> {
+        if self.mode == Mode::Tui {
+            self.render()?;
+        }
+        Ok(())
+    }
     fn event(&mut self, event: Event) -> Result<(), String> {
+        if event.sequence != self.next_sequence || u128::from(event.elapsed_ms) < self.elapsed_ms {
+            return Err("execution journal is not ordered".into());
+        }
+        self.next_sequence = self
+            .next_sequence
+            .checked_add(1)
+            .ok_or("execution sequence overflow")?;
+        self.elapsed_ms = u128::from(event.elapsed_ms);
+        self.observed = Instant::now();
+        if let EventKind::RunFinished { success } = &event.kind {
+            self.finished = Some(*success);
+        }
         if self.mode == Mode::Json {
-            serde_json::to_writer(io::stdout().lock(), &event).map_err(|e| e.to_string())?;
-            println!();
+            let mut out = io::stdout().lock();
+            serde_json::to_writer(&mut out, &event).map_err(|e| e.to_string())?;
+            writeln!(out).map_err(|e| e.to_string())?;
             return Ok(());
         }
         match event.kind {
@@ -138,6 +231,10 @@ impl Progress {
                 error,
                 duration_ms,
             } => {
+                if !self.rows.contains_key(&id) {
+                    self.rows.insert(id.clone(), Row::pending());
+                    self.order.push(id.clone());
+                }
                 if let Some(row) = self.rows.get_mut(&id) {
                     if status == Status::Running && row.started_ms.is_none() {
                         row.started_ms = Some(u128::from(event.elapsed_ms));
@@ -149,7 +246,8 @@ impl Progress {
                     row.duration_ms = u128::from(duration_ms);
                 }
                 if self.mode == Mode::Plain {
-                    println!(
+                    writeln!(
+                        io::stdout().lock(),
                         "[{}] {:?} cache={} {}",
                         clean(&id),
                         status,
@@ -160,7 +258,8 @@ impl Progress {
                                 .or(wait_reason.as_deref())
                                 .unwrap_or(&reason)
                         )
-                    );
+                    )
+                    .map_err(|e| e.to_string())?;
                 } else if let Some(error) = error {
                     self.push_log(format!("{}: {}", id, error));
                 }
@@ -168,7 +267,14 @@ impl Progress {
             EventKind::Log { id, stream, text } => {
                 if self.mode == Mode::Plain {
                     for line in text.split_inclusive('\n') {
-                        print!("[{}:{}] {}", clean(&id), stream, clean(line));
+                        write!(
+                            io::stdout().lock(),
+                            "[{}:{}] {}",
+                            clean(&id),
+                            stream,
+                            clean(line)
+                        )
+                        .map_err(|e| e.to_string())?;
                     }
                     io::stdout().flush().map_err(|e| e.to_string())?;
                 } else {
@@ -178,20 +284,24 @@ impl Progress {
                 }
             }
             EventKind::RunStarted { tasks } => {
+                self.task_count = tasks;
                 if self.mode == Mode::Plain {
-                    println!("Running {tasks} tasks");
+                    writeln!(io::stdout().lock(), "Running {tasks} tasks")
+                        .map_err(|e| e.to_string())?;
                 }
             }
             EventKind::RunFinished { success } => {
                 if self.mode == Mode::Plain {
-                    println!(
+                    writeln!(
+                        io::stdout().lock(),
                         "Pipeline {}",
                         if success {
                             "succeeded"
                         } else {
                             "failed or cancelled"
                         }
-                    );
+                    )
+                    .map_err(|e| e.to_string())?;
                 }
             }
         }
@@ -216,7 +326,12 @@ impl Progress {
         let (width, height) = crossterm::terminal::size().unwrap_or((100, 30));
         let width = usize::from(width.saturating_sub(1)).max(1);
         let max_rows = usize::from(height.saturating_sub(12)).max(1);
-        let elapsed = self.started.elapsed().as_millis();
+        let elapsed = self.elapsed_ms
+            + if self.finished.is_some() {
+                0
+            } else {
+                self.observed.elapsed().as_millis()
+            };
         let spinner = ['|', '/', '-', '\\'][(elapsed / 100 % 4) as usize];
         let complete = self
             .rows
@@ -226,7 +341,7 @@ impl Progress {
         let hits = self.rows.values().filter(|r| r.cache == "hit").count();
         let mut lines = vec![format!(
             "FluentCI  {complete}/{} succeeded  {hits} cached  {:.1}s",
-            self.rows.len(),
+            self.task_count.max(self.rows.len()),
             elapsed as f64 / 1000.0
         )];
         // Keep failures and active tasks visible when the plan exceeds the terminal.
@@ -292,7 +407,7 @@ impl Progress {
 impl Drop for Progress {
     fn drop(&mut self) {
         if self.mode == Mode::Tui {
-            print!("\x1b[?25h");
+            let _ = write!(io::stdout().lock(), "\x1b[?25h");
             let _ = io::stdout().flush();
         }
     }

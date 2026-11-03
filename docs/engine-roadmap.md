@@ -90,8 +90,10 @@ milestones do not establish a claim of being the fastest engine.
    An opt-in release microbenchmark measures inactive-task polling separately.
 8. The TUI now prioritizes failed/timed-out and active tasks, retaining failure reasons
    in their rows after the bounded output tail rolls over (covered by a small-terminal
-   PTY regression). Improve UX for local/server workflows: concise actionable errors, attach to
-   running jobs, inspect task logs/results, explain cache decisions, and sensible
+   PTY regression). Local `watch` now reopens saved journals or follows live runs
+   in plain/JSON/TUI mode without rerunning a plan; detachment leaves execution
+   running. Improve server workflows with remote attachment, concise actionable
+   errors, task log/result inspection, cache explanations, and sensible
    zero-daemon local defaults.
 
 Current boundaries and commands are documented in [host-executor.md](host-executor.md).

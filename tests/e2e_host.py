@@ -309,6 +309,209 @@ class HostExecution(unittest.TestCase):
 
 
     @unittest.skipUnless(os.name == "posix", "requires a PTY")
+    def watch_command(self, run="run", progress="json", follow=False, timeout=None):
+        command = [str(BINARY), "watch", str(self.root / run), "--progress", progress]
+        if follow:
+            command.append("--follow")
+        if timeout is not None:
+            command += ["--timeout-ms", str(timeout)]
+        return command
+
+    def test_watch_replays_saved_runs_without_a_plan_or_reexecution(self):
+        for success in [True, False]:
+            run = f"saved-{success}"
+            plan = self.plan([self.task("saved-task", "echo once >> executions; echo saved-output; exit " + ("0" if success else "7"))])
+            original = subprocess.run(self.command(plan, run=run), capture_output=True, text=True, timeout=10)
+            self.assertEqual(original.returncode == 0, success)
+            plan.unlink()
+            before = (self.root / "executions").read_bytes()
+            expected = [json.loads(line) for line in (self.root / run / "events.jsonl").read_text().splitlines()]
+            for follow in [False, True]:
+                replay = subprocess.run(self.watch_command(run, follow=follow), capture_output=True, text=True, timeout=5)
+                self.assertEqual(replay.returncode == 0, success, replay.stderr)
+                self.assertEqual([json.loads(line) for line in replay.stdout.splitlines()], expected)
+                self.assertEqual((self.root / "executions").read_bytes(), before)
+
+    def test_watch_follows_live_output_and_detaches_without_cancelling(self):
+        plan = self.plan([self.task("live", "echo started > started; printf live-marker; while [ ! -f release ]; do /bin/sleep 0.02; done; echo done")])
+        engine = subprocess.Popen(self.command(plan, progress="plain"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        watcher = None
+        reader = None
+        try:
+            deadline = time.monotonic() + 3
+            while not (self.root / "started").exists() and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertTrue((self.root / "started").exists())
+            watcher = subprocess.Popen(self.watch_command(follow=True, timeout=3000), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            messages = queue.Queue()
+            reader = threading.Thread(target=lambda: [messages.put(json.loads(line)) for line in watcher.stdout], daemon=True)
+            reader.start()
+            observed = []
+            while not any(e.get("type") == "log" and "live-marker" in e["text"] for e in observed):
+                observed.append(messages.get(timeout=3))
+            watcher.send_signal(signal.SIGINT)
+            self.assertEqual(watcher.wait(timeout=3), 0, watcher.stderr.read())
+            reader.join(timeout=3)
+            self.assertIsNone(engine.poll(), "detaching must not stop the execution")
+            timed = subprocess.run(self.watch_command(follow=True, timeout=80), capture_output=True, text=True, timeout=3)
+            self.assertNotEqual(timed.returncode, 0)
+            self.assertIn("watch timed out", timed.stderr)
+            self.assertIsNone(engine.poll(), "viewer timeout must not stop the execution")
+            # A second observer follows the same run through normal completion.
+            second = subprocess.Popen(self.watch_command(follow=True, timeout=3000), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            try:
+                first = json.loads(second.stdout.readline())
+                self.assertEqual(first["type"], "run_started")
+                (self.root / "release").write_text("go")
+                output, errors = second.communicate(timeout=4)
+                self.assertEqual(second.returncode, 0, errors)
+                self.assertTrue(json.loads(output.splitlines()[-1])["success"])
+            finally:
+                if second.poll() is None:
+                    second.kill()
+                    second.wait()
+            engine.communicate(timeout=3)
+            self.assertEqual(engine.returncode, 0)
+        finally:
+            if watcher is not None and watcher.poll() is None:
+                watcher.kill()
+                watcher.wait()
+            if reader is not None:
+                reader.join(timeout=3)
+            if watcher is not None:
+                watcher.stdout.close()
+                watcher.stderr.close()
+            if engine.poll() is None:
+                engine.send_signal(signal.SIGINT)
+                engine.communicate(timeout=5)
+
+    def test_watch_rejects_damaged_journals_and_handles_partial_records(self):
+        run = self.root / "run"
+        run.mkdir()
+        journal = run / "events.jsonl"
+        first = dict(type="run_started", sequence=0, elapsed_ms=0, tasks=0)
+        journal.write_text(json.dumps(first) + "\n" + '{"type":')
+        snapshot = subprocess.run(self.watch_command(), capture_output=True, text=True, timeout=3)
+        self.assertEqual(snapshot.returncode, 0, snapshot.stderr)
+        self.assertEqual([json.loads(line) for line in snapshot.stdout.splitlines()], [first])
+        final = json.dumps(dict(type="run_finished", sequence=1, elapsed_ms=1, success=True))
+        journal.write_text(json.dumps(first) + "\n" + final[:5])
+        proc = subprocess.Popen(self.watch_command(follow=True, timeout=1000), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            self.assertEqual(json.loads(proc.stdout.readline()), first)
+            with journal.open("a") as output:
+                output.write(final[5:] + "\n")
+            output, error = proc.communicate(timeout=3)
+            self.assertEqual(proc.returncode, 0, error)
+            self.assertEqual([json.loads(line) for line in output.splitlines()], [json.loads(final)])
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+                proc.communicate()
+        for changed in ["truncate", "replace", "remove"]:
+            journal.write_text(json.dumps(first) + "\n")
+            proc = subprocess.Popen(self.watch_command(follow=True, timeout=1000), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            try:
+                self.assertEqual(json.loads(proc.stdout.readline()), first)
+                if changed == "truncate":
+                    journal.write_text("")
+                elif changed == "replace":
+                    replacement = run / "replacement"
+                    replacement.write_text(json.dumps(first) + "\n")
+                    replacement.replace(journal)
+                else:
+                    journal.unlink()
+                _, error = proc.communicate(timeout=3)
+                self.assertNotEqual(proc.returncode, 0)
+                self.assertIn({"truncate": "truncated", "replace": "replaced", "remove": "disappeared"}[changed], error)
+            finally:
+                if proc.poll() is None:
+                    proc.kill()
+                    proc.wait()
+        journal.write_bytes(b"x" * (4 * 1024 * 1024 + 1))
+        oversized = subprocess.run(self.watch_command(), capture_output=True, text=True, timeout=5)
+        self.assertNotEqual(oversized.returncode, 0)
+        self.assertIn("exceeds 4 MiB", oversized.stderr)
+        journal.write_text(json.dumps({**first, "sequence": 4}) + "\n")
+        unordered = subprocess.run(self.watch_command(), capture_output=True, text=True, timeout=3)
+        self.assertNotEqual(unordered.returncode, 0)
+        self.assertIn("not ordered", unordered.stderr)
+        journal.unlink()
+        os.mkfifo(journal)
+        special = subprocess.run(self.watch_command(), capture_output=True, text=True, timeout=3)
+        self.assertNotEqual(special.returncode, 0)
+        self.assertIn("regular file", special.stderr)
+
+    def test_closed_plain_progress_pipe_cancels_and_reaps_the_execution(self):
+        plan = self.plan([self.task("writer", "echo $$ > writer.pid; while :; do echo output; /bin/sleep 0.02; done")])
+        proc = subprocess.Popen(self.command(plan, progress="plain"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            proc.stdout.readline()
+            deadline = time.monotonic() + 3
+            pid = None
+            while time.monotonic() < deadline:
+                if (self.root / "writer.pid").exists():
+                    value = (self.root / "writer.pid").read_text().strip()
+                    if value:
+                        pid = int(value)
+                        break
+                time.sleep(0.01)
+            self.assertIsNotNone(pid)
+            proc.stdout.close()
+            self.assertNotEqual(proc.wait(timeout=3), 0)
+            self.assertNotIn("panicked", proc.stderr.read())
+            with self.assertRaises(ProcessLookupError):
+                os.kill(pid, 0)
+        finally:
+            if proc.poll() is None:
+                proc.send_signal(signal.SIGINT)
+                proc.wait(timeout=5)
+            proc.stdout.close()
+            proc.stderr.close()
+
+    def test_watch_tui_reconstructs_rows_and_preserves_recorded_elapsed_time(self):
+        import errno
+        import fcntl
+        import pty
+        import select
+        import struct
+        import termios
+        run = self.root / "run"
+        run.mkdir()
+        events = [dict(type="run_started", sequence=0, elapsed_ms=0, tasks=1),
+                  dict(type="task_state", sequence=1, elapsed_ms=12345, id="saved-visible", status="failed", cache="disabled", reason="", error="saved failure reason", duration_ms=5000),
+                  dict(type="run_finished", sequence=2, elapsed_ms=12345, success=False)]
+        (run / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events))
+        master, slave = pty.openpty()
+        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 20, 100, 0, 0))
+        proc = subprocess.Popen(self.watch_command(progress="tui"), stdout=slave, stderr=slave,
+                                env={**os.environ, "TERM": "xterm-256color"})
+        os.close(slave)
+        output = bytearray()
+        try:
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                if select.select([master], [], [], 0.1)[0]:
+                    try:
+                        chunk = os.read(master, 65536)
+                    except OSError as error:
+                        if error.errno == errno.EIO:
+                            break
+                        raise
+                    if not chunk:
+                        break
+                    output.extend(chunk)
+                elif proc.poll() is not None:
+                    break
+            self.assertNotEqual(proc.wait(timeout=2), 0)
+            for expected in [b"0/1 succeeded", b"12.3s", b"saved-visible", b"saved failure reason", b"\x1b[?25h"]:
+                self.assertIn(expected, output)
+        finally:
+            os.close(master)
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+
     def test_tui_renders_live_tasks_and_restores_cursor(self):
         import errno
         import fcntl

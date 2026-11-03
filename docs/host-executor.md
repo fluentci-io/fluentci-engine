@@ -290,6 +290,45 @@ only event records on stdout, suitable for SDKs/server transport. Original
 stdout/stderr files retain exact bytes; streamed text is a lossy UTF-8 display
 view. Event storage currently duplicates log data and has no retention policy.
 
+### Reopen or follow an existing local run
+
+```sh
+fluentci-engine watch ./run --progress plain
+fluentci-engine watch ./run --follow --progress tui
+fluentci-engine watch ./run --follow --progress json --timeout-ms 60000
+```
+
+`watch` reads an existing run's journal without a plan file, command execution,
+exporter initialization, or changes to run artifacts. Without `--follow`, it
+replays complete records up to the journal size observed at startup and exits;
+later appends cannot turn that snapshot into an endless read. With `--follow`, it
+replays existing records and continues until `run_finished`. The directory must
+already exist; follow mode can wait for its journal to appear during setup.
+Ctrl-C detaches this viewer, and an optional positive `--timeout-ms` limits its
+observation time. Neither action asks the engine to cancel the pipeline.
+
+Plain/JSON output starts at sequence zero on each invocation. The TUI reconstructs
+task rows from journal events and uses recorded elapsed time, freezing it when a
+run finishes. While following, elapsed time advances from the last observed event;
+attaching to a quiet run can understate elapsed time until a new event arrives,
+because the journal does not store an absolute run-start timestamp. Task failures
+remain visible in their rows. JSON mode emits only
+journal records on stdout. Saved failed/cancelled runs produce a nonzero exit;
+a snapshot of an unfinished run exits successfully after displaying available
+records. This is an observation result, not proof that an unfinished run succeeded.
+
+A `run_finished` event reports the pipeline's logical result; result-file
+publication follows it. If an engine crashes without a finish event, follow mode
+waits until detached or timed out. `watch` does not independently supervise the
+engine, recover runs, or connect to an HTTP server yet.
+
+Journal reading is limited to 64 KiB per poll and records to 4 MiB, with partial
+records retained for the next append. Truncation, disappearance, nonregular files,
+unordered records, and inode replacement on Unix are reported as errors. This
+assumes trusted local run storage, not protection against malicious filesystem
+races. Renderer write failures return errors: during `execute` they trigger normal
+cancellation and child cleanup; during `watch` they only stop the observer.
+
 ## BSD package managers and native CI
 
 `fluentci_ext::bsd::BsdPackages` exposes `freebsd()`, `netbsd()`, and `openbsd()`:
