@@ -139,12 +139,15 @@ class RunServer(unittest.TestCase):
 
     def test_remote_watch_replay_and_terminal_without_journal(self):
         env = dict(os.environ, FLUENTCI_RUN_TOKEN=TOKEN)
-        for script, expected in [("echo watched", 0), ("echo failed; exit 7", 1)]:
+        for script, expected in [("echo watched", 0), ("echo failed; exit 7", 7)]:
             path = self.submit(self.plan(script))
             self.terminal(path)
             result = subprocess.run(self.watch_command(path, "--follow"), env=env,
                                     capture_output=True, timeout=10)
             self.assertEqual(result.returncode, expected, result.stderr)
+            if expected:
+                self.assertIn(b"exit code 7", result.stderr)
+                self.assertIn(b"stdout:\nfailed", result.stderr)
             journal = self.root / "runs" / path.rsplit("/", 1)[1] / "execution/events.jsonl"
             self.assertEqual([json.loads(x) for x in result.stdout.splitlines()],
                              [json.loads(x) for x in journal.read_bytes().splitlines()])
