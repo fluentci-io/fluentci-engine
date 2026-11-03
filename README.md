@@ -67,8 +67,8 @@ cargo run --release -p fluentci-engine -- serve
 
 ## 📦 Downloads
 
-- `Mac`: arm64: [fluentci-engine_v0.4.11_aarch64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.4.11/fluentci-engine_v0.4.11_aarch64-apple-darwin.tar.gz) intel: [fluentci-engine_v0.4.11_x86_64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.4.11/fluentci-engine_v0.4.11_x86_64-apple-darwin.tar.gz)
-- `Linux`: intel: [fluentci-engine_v0.4.11_x86_64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.4.11/fluentci-engine_v0.4.11_x86_64-unknown-linux-gnu.tar.gz) arm64: [fluentci-engine_v0.4.11_aarch64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.4.11/fluentci-engine_v0.4.11_aarch64-unknown-linux-gnu.tar.gz)
+- `Mac`: arm64: [fluentci-engine_v0.5.0_aarch64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.5.0/fluentci-engine_v0.5.0_aarch64-apple-darwin.tar.gz) intel: [fluentci-engine_v0.5.0_x86_64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.5.0/fluentci-engine_v0.5.0_x86_64-apple-darwin.tar.gz)
+- `Linux`: intel: [fluentci-engine_v0.5.0_x86_64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.5.0/fluentci-engine_v0.5.0_x86_64-unknown-linux-gnu.tar.gz) arm64: [fluentci-engine_v0.5.0_aarch64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.5.0/fluentci-engine_v0.5.0_aarch64-unknown-linux-gnu.tar.gz)
 
 ## 📚 Documentation
 
