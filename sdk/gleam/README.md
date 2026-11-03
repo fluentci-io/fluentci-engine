@@ -124,8 +124,10 @@ pub fn main() {
 
 Servers configured with `--max-queued` can return `Queued` before `Running`;
 keep polling both states. Cancelling a queued run before execution leaves no
-result report. After a hard server stop, unstarted queued runs become `Interrupted`
-and require an explicit new submission to run.
+result report. After a hard server stop, queued runs become `Interrupted` by
+default. Servers using `--resume-queued` can resume fully admitted, never-started
+queued runs with the same IDs and idempotency keys. Continue polling the existing
+handle; running/interrupted runs are never automatically re-executed.
 
 Paths refer to the **server filesystem**; the adapter does not upload a local
 workspace. Store the returned ID and use `get_state(id, config)` to poll until
