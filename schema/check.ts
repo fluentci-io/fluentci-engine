@@ -6,7 +6,7 @@ const canonical = JSON.parse(source);
 const expectedImports = Object.keys(canonical.imports).sort();
 const host = parse(source);
 function checkImports(schema: ReturnType<typeof parse>, name: string) {
-  const actual = Object.keys(schema.imports ?? {}).sort();
+  const actual = (schema.imports ?? []).map((fn) => fn.name).sort();
   if (JSON.stringify(actual) !== JSON.stringify(expectedImports)) {
     throw new Error(`Host imports differ from the canonical schema: ${name}`);
   }
