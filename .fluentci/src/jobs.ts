@@ -180,7 +180,10 @@ export const build = async (src = "."): Promise<string> => {
   const ctr = dag
     .pipeline(Job.build)
     .container()
+    // Retain the Bullseye libc baseline; explicitly select the release compiler.
     .from("rust:1.76-bullseye")
+    .withExec(["rustup", "toolchain", "install", "1.99.1", "--profile", "minimal"])
+    .withEnvVariable("RUSTUP_TOOLCHAIN", "1.99.1")
     .withExec([
       "wget",
       "https://github.com/mozilla/sccache/releases/download/v0.16.0/sccache-v0.16.0-x86_64-unknown-linux-musl.tar.gz",
@@ -243,28 +246,9 @@ export const build = async (src = "."): Promise<string> => {
       "libssl1.1:arm64",
     ])
     .withExec([
-      "dpkg",
-      "-x",
-      "libssl1.1_1.1.1w-0+deb11u1_arm64.deb",
-      "/build/sysroot/",
-    ])
-    .withExec([
-      "dpkg",
-      "-x",
-      "libssl-dev_1.1.1w-0+deb11u1_arm64.deb",
-      "/build/sysroot/",
-    ])
-    .withExec([
-      "dpkg",
-      "-x",
-      "libssl1.1_1.1.1w-0+deb11u1_armhf.deb",
-      "/build/sysroot/",
-    ])
-    .withExec([
-      "dpkg",
-      "-x",
-      "libssl-dev_1.1.1w-0+deb11u1_armhf.deb",
-      "/build/sysroot/",
+      "sh",
+      "-ec",
+      'for package in libssl*.deb; do dpkg -x "$package" /build/sysroot/; done',
     ])
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
@@ -318,10 +302,12 @@ export const build = async (src = "."): Promise<string> => {
 
   if (cacheRoot) {
     // Stop the compiler-cache server before exporting its completed disk writes.
-    const cached = ctr.withExec(["sh", "-c", "sccache --show-stats; sccache --stop-server || true"]);
-    await cached.directory("/root/.cache/sccache").export(`${cacheRoot}/sccache`);
-    await cached.directory("/usr/local/cargo/registry").export(`${cacheRoot}/registry`);
-    await cached.directory("/usr/local/cargo/git").export(`${cacheRoot}/git`);
+    // Dagger cannot expose a mounted cache as a Directory. Snapshot its
+    // contents into the regular root filesystem before exporting to the host.
+    const cached = ctr
+      .withExec(["sh", "-c", "sccache --show-stats; sccache --stop-server || true"])
+      .withExec(["sh", ".github/scripts/snapshot-rust-cache.sh", "/tmp/rust-cache-export"]);
+    await cached.directory("/tmp/rust-cache-export").export(cacheRoot);
   }
 
   const exe = await ctr.file(

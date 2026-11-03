@@ -30,7 +30,9 @@ data actually synchronized back can be saved.
 Linux release packaging still runs in its existing Dagger container. The release
 workflow restores `.ci-cache/linux-release`; the build imports it late, after OS
 provisioning layers, then exports the sccache disk cache and Cargo registry/git
-downloads after a successful build. This is separate from native-runner caches.
+downloads after a successful build. Cache mounts are first copied into an
+unmounted snapshot directory, because Dagger cannot export mounted caches as
+Directory objects. This is separate from native-runner caches.
 `FLUENTCI_RUST_CACHE_DIR` enables this transfer; standalone callers can omit it.
 Registry mounts now use the official Rust image's `/usr/local/cargo` directory.
 
