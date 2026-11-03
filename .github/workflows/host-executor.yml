@@ -211,6 +211,19 @@ jobs:
           copyback: false
           prepare: |
             set -eu
+            export PATH=/usr/pkg/bin:/usr/pkg/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+            # The base VM has pkg_add, but does not preinstall pkgin.
+            if [ ! -x /usr/pkg/bin/pkgin ]; then
+              /usr/sbin/pkg_add pkgin
+            fi
+            # Use the same live mirrors selected by the action's onStarted hook.
+            repositories=$(sed -n 's/^PKG_PATH=//p' /etc/pkg_install.conf)
+            if [ -z "$repositories" ]; then
+              echo "NetBSD VM did not configure a package repository" >&2
+              exit 1
+            fi
+            printf '%s\n' "$repositories" | tr ';' '\n' > /usr/pkg/etc/pkgin/repositories.conf
+            /usr/pkg/bin/pkgin -y update
             /usr/pkg/bin/pkgin -y install rust git pkgconf
           run: |
             set -eu
