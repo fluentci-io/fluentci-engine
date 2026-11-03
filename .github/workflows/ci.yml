@@ -8,7 +8,7 @@ on:
       - main
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,6 +28,24 @@ jobs:
           large-packages: true
           docker-images: true
           swap-storage: true
+      - name: Verify OS-provided curl before native provisioning
+        env:
+          PATH: /usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin
+        run: |
+          test "$(command -v curl)" = /usr/bin/curl
+          /usr/bin/curl --version
+      - name: Install native Flox
+        uses: flox/install-flox-action@61d86f71ca9fc8061fea04e5bc5e3a8206423dca
+        env:
+          # Avoid curl binaries injected by legacy build-tool environments.
+          PATH: /usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin
+        with:
+          version: '1.19.3'
+          disable-metrics: 'true'
+      - name: Verify native Flox
+        env:
+          PATH: /usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin
+        run: flox --version
       - name: Setup Fluent CI
         uses: fluentci-io/setup-fluentci@v5
         with:
@@ -35,13 +53,6 @@ jobs:
           pipeline: rust
           args: build --release
           engine-version: 0.4.12
-      - name: Install native Flox
-        uses: flox/install-flox-action@61d86f71ca9fc8061fea04e5bc5e3a8206423dca
-        with:
-          version: '1.19.3'
-          disable-metrics: 'true'
-      - name: Verify native Flox
-        run: flox --version
       - name: Run Build and e2e tests
         run: |
           export PATH=${HOME}/.cargo/bin:${PATH}
@@ -63,7 +74,7 @@ jobs:
 
   publish:
     needs: tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
