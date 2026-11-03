@@ -17,7 +17,7 @@ jobs:
         uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
           path: .ci-cache/linux-release
-          key: container-rust-v1-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.fluentci/src/jobs.ts', '.fluentci/src/helpers.ts') }}-${{ hashFiles('crates/**/*.rs') }}
+          key: container-rust-v1-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.fluentci/src/jobs.ts', '.fluentci/src/helpers.ts') }}-${{ hashFiles('crates/**/*.rs', 'vendor/**/*.rs', 'vendor/**/Cargo.toml') }}
           restore-keys: |
             container-rust-v1-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.fluentci/src/jobs.ts', '.fluentci/src/helpers.ts') }}-
             container-rust-v1-${{ matrix.target }}-

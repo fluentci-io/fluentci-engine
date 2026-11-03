@@ -15,7 +15,7 @@ runs:
       uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
       with:
         path: .ci-cache/native-sccache
-        key: sccache-disk-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.key }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/*.rs', 'vendor/superconsole/**/*.rs', 'vendor/superconsole/Cargo.toml') }}
+        key: sccache-disk-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.key }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'crates/**/*.rs', 'vendor/**/*.rs', 'vendor/**/Cargo.toml') }}
         restore-keys: |
           sccache-disk-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.key }}-
     - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba
