@@ -12,7 +12,7 @@ export abstract class DaggerSDKError extends Error {
   /**
    * The name of the dagger error.
    */
-  abstract readonly name: ErrorNames;
+  abstract override readonly name: ErrorNames;
 
   /**
    * The dagger specific error code.
@@ -23,7 +23,7 @@ export abstract class DaggerSDKError extends Error {
   /**
    * The original error, which caused the DaggerSDKError.
    */
-  cause?: Error;
+  override cause?: Error;
 
   protected constructor(message: string, options?: DaggerSDKErrorOptions) {
     super(message);

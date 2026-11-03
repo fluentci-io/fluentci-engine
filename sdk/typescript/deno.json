@@ -7,7 +7,8 @@
     "./dagger": "./src/dagger/mod.ts"
   },
   "tasks": {
-    "dev": "deno run --watch main.ts"
+    "dev": "deno run --watch main.ts",
+    "check": "deno check src/client.gen.ts src/plugin.ts src/dagger/mod.ts demo/main.ts"
   },
   "publish": {
     "exclude": [

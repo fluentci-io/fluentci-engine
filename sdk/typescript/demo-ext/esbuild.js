@@ -1,6 +1,7 @@
 const esbuild = require("esbuild");
 
 esbuild.build({
+  alias: { "@fluentci/sdk/plugin": "../src/plugin.ts" },
   entryPoints: ["src/index.ts", "src/hash.ts", "src/module.ts", "src/sys.ts"],
   outdir: "dist",
   bundle: true,

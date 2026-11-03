@@ -16,7 +16,6 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@fluentci/sdk": "npm:@jsr/fluentci__sdk@0.2.6",
     "@tsirysndr/env-js": "npm:@jsr/tsirysndr__env-js"
   }
 }

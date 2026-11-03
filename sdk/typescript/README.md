@@ -115,3 +115,9 @@ fluentci-engine run -- deno run -A main.ts
 
 So you don't need to run the engine server separately, it will start the engine server and run the code in the same command and output the results.
 Don't forget to remove the `Deno.env.set` lines from the code above if you are using the `fluentci-engine run` command, the engine will set the environment variables for you.
+## Development
+
+Use Deno 2 and run `deno task check` from this directory to type-check the
+GraphQL, plugin, and Dagger exports and the local demo. The demo imports source
+from this checkout. Immutable host-plan bindings remain pending for TypeScript.
+The Extism plugin API requires its Wasm host and is separate from host plans.
