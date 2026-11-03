@@ -9,6 +9,10 @@ use sha2::Digest;
 pub struct Sha256 {}
 
 impl Extension for Sha256 {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Sha256)
+    }
+
     fn exec(
         &mut self,
         file_path: &str,

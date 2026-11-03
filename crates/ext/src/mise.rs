@@ -27,6 +27,10 @@ impl Mise {
 }
 
 impl Extension for Mise {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Mise)
+    }
+
     fn exec(
         &mut self,
         cmd: &str,

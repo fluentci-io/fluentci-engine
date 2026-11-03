@@ -8,6 +8,10 @@ use fluentci_types::Output;
 pub struct TarCzvf {}
 
 impl Extension for TarCzvf {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::TarCzvf)
+    }
+
     fn exec(
         &mut self,
         path: &str,

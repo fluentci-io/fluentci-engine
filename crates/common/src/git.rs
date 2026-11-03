@@ -22,7 +22,6 @@ pub fn git(graph: Arc<Mutex<Graph>>, url: String, reset: bool) -> Result<Git, Er
     }
 
     graph.runner = Arc::new(Box::new(GitExt::default()));
-    graph.runner.setup()?;
     graph.work_dir = format!(
         "{}/.fluentci/cache",
         dirs::home_dir().unwrap().to_str().unwrap()
@@ -57,7 +56,6 @@ pub fn git(graph: Arc<Mutex<Graph>>, url: String, reset: bool) -> Result<Git, Er
 pub fn branch(graph: Arc<Mutex<Graph>>, name: String) -> Result<(), Error> {
     let mut graph = graph.lock().unwrap();
     graph.runner = Arc::new(Box::new(GitCheckoutExt::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
 
@@ -86,7 +84,6 @@ pub fn branch(graph: Arc<Mutex<Graph>>, name: String) -> Result<(), Error> {
 pub fn commit(graph: Arc<Mutex<Graph>>) -> Result<String, Error> {
     let mut graph = graph.lock().unwrap();
     graph.runner = Arc::new(Box::new(GitLastCommitExt::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
 

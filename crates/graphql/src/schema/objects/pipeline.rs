@@ -47,7 +47,6 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.runner = Arc::new(Box::new(HttpExt::default()));
-        graph.runner.setup()?;
         graph.work_dir = format!(
             "{}/.fluentci/cache",
             dirs::home_dir().unwrap().to_str().unwrap()
@@ -97,7 +96,6 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.runner = Arc::new(Box::new(GitExt::default()));
-        graph.runner.setup()?;
         graph.work_dir = format!(
             "{}/.fluentci/cache",
             dirs::home_dir().unwrap().to_str().unwrap()
@@ -147,7 +145,6 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.runner = Arc::new(Box::new(DevboxExt::default()));
-        graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
 
@@ -178,7 +175,6 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.runner = Arc::new(Box::new(DevenvExt::default()));
-        graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
 
@@ -209,7 +205,6 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.runner = Arc::new(Box::new(FloxExt::default()));
-        graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
 
@@ -241,7 +236,6 @@ impl Pipeline {
         let mut graph = graph.lock().unwrap();
         let args: nix::NixArgs = args.unwrap_or_default().into();
         graph.runner = Arc::new(Box::new(NixExt::new(args.clone())));
-        graph.runner.setup()?;
         graph.nix_args = args.clone();
 
         let id = Uuid::new_v4().to_string();
@@ -274,7 +268,6 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.runner = Arc::new(Box::new(PkgxExt::default()));
-        graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
 
@@ -305,7 +298,6 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.runner = Arc::new(Box::new(PixiExt::default()));
-        graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
 
@@ -336,7 +328,6 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.runner = Arc::new(Box::new(ProtoExt::default()));
-        graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
 
@@ -367,7 +358,6 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.runner = Arc::new(Box::new(HermitExt::default()));
-        graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
 
@@ -398,7 +388,6 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.runner = Arc::new(Box::new(MiseExt::default()));
-        graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
 
@@ -429,7 +418,6 @@ impl Pipeline {
         let graph = ctx.data::<Arc<Mutex<Graph>>>().unwrap();
         let mut graph = graph.lock().unwrap();
         graph.runner = Arc::new(Box::new(EnvhubExt::default()));
-        graph.runner.setup()?;
 
         let id = Uuid::new_v4().to_string();
 

@@ -1,34 +1,17 @@
 use anyhow::Error;
 use fluentci_secrets::{Provider, Vault, VaultConfig};
-use opentelemetry::{
-    global,
-    trace::{Span, TraceContextExt, Tracer, TracerProvider},
-    Context, KeyValue,
-};
-use owo_colors::OwoColorize;
-use std::sync::mpsc::{self, Sender};
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use std::{
-    collections::HashMap,
-    env::{self, current_dir},
-};
-use std::{path::Path, thread};
+use std::{collections::HashMap, env::current_dir, thread};
 use uuid::Uuid;
 
-use fluentci_ext::envhub::Envhub;
-use fluentci_ext::service::Service as ServiceExt;
 use fluentci_ext::Extension;
-use fluentci_types::{
-    nix::NixArgs,
-    process_compose::{self, Process},
-    secret::Secret,
-    Output,
-};
+use fluentci_types::{nix::NixArgs, secret::Secret, Output};
 
 use crate::get_hmac;
 
 use super::edge::Edge;
-use super::vertex::{Runnable, Vertex};
+use super::vertex::Vertex;
 
 #[derive(Default, Debug, Clone)]
 pub struct Volume {
@@ -44,22 +27,6 @@ pub struct Service {
     pub name: String,
     pub vertices: Vec<Vertex>,
     pub working_dir: String,
-}
-
-impl Into<Process> for Service {
-    fn into(self) -> Process {
-        Process {
-            command: self
-                .vertices
-                .iter()
-                .map(|v| v.runner.format_command(&v.command))
-                .collect::<Vec<String>>()
-                .join(" ; "),
-            depends_on: None,
-            working_dir: Some(self.working_dir),
-            ..Default::default()
-        }
-    }
 }
 
 pub enum GraphCommand {
@@ -94,6 +61,10 @@ pub struct Graph {
     pub runner: Arc<Box<dyn Extension + Send + Sync>>,
     pub work_dir: String,
     pub nix_args: NixArgs,
+    pub environment: std::collections::BTreeMap<String, String>,
+    pub cancellation: fluentci_executor::Cancellation,
+    /// Hosts embedding the library may select the matching engine worker binary.
+    pub worker_executable: std::path::PathBuf,
 }
 
 impl Graph {
@@ -109,6 +80,11 @@ impl Graph {
             runner,
             work_dir,
             nix_args: NixArgs::default(),
+            environment: std::env::vars_os()
+                .filter_map(|(k, v)| Some((k.into_string().ok()?, v.into_string().ok()?)))
+                .collect(),
+            cancellation: fluentci_executor::Cancellation::default(),
+            worker_executable: std::env::current_exe().unwrap_or_default(),
             vaults: HashMap::new(),
             secrets: HashMap::new(),
             secret_names: HashMap::new(),
@@ -176,109 +152,43 @@ impl Graph {
         }
     }
 
-    pub fn register_service(&mut self, id: &str) {
-        // return if vertex at id is not found or is not a service
-        if self
+    pub fn register_service(&mut self, id: &str) -> Result<(), Error> {
+        let order = self.execution_order()?;
+        let Some(index) = self
             .vertices
             .iter()
-            .find(|v| v.id == id && v.label == "asService")
-            .is_none()
-        {
-            return;
-        }
-
-        let vertex = self
-            .vertices
-            .iter()
-            .find(|v| v.id == id && v.label == "asService")
-            .unwrap();
-
-        // browse the graph dependencies of the service
-        let mut visited = vec![false; self.vertices.len()];
-        let mut stack = Vec::new();
-        let mut service = Service {
-            id: id.to_string(),
-            name: vertex.command.clone(),
-            vertices: Vec::new(),
-            working_dir: self.work_dir.clone(),
+            .position(|v| v.id == id && v.label == "asService")
+        else {
+            return Err(Error::msg("service vertex not found"));
         };
-
-        let skip = vec![
-            "git",
-            "git-checkout",
-            "git-last-commit",
-            "tree",
-            "http",
-            "cache",
-            "file",
-            "directory",
-            "chmod",
-            "withFile",
-            "asService",
-            "trust",
-        ];
-
-        for (i, vertex) in self.vertices.iter().enumerate() {
-            if vertex.id == id {
-                stack.push(i);
-                break;
-            }
-        }
-
-        while let Some(i) = stack.pop() {
-            if visited[i] {
+        let mut selected = std::collections::HashSet::new();
+        let mut pending = vec![index];
+        while let Some(i) = pending.pop() {
+            if !selected.insert(i) {
                 continue;
             }
-            visited[i] = true;
-
             for edge in self.edges.iter().filter(|e| e.to == i) {
-                stack.push(edge.from);
+                pending.push(edge.from);
             }
-
-            if skip.contains(&self.vertices[i].label.as_str()) {
-                continue;
-            }
-
-            if self.vertices[i].label == "withWorkdir" {
-                if !Path::new(&self.vertices[i].command).exists() {
-                    println!("Error: {}", self.vertices[i].id);
-                    match fluentci_logging::error(
-                        &format!("Error: {}", self.vertices[i].id),
-                        "register-service",
-                    ) {
-                        Ok(_) => {}
-                        Err(e) => {
-                            println!("{}", e);
-                        }
-                    }
-                    self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                    break;
+            for need in &self.vertices[i].needs {
+                if let Some(parent) = self.vertices.iter().position(|v| &v.id == need) {
+                    pending.push(parent);
                 }
-                service.working_dir = self.vertices[i].command.clone();
-                continue;
             }
-
-            if self.vertices[i].label == "useEnv" {
-                match Envhub::default().r#use(&self.vertices[i].command, &self.work_dir) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("Error: {}", e);
-                        self.tx.send((self.vertices[i].command.clone(), 1)).unwrap();
-                        break;
-                    }
-                }
-                continue;
-            }
-
-            if self.vertices[i].command.is_empty() {
-                continue;
-            }
-
-            let vertex = self.vertices[i].clone();
-            service.vertices.insert(0, vertex);
         }
-
-        self.services.push(service);
+        // Registration records data; commands and provider setup run in executor workers.
+        let vertices = order
+            .into_iter()
+            .filter(|i| selected.contains(i))
+            .map(|i| self.vertices[i].clone())
+            .collect();
+        self.services.push(Service {
+            id: id.into(),
+            name: self.vertices[index].command.clone(),
+            vertices,
+            working_dir: self.work_dir.clone(),
+        });
+        Ok(())
     }
 
     pub fn execute(&mut self, command: GraphCommand) -> Result<(), Error> {
@@ -307,11 +217,11 @@ impl Graph {
                 self.edges.push(Edge { from, to });
             }
             GraphCommand::AddEnvVariable(key, value) => {
-                env::set_var(key, value);
+                self.environment.insert(key, value);
             }
             GraphCommand::AddSecretVariable(env_name, secret_id, secret_name) => {
                 let value = self.get_secret_plaintext(secret_id, secret_name)?;
-                env::set_var(env_name, value);
+                self.environment.insert(env_name, value);
             }
             GraphCommand::Execute(Output::Stdout) => {
                 self.execute_graph(Output::Stdout);
@@ -345,63 +255,8 @@ impl Graph {
         Ok(())
     }
 
-    pub fn execute_services(&mut self, ctx: &Context) -> Result<(), Error> {
-        if self.enabled_services.is_empty() {
-            return Ok(());
-        }
-        let tracer_provider = global::tracer_provider();
-        let tracer = tracer_provider.versioned_tracer(
-            "fluentci-core",
-            Some(env!("CARGO_PKG_VERSION")),
-            Some("https://opentelemetry.io/schemas/1.17.0"),
-            None,
-        );
-
-        let mut span = tracer.start_with_context("start services", &ctx);
-
-        let process_compose_config = process_compose::ConfigFile {
-            version: "0.5".to_string(),
-            processes: self
-                .enabled_services
-                .iter()
-                .map(|s| (s.name.clone(), s.clone().into()))
-                .collect(),
-            ..Default::default()
-        };
-        let yaml = serde_yaml::to_string(&process_compose_config)?;
-
-        span.set_attribute(KeyValue::new("process_compose", yaml.clone()));
-
-        let label = format!("[{}]", "start services");
-        println!("{}", label.cyan());
-        fluentci_logging::info(&label, "process-compose")?;
-        fluentci_logging::info(&yaml, "process-compose")?;
-
-        thread::spawn(move || {
-            let (tx, _rx) = mpsc::channel();
-            match ServiceExt::default().exec(&yaml, tx.clone(), Output::Stdout, true, ".") {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("{}", e);
-                    match fluentci_logging::error(&e.to_string(), "process-compose") {
-                        Ok(_) => {}
-                        Err(e) => {
-                            println!("{}", e);
-                        }
-                    }
-                }
-            }
-        });
-
-        span.end();
-
-        thread::sleep(std::time::Duration::from_secs(5));
-
-        Ok(())
-    }
-
     /// Validate both legacy edge representations and produce a dependency-safe order.
-    fn execution_order(&self) -> Result<Vec<usize>, Error> {
+    pub(crate) fn execution_order(&self) -> Result<Vec<usize>, Error> {
         let ids: Vec<_> = self.vertices.iter().map(|v| v.id.clone()).collect();
         let mut needs: Vec<_> = self.vertices.iter().map(|v| v.needs.clone()).collect();
         for edge in &self.edges {
@@ -416,230 +271,17 @@ impl Graph {
     }
 
     pub fn execute_graph(&mut self, output: Output) {
-        let tracer_provider = global::tracer_provider();
-        let tracer = tracer_provider.versioned_tracer(
-            "fluentci-core",
-            Some(env!("CARGO_PKG_VERSION")),
-            Some("https://opentelemetry.io/schemas/1.17.0"),
-            None,
-        );
-        let context = Context::current_with_span(tracer.start("root"));
-        // Validate before starting services or running any commands.
-        let result = self.execution_order().and_then(|order| {
-            self.execute_services(&context)?;
-            let skip = [
-                "git",
-                "git-checkout",
-                "git-last-commit",
-                "tree",
-                "http",
-                "cache",
-                "file",
-                "directory",
-                "chmod",
-                "withFile",
-                "asService",
-                "trust",
-            ];
-            let target = order.iter().rev().copied().find(|&i| {
-                let v = &self.vertices[i];
-                !skip.contains(&v.label.as_str())
-                    && !v.command.is_empty()
-                    && v.label != "withWorkdir"
-                    && v.label != "useEnv"
-            });
-            let mut result = String::new();
-            let execution = (|| -> Result<(), Error> {
-                for i in order {
-                    let vertex = &self.vertices[i];
-                    if skip.contains(&vertex.label.as_str()) || vertex.command.is_empty() {
-                        continue;
-                    }
-                    let mut span = tracer.start_with_context(
-                        format!("{} {}", vertex.label, vertex.command),
-                        &context,
-                    );
-                    span.set_attribute(KeyValue::new("command", vertex.command.clone()));
-                    let step = (|| -> Result<(), Error> {
-                        if self.vertices[i].label == "withWorkdir" {
-                            if !Path::new(&self.vertices[i].command).is_dir() {
-                                return Err(Error::msg(format!(
-                                    "Invalid working directory: {}",
-                                    self.vertices[i].command
-                                )));
-                            }
-                            self.work_dir = self.vertices[i].command.clone();
-                            return Ok(());
-                        }
-                        if self.vertices[i].label == "useEnv" {
-                            Envhub::default().r#use(&self.vertices[i].command, &self.work_dir)?;
-                            return Ok(());
-                        }
-                        let capture = Some(i) == target;
-                        let (tx, rx) = mpsc::channel();
-                        let status =
-                            self.vertices[i].run(tx, output.clone(), capture, &self.work_dir)?;
-                        if !status.success() {
-                            return Err(Error::msg(format!(
-                                "Command failed ({}): {}",
-                                status, self.vertices[i].command
-                            )));
-                        }
-                        if capture {
-                            result = rx
-                                .recv()
-                                .map_err(|e| Error::msg(format!("Missing command output: {e}")))?;
-                        }
-                        Ok(())
-                    })();
-                    span.end();
-                    step?;
-                }
-                Ok(())
-            })();
-            // Cleanup occurs on both success and command failure.
-            self.post_execute(&context);
-            execution?;
-            Ok(result)
-        });
-        // Exactly one completion message, including empty graphs and validation failures.
+        let result = crate::legacy_plan::execute(self, None, output);
+        self.enabled_services.clear();
         let completion = match result {
-            Ok(stdout) => (stdout, 0),
+            Ok(output) => (output, 0),
             Err(error) => (error.to_string(), 1),
         };
         let _ = self.tx.send(completion);
-        context.span().end();
     }
 
     pub fn execute_vertex(&mut self, id: &str) -> Result<String, Error> {
-        let tracer_provider = global::tracer_provider();
-        let tracer = tracer_provider.versioned_tracer(
-            "fluentci-core",
-            Some(env!("CARGO_PKG_VERSION")),
-            Some("https://opentelemetry.io/schemas/1.17.0"),
-            None,
-        );
-
-        let mut result = String::from("");
-        let mut visited = vec![false; self.vertices.len()];
-        let mut stack = Vec::new();
-        let index = self
-            .vertices
-            .iter()
-            .position(|v| v.id == id)
-            .ok_or_else(|| Error::msg(format!("Vertex not found: {id}")))?;
-        stack.push(index);
-        while let Some(i) = stack.pop() {
-            if visited[i] {
-                continue;
-            }
-            visited[i] = true;
-            for edge in self.edges.iter().filter(|e| e.from == i) {
-                stack.push(edge.to);
-            }
-            let (tx, rx) = mpsc::channel();
-            let label = self.vertices[i].label.clone();
-            let command = self.vertices[i].command.clone();
-            let mut span = tracer.start(format!("{} {}", label, command.clone()));
-            span.set_attribute(KeyValue::new("command", command.clone()));
-
-            if self.vertices[i].label == "withWorkdir" {
-                if !Path::new(&self.vertices[i].command).exists() {
-                    span.end();
-                    return Err(Error::msg(format!("Error: {}", self.vertices[i].id)));
-                }
-                self.work_dir = self.vertices[i].command.clone();
-                span.end();
-                continue;
-            }
-
-            match self.vertices[i].run(tx, Output::Stdout, true, &self.work_dir) {
-                Ok(status) => {
-                    if !status.success() {
-                        span.end();
-                        return Err(Error::msg(format!("Error: {}", self.vertices[i].id)));
-                    }
-                    result = rx.recv()?;
-                    span.end();
-                }
-                Err(e) => {
-                    span.end();
-                    return Err(Error::msg(format!("Error: {}", e)));
-                }
-            };
-        }
-
-        Ok(result)
-    }
-
-    pub fn post_execute(&mut self, ctx: &Context) {
-        if !self.enabled_services.is_empty() {
-            let (tx, _) = mpsc::channel();
-            match ServiceExt::default().post_setup(tx) {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("Failed to stop services: {}", e);
-                }
-            }
-        }
-
-        self.enabled_services.clear();
-        let tracer_provider = global::tracer_provider();
-        let tracer = tracer_provider.versioned_tracer(
-            "fluentci-core",
-            Some(env!("CARGO_PKG_VERSION")),
-            Some("https://opentelemetry.io/schemas/1.17.0"),
-            None,
-        );
-
-        let only = vec!["withCache", "withService"];
-
-        let mut visited = vec![false; self.vertices.len()];
-        let mut stack = Vec::new();
-        for (i, vertex) in self.vertices.iter().enumerate() {
-            if vertex.needs.is_empty() {
-                stack.push(i);
-            }
-        }
-
-        while let Some(i) = stack.pop() {
-            let label = &self.vertices[i].label.as_str();
-            if visited[i] {
-                continue;
-            }
-            visited[i] = true;
-            for edge in self.edges.iter().filter(|e| e.from == i) {
-                stack.push(edge.to);
-            }
-
-            if !only.contains(&label) {
-                continue;
-            }
-
-            let mut span = tracer.start_with_context(
-                format!("{} {}", label.to_string(), self.vertices[i].command.clone()),
-                &ctx,
-            );
-            span.set_attribute(KeyValue::new("command", self.vertices[i].command.clone()));
-            let (tx, rx) = mpsc::channel();
-            match self.vertices[i].runner.post_setup(tx) {
-                Ok(_) => {
-                    span.end();
-                }
-                Err(e) => {
-                    println!("Error: {}", e);
-                    match fluentci_logging::error(&e.to_string(), "post-setup") {
-                        Ok(_) => {}
-                        Err(e) => {
-                            println!("{}", e);
-                        }
-                    }
-                    span.end();
-                    break;
-                }
-            }
-            rx.recv().unwrap();
-        }
+        crate::legacy_plan::execute(self, Some(id), Output::Stdout)
     }
 
     pub fn size(&self) -> usize {
@@ -718,105 +360,5 @@ mod tests {
 
         assert_eq!(graph.size(), 0);
         Ok(())
-    }
-    #[derive(Default)]
-    struct RecordingRunner {
-        calls: Arc<std::sync::Mutex<Vec<String>>>,
-    }
-    impl fluentci_ext::Extension for RecordingRunner {
-        fn setup(&self) -> Result<(), Error> {
-            Ok(())
-        }
-        fn exec(
-            &mut self,
-            command: &str,
-            tx: mpsc::Sender<String>,
-            _: Output,
-            capture: bool,
-            _: &str,
-        ) -> Result<std::process::ExitStatus, Error> {
-            self.calls.lock().unwrap().push(command.into());
-            if command == "fail" {
-                return Err(Error::msg("intentional failure"));
-            }
-            if capture {
-                tx.send(command.into())?;
-            }
-            Ok(std::process::ExitStatus::default())
-        }
-    }
-    fn recording_graph() -> (
-        Graph,
-        mpsc::Receiver<(String, usize)>,
-        Arc<std::sync::Mutex<Vec<String>>>,
-    ) {
-        let (tx, rx) = mpsc::channel();
-        (
-            Graph::new(tx, Arc::new(Box::new(Runner::default()))),
-            rx,
-            Arc::default(),
-        )
-    }
-    fn add_recording(
-        graph: &mut Graph,
-        id: &str,
-        needs: &[&str],
-        calls: &Arc<std::sync::Mutex<Vec<String>>>,
-    ) {
-        graph
-            .execute(GraphCommand::AddVertex(
-                id.into(),
-                "exec".into(),
-                id.into(),
-                needs.iter().map(|s| s.to_string()).collect(),
-                Arc::new(Box::new(RecordingRunner {
-                    calls: calls.clone(),
-                })),
-            ))
-            .unwrap();
-    }
-    #[test]
-    fn diamond_executes_once_after_all_dependencies_and_returns_terminal_output() {
-        let (mut graph, rx, calls) = recording_graph();
-        add_recording(&mut graph, "a", &[], &calls);
-        add_recording(&mut graph, "b", &["a"], &calls);
-        add_recording(&mut graph, "c", &["a"], &calls);
-        add_recording(&mut graph, "d", &["b", "c"], &calls);
-        graph.execute_graph(Output::Stdout);
-        assert_eq!(*calls.lock().unwrap(), vec!["a", "b", "c", "d"]);
-        assert_eq!(
-            rx.recv_timeout(std::time::Duration::from_secs(1)).unwrap(),
-            ("d".into(), 0)
-        );
-        assert!(rx.try_recv().is_err());
-    }
-    #[test]
-    fn empty_graph_completes_without_waiting_for_nonexistent_output() {
-        let (mut graph, rx, _) = recording_graph();
-        graph.execute_graph(Output::Stdout);
-        assert_eq!(
-            rx.recv_timeout(std::time::Duration::from_secs(1)).unwrap(),
-            ("".into(), 0)
-        );
-    }
-    #[test]
-    fn invalid_graph_fails_before_any_command_runs() {
-        let (mut graph, rx, calls) = recording_graph();
-        add_recording(&mut graph, "a", &["b"], &calls);
-        add_recording(&mut graph, "b", &["a"], &calls);
-        graph.execute_graph(Output::Stdout);
-        assert_eq!(rx.recv().unwrap().1, 1);
-        assert!(calls.lock().unwrap().is_empty());
-        assert!(graph.execute_vertex("missing").is_err());
-    }
-    #[test]
-    fn failure_sends_one_completion_and_stops_dependents() {
-        let (mut graph, rx, calls) = recording_graph();
-        add_recording(&mut graph, "fail", &[], &calls);
-        add_recording(&mut graph, "never", &["fail"], &calls);
-        graph.execute_graph(Output::Stdout);
-        assert_eq!(rx.recv().unwrap().1, 1);
-        assert_eq!(*calls.lock().unwrap(), vec!["fail"]);
-        assert!(rx.try_recv().is_err());
     }
 }

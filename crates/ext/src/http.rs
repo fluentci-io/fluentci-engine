@@ -23,6 +23,10 @@ impl Http {
 }
 
 impl Extension for Http {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Http)
+    }
+
     fn exec(
         &mut self,
         url: &str,

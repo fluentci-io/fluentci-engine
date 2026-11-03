@@ -14,7 +14,6 @@ pub fn pkgx(graph: Arc<Mutex<Graph>>, reset: bool) -> Result<Pkgx, Error> {
     }
 
     graph.runner = Arc::new(Box::new(PkgxExt::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     graph.execute(GraphCommand::AddVertex(

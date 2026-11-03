@@ -27,6 +27,10 @@ impl Pkgx {
 }
 
 impl Extension for Pkgx {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Pkgx)
+    }
+
     fn exec(
         &mut self,
         cmd: &str,

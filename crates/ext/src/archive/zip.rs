@@ -8,6 +8,10 @@ use fluentci_types::Output;
 pub struct Zip {}
 
 impl Extension for Zip {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Zip)
+    }
+
     fn exec(
         &mut self,
         path: &str,

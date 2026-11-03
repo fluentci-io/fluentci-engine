@@ -18,7 +18,6 @@ pub fn directory(graph: Arc<Mutex<Graph>>, path: String, reset: bool) -> Result<
     }
 
     graph.runner = Arc::new(Box::new(Runner::default()));
-    graph.runner.setup()?;
 
     let md = metadata(path.clone())?;
     if !md.is_dir() {

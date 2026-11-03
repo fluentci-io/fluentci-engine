@@ -80,6 +80,13 @@ impl MacPorts {
 }
 
 impl Extension for MacPorts {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Macports {
+            rust: self.backend == MacPortsBackend::Rust,
+            executable: self.executable.clone(),
+        })
+    }
+
     fn setup(&self) -> Result<(), Error> {
         Self::validate_platform(std::env::consts::OS)?;
         if !self.executable.is_absolute() || !self.executable.is_file() {

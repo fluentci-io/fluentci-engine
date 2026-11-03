@@ -8,6 +8,10 @@ use fluentci_types::Output;
 pub struct Runner {}
 
 impl Extension for Runner {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Runner)
+    }
+
     fn exec(
         &mut self,
         cmd: &str,

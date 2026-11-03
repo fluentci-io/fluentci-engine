@@ -144,7 +144,26 @@ pub async fn upload(key: &str) -> Result<(), Error> {
     Ok(())
 }
 
+impl Cache {
+    pub(crate) fn mounted(key: &str, work_dir: &std::path::Path) -> Result<Self, Error> {
+        let (key, path) = key
+            .split_once(':')
+            .ok_or_else(|| Error::msg("Invalid cache key"))?;
+        if key.is_empty() || path.is_empty() {
+            return Err(Error::msg("Invalid cache mount"));
+        }
+        Ok(Self {
+            key: key.into(),
+            path: work_dir.join(path).to_string_lossy().into_owned(),
+        })
+    }
+}
+
 impl Extension for Cache {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Cache)
+    }
+
     fn exec(
         &mut self,
         key: &str,

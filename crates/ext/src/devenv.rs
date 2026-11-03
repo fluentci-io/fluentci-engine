@@ -12,6 +12,10 @@ use fluentci_types::Output;
 pub struct Devenv {}
 
 impl Extension for Devenv {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Devenv)
+    }
+
     fn exec(
         &mut self,
         cmd: &str,

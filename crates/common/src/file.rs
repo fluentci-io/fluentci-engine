@@ -1,5 +1,4 @@
 use std::{
-    env,
     fs::metadata,
     path::Path,
     sync::{Arc, Mutex},
@@ -23,7 +22,6 @@ pub fn file(graph: Arc<Mutex<Graph>>, path: String, reset: bool) -> Result<File,
     }
 
     graph.runner = Arc::new(Box::new(Runner::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
 
@@ -57,7 +55,6 @@ pub fn file(graph: Arc<Mutex<Graph>>, path: String, reset: bool) -> Result<File,
 pub fn md5(graph: Arc<Mutex<Graph>>, path: String) -> Result<String, Error> {
     let mut graph = graph.lock().unwrap();
     graph.runner = Arc::new(Box::new(Md5Ext::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     let dep_id = graph.vertices[graph.size() - 1].id.clone();
@@ -81,7 +78,6 @@ pub fn md5(graph: Arc<Mutex<Graph>>, path: String) -> Result<String, Error> {
 pub fn sha256(graph: Arc<Mutex<Graph>>, path: String) -> Result<String, Error> {
     let mut graph = graph.lock().unwrap();
     graph.runner = Arc::new(Box::new(Sha256Ext::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     let dep_id = graph.vertices[graph.size() - 1].id.clone();
@@ -109,7 +105,6 @@ pub fn tar_xzvf(
 ) -> Result<Directory, Error> {
     let mut graph = graph.lock().unwrap();
     graph.runner = Arc::new(Box::new(TarXzvfExt::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     let dep_id = graph.vertices[graph.size() - 1].id.clone();
@@ -131,7 +126,10 @@ pub fn tar_xzvf(
         None => ".".into(),
     };
 
-    env::set_var("FLUENTCI_TAR_XZVF_OUTPUT_DIRECTORY", output_dir.clone());
+    graph.environment.insert(
+        "FLUENTCI_TAR_XZVF_OUTPUT_DIRECTORY".into(),
+        output_dir.clone(),
+    );
 
     graph.execute_vertex(&id)?;
 
@@ -159,7 +157,6 @@ pub fn unzip(
 ) -> Result<Directory, Error> {
     let mut graph = graph.lock().unwrap();
     graph.runner = Arc::new(Box::new(UnzipExt::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     let dep_id = graph.vertices[graph.size() - 1].id.clone();
@@ -181,7 +178,9 @@ pub fn unzip(
         None => ".".into(),
     };
 
-    env::set_var("FLUENTCI_UNZIP_OUTPUT_DIRECTORY", output_dir.clone());
+    graph
+        .environment
+        .insert("FLUENTCI_UNZIP_OUTPUT_DIRECTORY".into(), output_dir.clone());
 
     graph.execute_vertex(&id)?;
 
@@ -205,7 +204,6 @@ pub fn unzip(
 pub fn chmod(graph: Arc<Mutex<Graph>>, path: String, mode: String) -> Result<File, Error> {
     let mut graph = graph.lock().unwrap();
     graph.runner = Arc::new(Box::new(Runner::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     let dep_id = graph.vertices[graph.size() - 1].id.clone();

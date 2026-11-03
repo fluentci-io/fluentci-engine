@@ -98,6 +98,13 @@ impl BsdPackages {
     }
 }
 impl Extension for BsdPackages {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Bsd {
+            manager: self.manager.os().into(),
+            executable: self.executable.clone(),
+        })
+    }
+
     fn setup(&self) -> Result<(), Error> {
         self.manager.validate_platform(std::env::consts::OS)?;
         if !self.executable.is_absolute() || !self.executable.is_file() {

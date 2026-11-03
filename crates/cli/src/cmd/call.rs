@@ -26,11 +26,10 @@ pub fn call(module: &str, command: &str) -> Result<(), Error> {
     }
 
     let (tx, rx) = mpsc::channel();
+    let graph = Graph::new(tx, Arc::new(Box::new(Runner::default())));
+    let _signals = fluentci_core::signals::CancellationSignals::new(graph.cancellation.clone())?;
     let user_data = UserData::new(State {
-        graph: Arc::new(Mutex::new(Graph::new(
-            tx,
-            Arc::new(Box::new(Runner::default())),
-        ))),
+        graph: Arc::new(Mutex::new(graph)),
         rx: Arc::new(Mutex::new(rx)),
         runner: "default".into(),
     });
@@ -55,8 +54,10 @@ pub fn call(module: &str, command: &str) -> Result<(), Error> {
     }
     let response = plugin
         .call::<&str, &str>(func, args)
-        .with_context(|| format!("Wasm export {func:?} failed"))?;
-    println!("{response}");
+        .map(str::to_owned)
+        .with_context(|| format!("Wasm export {func:?} failed"));
+    fluentci_core::shutdown_tracer();
+    println!("{}", response?);
     Ok(())
 }
 

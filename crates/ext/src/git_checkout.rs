@@ -8,6 +8,10 @@ use fluentci_types::Output;
 pub struct GitCheckout {}
 
 impl Extension for GitCheckout {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::GitCheckout)
+    }
+
     fn exec(
         &mut self,
         branch: &str,

@@ -14,7 +14,6 @@ pub fn pixi(graph: Arc<Mutex<Graph>>, reset: bool) -> Result<Pixi, Error> {
     }
 
     graph.runner = Arc::new(Box::new(PixiExt::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     graph.execute(GraphCommand::AddVertex(

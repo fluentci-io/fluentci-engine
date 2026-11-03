@@ -12,6 +12,8 @@ version = "0.3.9"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+serde_json = "1.0"
+tempfile = "3"
 fluentci-executor = { path = "../executor", version = "0.1.0" }
 anyhow = "1.0.81"
 chrono = "0.4.35"
@@ -30,7 +32,7 @@ opentelemetry_sdk = {version = "0.22.1", features = ["tokio", "rt-tokio", "trace
 owo-colors = "4.0.0"
 serde_yaml = "0.9.34"
 sha2 = "0.10.8"
-tokio = "1.36.0"
+tokio = { version = "1.36.0", features = ["rt", "signal", "macros"] }
 uuid = {version = "1.7.0", features = [
   "v4",
   "fast-rng",

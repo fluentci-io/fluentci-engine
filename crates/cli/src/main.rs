@@ -64,6 +64,11 @@ fn cli() -> Command<'static> {
                 .about("Displays an existing local execution without rerunning its plan"),
         )
         .subcommand(
+            Command::new("provider-worker")
+                .hide(true)
+                .arg(Arg::new("request").required(true)),
+        )
+        .subcommand(
             Command::new("execute")
                 .arg(
                     Arg::new("progress")
@@ -162,6 +167,9 @@ async fn main() -> Result<(), Error> {
                 args.value_of("server"),
             )
             .await?;
+        }
+        Some(("provider-worker", args)) => {
+            fluentci_ext::worker::run(std::path::Path::new(args.value_of("request").unwrap()))?;
         }
         Some(("execute", args)) => {
             cmd::execute::execute(

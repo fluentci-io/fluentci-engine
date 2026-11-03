@@ -14,7 +14,6 @@ pub fn devbox(graph: Arc<Mutex<Graph>>, reset: bool) -> Result<Devbox, Error> {
     }
 
     graph.runner = Arc::new(Box::new(DevboxExt::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     graph.execute(GraphCommand::AddVertex(

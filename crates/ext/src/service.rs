@@ -8,6 +8,10 @@ use fluentci_types::Output;
 pub struct Service {}
 
 impl Extension for Service {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Service)
+    }
+
     fn exec(
         &mut self,
         yaml: &str,

@@ -38,6 +38,10 @@ impl Hermit {
 }
 
 impl Extension for Hermit {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Hermit)
+    }
+
     fn exec(
         &mut self,
         cmd: &str,

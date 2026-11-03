@@ -8,6 +8,10 @@ use fluentci_types::Output;
 pub struct Unzip {}
 
 impl Extension for Unzip {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Unzip)
+    }
+
     fn exec(
         &mut self,
         path: &str,

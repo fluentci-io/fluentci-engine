@@ -25,6 +25,10 @@ impl Envhub {
 }
 
 impl Extension for Envhub {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Envhub)
+    }
+
     fn exec(
         &mut self,
         cmd: &str,

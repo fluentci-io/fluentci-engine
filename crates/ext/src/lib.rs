@@ -1,7 +1,7 @@
 use std::{
     io::{BufRead, BufReader},
     process::{Command, ExitStatus, Stdio},
-    sync::mpsc::{self, Receiver, Sender},
+    sync::mpsc::Sender,
     thread,
 };
 
@@ -34,8 +34,16 @@ pub mod pkgx;
 pub mod proto;
 pub mod runner;
 pub mod service;
+pub mod worker;
 
 pub trait Extension {
+    /// Serializable provider configuration, never an alternate scheduling path.
+    fn worker_spec(&self) -> Result<worker::Provider, Error> {
+        Err(anyhow::anyhow!(
+            "extension must implement worker_spec for executor-managed execution"
+        ))
+    }
+
     fn exec(
         &mut self,
         cmd: &str,
@@ -96,9 +104,6 @@ fn exec_command(
     last_cmd: bool,
     work_dir: &str,
 ) -> Result<ExitStatus, Error> {
-    let (stdout_tx, stdout_rx): (Sender<String>, Receiver<String>) = mpsc::channel();
-    let (stderr_tx, stderr_rx): (Sender<String>, Receiver<String>) = mpsc::channel();
-
     let mut child = command
         .arg("-c")
         .arg(cmd)
@@ -106,87 +111,71 @@ fn exec_command(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
-
-    let stdout_tx_clone = stdout_tx.clone();
-    let stdout = child.stdout.take().unwrap();
-    let stderr = child.stderr.take().unwrap();
-
-    let out_clone = out.clone();
-    let tx_clone = tx.clone();
-    let namespace = cmd.to_string().clone();
-
-    thread::spawn(move || {
-        let mut console = Console::new(&namespace);
-        let mut stdout = String::new();
-        while let Ok(line) = stdout_rx.recv() {
-            if let Some(active) = &mut console {
-                if active.line(&line).is_err() {
-                    // Rendering must never interrupt capture or execution.
+    worker::command_started()?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| anyhow::anyhow!("missing stdout pipe"))?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| anyhow::anyhow!("missing stderr pipe"))?;
+    let namespace = cmd.to_string();
+    let stdout_namespace = namespace.clone();
+    let stdout = thread::spawn(move || -> Result<String, Error> {
+        let mut console = Console::new(&stdout_namespace);
+        let mut captured = String::new();
+        for line in BufReader::new(stdout).lines() {
+            let line = line?;
+            if let Some(renderer) = &mut console {
+                if renderer.line(&line).is_err() {
                     console = None;
-                    println!("{}", line);
+                    println!("{line}");
                 }
             } else {
-                println!("{}", line);
+                println!("{line}");
             }
-            match fluentci_logging::info(&line, &namespace) {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("Error: {}", e);
-                }
-            }
-            stdout.push_str(&line);
-            stdout.push_str("\n");
-        }
-
-        if let Some(mut console) = console {
-            let _ = console.finish();
-        }
-
-        if out_clone == Output::Stdout && last_cmd {
-            match tx_clone.send(stdout) {
-                Ok(_) => {}
-                Err(_) => {}
+            let _ = fluentci_logging::info(&line, &stdout_namespace);
+            if last_cmd {
+                captured.push_str(&line);
+                captured.push('\n');
             }
         }
+        if let Some(mut renderer) = console {
+            let _ = renderer.finish();
+        }
+        Ok(captured)
     });
-
-    let namespace = cmd.to_string().clone();
-
-    thread::spawn(move || {
-        let mut stderr = String::new();
-        while let Ok(line) = stderr_rx.recv() {
-            println!("{}", line);
-            match fluentci_logging::info(&line, &namespace) {
-                Ok(_) => {}
-                Err(_) => {}
-            }
-            stderr.push_str(&line);
-            stderr.push_str("\n");
-        }
-        if out == Output::Stderr && last_cmd {
-            match tx.send(stderr) {
-                Ok(_) => {}
-                Err(_) => {}
+    let stderr = thread::spawn(move || -> Result<String, Error> {
+        let mut captured = String::new();
+        for line in BufReader::new(stderr).lines() {
+            let line = line?;
+            println!("{line}");
+            let _ = fluentci_logging::info(&line, &namespace);
+            if last_cmd {
+                captured.push_str(&line);
+                captured.push('\n');
             }
         }
+        Ok(captured)
     });
-
-    thread::spawn(move || {
-        let reader = BufReader::new(stdout);
-        for line in reader.lines() {
-            match stdout_tx_clone.send(line.unwrap()) {
-                Ok(_) => {}
-                Err(_) => {}
-            }
-        }
-    });
-
-    thread::spawn(move || {
-        let reader = BufReader::new(stderr);
-        for line in reader.lines() {
-            stderr_tx.send(line.unwrap()).unwrap();
-        }
-    });
-
-    child.wait().map_err(Error::from)
+    let status = child.wait();
+    // Both pipe readers are joined before returning or allowing the worker process
+    // to exit; final output cannot race the completion/capture notification.
+    let stdout = stdout
+        .join()
+        .map_err(|_| anyhow::anyhow!("stdout reader panicked"));
+    let stderr = stderr
+        .join()
+        .map_err(|_| anyhow::anyhow!("stderr reader panicked"));
+    let stdout = stdout??;
+    let stderr = stderr??;
+    if last_cmd {
+        tx.send(if out == Output::Stdout {
+            stdout
+        } else {
+            stderr
+        })?;
+    }
+    Ok(status?)
 }

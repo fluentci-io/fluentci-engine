@@ -25,6 +25,10 @@ impl Git {
 }
 
 impl Extension for Git {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Git)
+    }
+
     fn exec(
         &mut self,
         url: &str,

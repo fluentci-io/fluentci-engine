@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::Error;
-use fluentci_server::start;
+use fluentci_server::start_with_cancellation;
 use tokio::runtime;
 
 pub async fn run(command: &str) -> Result<(), Error> {
@@ -26,18 +26,29 @@ pub async fn run(command: &str) -> Result<(), Error> {
     let port = addr.port();
     let listen = format!("{}:{}", host, port);
 
+    let cancellation = fluentci_executor::Cancellation::default();
+    let server_cancel = cancellation.clone();
+    let (started, errors) = std::sync::mpsc::channel();
     thread::spawn(move || {
         let rt = runtime::Runtime::new().unwrap();
-        match rt.block_on(start(&listen)) {
-            Ok(_) => {}
-            Err(e) => {
-                eprintln!("{}", e);
-                std::process::exit(1);
-            }
+        if let Err(error) = rt.block_on(start_with_cancellation(&listen, server_cancel)) {
+            let _ = started.send(error.to_string());
         }
     });
-
-    thread::sleep(std::time::Duration::from_secs(5));
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    loop {
+        if let Ok(error) = errors.try_recv() {
+            return Err(anyhow::anyhow!("session server failed: {error}"));
+        }
+        if std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_millis(50)).is_ok()
+        {
+            break;
+        }
+        if std::time::Instant::now() >= deadline {
+            return Err(anyhow::anyhow!("session server startup timeout"));
+        }
+        thread::sleep(std::time::Duration::from_millis(20));
+    }
 
     let mut child = Command::new("sh")
         .arg("-c")
@@ -50,9 +61,16 @@ pub async fn run(command: &str) -> Result<(), Error> {
         .stderr(Stdio::inherit())
         .spawn()?;
 
-    let status = child.wait()?;
-    if !status.success() {
-        std::process::exit(1);
+    let status = child.wait();
+    cancellation.cancel();
+    if !cancellation.wait_idle(std::time::Duration::from_secs(15)) {
+        return Err(anyhow::anyhow!(
+            "session execution cleanup did not finish before shutdown"
+        ));
     }
-    std::process::exit(0);
+    let status = status?;
+    if !status.success() {
+        return Err(anyhow::anyhow!("session command failed ({status})"));
+    }
+    Ok(())
 }

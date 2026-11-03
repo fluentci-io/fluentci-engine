@@ -8,6 +8,10 @@ use fluentci_types::Output;
 pub struct Proto {}
 
 impl Extension for Proto {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Proto)
+    }
+
     fn exec(
         &mut self,
         cmd: &str,

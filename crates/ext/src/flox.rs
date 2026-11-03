@@ -113,6 +113,10 @@ fn initialize(command: &mut Command, work_dir: &str) -> Result<(), Error> {
 }
 
 impl Extension for Flox {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Flox)
+    }
+
     fn exec(
         &mut self,
         cmd: &str,

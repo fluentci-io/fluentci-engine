@@ -14,7 +14,6 @@ pub fn envhub(graph: Arc<Mutex<Graph>>, reset: bool) -> Result<Envhub, Error> {
     }
 
     graph.runner = Arc::new(Box::new(EnvhubExt::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     graph.execute(GraphCommand::AddVertex(

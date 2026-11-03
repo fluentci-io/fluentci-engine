@@ -34,6 +34,12 @@ impl Nix {
 }
 
 impl Extension for Nix {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Nix {
+            impure: self.args.impure,
+        })
+    }
+
     fn exec(
         &mut self,
         cmd: &str,

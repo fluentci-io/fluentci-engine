@@ -66,6 +66,10 @@ pub(crate) fn validate_packages(packages: &[&str]) -> Result<(), Error> {
 }
 
 impl Extension for Homebrew {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Homebrew)
+    }
+
     fn setup(&self) -> Result<(), Error> {
         let executable = self.executable()?;
         if !executable.is_file() {

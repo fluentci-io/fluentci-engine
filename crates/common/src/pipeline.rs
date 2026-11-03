@@ -10,7 +10,6 @@ pub fn pipeline(graph: Arc<Mutex<Graph>>, name: String) -> Result<Pipeline, Erro
     let mut graph = graph.lock().unwrap();
     graph.reset();
     graph.runner = Arc::new(Box::new(Runner::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     graph.execute(GraphCommand::AddVertex(

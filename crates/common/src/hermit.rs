@@ -14,7 +14,6 @@ pub fn hermit(graph: Arc<Mutex<Graph>>, reset: bool) -> Result<Hermit, Error> {
     }
 
     graph.runner = Arc::new(Box::new(HermitExt::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     graph.execute(GraphCommand::AddVertex(

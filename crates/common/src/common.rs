@@ -90,7 +90,6 @@ pub fn with_cache(graph: Arc<Mutex<Graph>>, cache_id: String, path: String) -> R
     let mut graph = graph.lock().unwrap();
     let runner = graph.runner.clone();
     graph.runner = Arc::new(Box::new(CacheExt::default()));
-    graph.runner.setup()?;
 
     if let Some(cache) = graph.volumes.iter().find(|v| v.id.clone() == cache_id) {
         let id = Uuid::new_v4().to_string();
@@ -124,7 +123,6 @@ pub fn with_file(graph: Arc<Mutex<Graph>>, file_id: String, path: String) -> Res
     let mut graph = graph.lock().unwrap();
     let runner = graph.runner.clone();
     graph.runner = Arc::new(Box::new(Runner::default()));
-    graph.runner.setup()?;
 
     if let Some(file) = graph.volumes.iter().find(|v| v.id.clone() == file_id) {
         let id = Uuid::new_v4().to_string();
@@ -195,7 +193,6 @@ pub fn stderr(
 pub fn zip(graph: Arc<Mutex<Graph>>, path: String) -> Result<File, Error> {
     let mut graph = graph.lock().unwrap();
     graph.runner = Arc::new(Box::new(ZipExt::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     let dep_id = graph.vertices[graph.size() - 1].id.clone();
@@ -240,7 +237,6 @@ pub fn zip(graph: Arc<Mutex<Graph>>, path: String) -> Result<File, Error> {
 pub fn tar_czvf(graph: Arc<Mutex<Graph>>, path: String) -> Result<File, Error> {
     let mut graph = graph.lock().unwrap();
     graph.runner = Arc::new(Box::new(TarCzvfExt::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     let dep_id = graph.vertices[graph.size() - 1].id.clone();
@@ -286,7 +282,6 @@ pub fn as_service(graph: Arc<Mutex<Graph>>, name: String) -> Result<Service, Err
     let mut graph = graph.lock().unwrap();
     let runner = graph.runner.clone();
     graph.runner = Arc::new(Box::new(Runner::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     let dep_id = graph.vertices[graph.size() - 1].id.clone();
@@ -307,7 +302,7 @@ pub fn as_service(graph: Arc<Mutex<Graph>>, name: String) -> Result<Service, Err
         let y = graph.size() - 1;
         graph.execute(GraphCommand::AddEdge(x, y))?;
 
-        graph.register_service(&id);
+        graph.register_service(&id)?;
     }
 
     let service = Service { id: id.clone() };
@@ -337,7 +332,6 @@ pub fn wait_on(graph: Arc<Mutex<Graph>>, port: u32, timeout: Option<u32>) -> Res
     let mut graph = graph.lock().unwrap();
     let runner = graph.runner.clone();
     graph.runner = Arc::new(Box::new(PkgxExt::default()));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     let dep_id = graph.vertices[graph.size() - 1].id.clone();

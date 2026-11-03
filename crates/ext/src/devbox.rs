@@ -25,6 +25,10 @@ impl Devbox {
 }
 
 impl Extension for Devbox {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Devbox)
+    }
+
     fn exec(
         &mut self,
         cmd: &str,

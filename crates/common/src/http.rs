@@ -17,7 +17,6 @@ pub fn http(graph: Arc<Mutex<Graph>>, url: String, reset: bool) -> Result<File, 
     }
 
     graph.runner = Arc::new(Box::new(HttpExt::default()));
-    graph.runner.setup()?;
     graph.work_dir = format!(
         "{}/.fluentci/cache",
         dirs::home_dir().unwrap().to_str().unwrap()

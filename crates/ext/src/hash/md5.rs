@@ -8,6 +8,10 @@ use fluentci_types::Output;
 pub struct Md5 {}
 
 impl Extension for Md5 {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Md5)
+    }
+
     fn exec(
         &mut self,
         file_path: &str,

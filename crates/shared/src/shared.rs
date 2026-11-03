@@ -141,23 +141,32 @@ host_fn!(pub tar_czvf(user_data: State; path: String) -> Json<File> {
 });
 
 host_fn!(pub get_env(user_data: State; key: String) -> String {
-  Ok(std::env::var(key).unwrap_or_default())
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  let graph = state.graph.lock().unwrap();
+  Ok(graph.environment.get(&key).cloned().unwrap_or_default())
 });
 
 host_fn!(pub set_envs(user_data: State; env: Json<Vec<(String, String)>>) {
-  for (key, value) in env.into_inner() {
-    std::env::set_var(key, value);
-  }
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  let mut graph = state.graph.lock().unwrap();
+  for (key, value) in env.into_inner() { graph.environment.insert(key, value); }
   Ok(())
 });
 
 host_fn!(pub remove_env(user_data: State; key: String) {
-  std::env::remove_var(key);
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  state.graph.lock().unwrap().environment.remove(&key);
   Ok(())
 });
 
 host_fn!(pub has_env(user_data: State; key: String) -> Json<bool> {
-  Ok(Json(std::env::var(key).is_ok()))
+  let state = user_data.get()?;
+  let state = state.lock().unwrap();
+  let present = state.graph.lock().unwrap().environment.contains_key(&key);
+  Ok(Json(present))
 });
 
 host_fn!(pub get_os(user_data: State;) -> String {

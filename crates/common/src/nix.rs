@@ -14,7 +14,6 @@ pub fn nix(graph: Arc<Mutex<Graph>>, reset: bool, args: NixArgs) -> Result<Nix, 
     }
 
     graph.runner = Arc::new(Box::new(NixExt::new(args)));
-    graph.runner.setup()?;
 
     let id = Uuid::new_v4().to_string();
     graph.execute(GraphCommand::AddVertex(

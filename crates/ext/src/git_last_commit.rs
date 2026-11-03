@@ -8,6 +8,10 @@ use fluentci_types::Output;
 pub struct GitLastCommit {}
 
 impl Extension for GitLastCommit {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::GitLastCommit)
+    }
+
     fn exec(
         &mut self,
         branch: &str,

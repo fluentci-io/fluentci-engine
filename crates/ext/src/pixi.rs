@@ -12,6 +12,10 @@ use fluentci_types::Output;
 pub struct Pixi {}
 
 impl Extension for Pixi {
+    fn worker_spec(&self) -> Result<crate::worker::Provider, Error> {
+        Ok(crate::worker::Provider::Pixi)
+    }
+
     fn exec(
         &mut self,
         cmd: &str,
