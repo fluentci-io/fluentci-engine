@@ -72,27 +72,7 @@ fn provision_native() -> Result<(), Error> {
     let directory =
         tempfile::tempdir().context("could not create private Flox installer directory")?;
     let script = directory.path().join("install.sh");
-    checked_status(
-        Command::new("/usr/bin/curl")
-            .args([
-                "--fail",
-                "--silent",
-                "--show-error",
-                "--location",
-                "--proto",
-                "=https",
-                "--proto-redir",
-                "=https",
-                "--connect-timeout",
-                "15",
-                "--max-time",
-                "120",
-                "--output",
-            ])
-            .arg(&script)
-            .arg("https://get.flox.dev"),
-        "installer download",
-    )?;
+    crate::bootstrap::download("https://get.flox.dev", &script)?;
     // Prefer native system utilities over old toolchain curl binaries that may
     // reference libraries no longer present on the host. Only this child changes PATH.
     let path = format!(

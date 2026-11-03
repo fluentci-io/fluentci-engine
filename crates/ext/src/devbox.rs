@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{exec, nix::Nix, Extension};
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use fluentci_types::Output;
 
 #[derive(Default)]
@@ -39,7 +39,7 @@ impl Extension for Devbox {
             return Ok(ExitStatus::default());
         }
 
-        Command::new("bash")
+        let status = Command::new("bash")
             .arg("-c")
             .arg("[ -f devbox.json ] || devbox init")
             .current_dir(work_dir)
@@ -48,22 +48,28 @@ impl Extension for Devbox {
             .spawn()?
             .wait()?;
 
+        if !status.success() {
+            return Err(anyhow!(
+                "Devbox initialization failed ({status}); command was not executed"
+            ));
+        }
         let cmd = format!("devbox run {}", cmd);
         exec(&cmd, tx, out, last_cmd, work_dir)
     }
 
     fn setup(&self) -> Result<(), Error> {
         Nix::default().setup()?;
-        let mut child = Command::new("sh")
-            .arg("-c")
-            .arg("type devbox > /dev/null || curl -fsSL https://get.jetpack.io/devbox | bash")
-            .env("FORCE", "1")
-            .spawn()?;
-        child.wait()?;
+        crate::bootstrap::install(
+            "devbox",
+            "https://get.jetpack.io/devbox",
+            "/bin/bash",
+            &[],
+            &[("FORCE", "1")],
+        )?;
         Ok(())
     }
 
     fn format_command(&self, cmd: &str) -> String {
-        format!("[ -f devbox.json ] || devbox init ; devbox run {}", cmd)
+        format!("([ -f devbox.json ] || devbox init) && devbox run {}", cmd)
     }
 }

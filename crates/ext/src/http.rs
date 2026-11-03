@@ -1,6 +1,6 @@
 use std::{process::ExitStatus, sync::mpsc::Sender};
 
-use crate::{exec, pkgx::Pkgx, Extension};
+use crate::{bootstrap, exec, Extension};
 use anyhow::Error;
 use fluentci_types::Output;
 
@@ -38,12 +38,21 @@ impl Extension for Http {
 
         let filename = sha256::digest(url).to_string();
 
-        let cmd = format!("curl -s {} -o {}", url, filename);
+        let cmd = format!(
+            "{} --fail --silent --show-error --location --url {} --output {}",
+            bootstrap::native_curl(),
+            bootstrap::quote(url),
+            filename
+        );
         exec(&cmd, tx, out, last_cmd, work_dir)
     }
 
     fn setup(&self) -> Result<(), Error> {
-        Pkgx::default().install(vec!["curl"])?;
+        if !std::path::Path::new(bootstrap::native_curl()).is_file() {
+            return Err(Error::msg(
+                "OS-provided curl is missing; install the operating system's curl package",
+            ));
+        }
         Ok(())
     }
 }

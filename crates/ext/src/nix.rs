@@ -105,23 +105,21 @@ impl Extension for Nix {
             _ => "--init none",
         };
 
-        let linux = match std::env::consts::OS {
-            "linux" => format!("linux --extra-conf 'sandbox = false' {}", init),
-            _ => "".to_string(),
-        };
-        let mut child = Command::new("bash")
-            .arg("-c")
-            .arg(format!("type nix > /dev/null || curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install {}", linux))
-
-            .spawn()?;
-        child.wait()?;
-
-        let mut child = Command::new("bash")
-            .arg("-c")
-            .arg(format!("type nix > /dev/null || curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install {} --no-confirm", linux))
-
-            .spawn()?;
-        child.wait()?;
+        let mut args = vec!["install"];
+        if std::env::consts::OS == "linux" {
+            args.extend(["linux", "--extra-conf", "sandbox = false"]);
+            if !init.is_empty() {
+                args.extend(["--init", "none"]);
+            }
+        }
+        args.push("--no-confirm");
+        crate::bootstrap::install(
+            "nix",
+            "https://install.determinate.systems/nix",
+            "/bin/sh",
+            &args,
+            &[],
+        )?;
         Ok(())
     }
 

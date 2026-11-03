@@ -83,14 +83,13 @@ impl Extension for Hermit {
             return Ok(());
         }
 
-        Command::new("sh")
-            .arg("-c")
-            .arg("curl -fsSL https://github.com/cashapp/hermit/releases/download/stable/install.sh | /bin/bash")
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()?
-            .wait()?;
+        crate::bootstrap::install(
+            "hermit",
+            "https://github.com/cashapp/hermit/releases/download/stable/install.sh",
+            "/bin/bash",
+            &[],
+            &[],
+        )?;
         Ok(())
     }
 }

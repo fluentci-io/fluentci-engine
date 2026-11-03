@@ -33,18 +33,48 @@ fn cli() -> Command<'static> {
         )
         .subcommand(
             Command::new("watch")
-                .arg(Arg::new("run-dir").required(true).help("Local run directory, or run UUID with --server"))
-                .arg(Arg::new("server").long("server").takes_value(true).help("Run API origin; reads FLUENTCI_RUN_TOKEN"))
-                .arg(Arg::new("follow").long("follow").help("Follow until the run-finished event; Ctrl-C only detaches"))
+                .arg(
+                    Arg::new("run-dir")
+                        .required(true)
+                        .help("Local run directory, or run UUID with --server"),
+                )
+                .arg(
+                    Arg::new("server")
+                        .long("server")
+                        .takes_value(true)
+                        .help("Run API origin; reads FLUENTCI_RUN_TOKEN"),
+                )
+                .arg(
+                    Arg::new("follow")
+                        .long("follow")
+                        .help("Follow until the run-finished event; Ctrl-C only detaches"),
+                )
                 .arg(Arg::new("timeout-ms").long("timeout-ms").takes_value(true))
-                .arg(Arg::new("progress").long("progress").takes_value(true).possible_values(["auto", "plain", "tui", "json"]).default_value("auto"))
+                .arg(
+                    Arg::new("progress")
+                        .long("progress")
+                        .takes_value(true)
+                        .possible_values(["auto", "plain", "tui", "json"])
+                        .default_value("auto"),
+                )
                 .about("Displays an existing local execution without rerunning its plan"),
         )
         .subcommand(
             Command::new("execute")
-                .arg(Arg::new("progress").long("progress").takes_value(true).possible_values(["auto", "plain", "tui", "json"]).default_value("auto"))
+                .arg(
+                    Arg::new("progress")
+                        .long("progress")
+                        .takes_value(true)
+                        .possible_values(["auto", "plain", "tui", "json"])
+                        .default_value("auto"),
+                )
                 .arg(Arg::new("plan").required(true))
-                .arg(Arg::new("run-dir").long("run-dir").takes_value(true).required(true))
+                .arg(
+                    Arg::new("run-dir")
+                        .long("run-dir")
+                        .takes_value(true)
+                        .required(true),
+                )
                 .about("Executes an explicit host task plan with bounded parallelism"),
         )
         .subcommand(
@@ -70,11 +100,35 @@ fn cli() -> Command<'static> {
         )
         .subcommand(
             Command::new("serve-runs")
-                .arg(Arg::new("listen").long("listen").takes_value(true).default_value("127.0.0.1:6881"))
-                .arg(Arg::new("data-dir").long("data-dir").takes_value(true).required(true))
-                .arg(Arg::new("max-runs").long("max-runs").takes_value(true).default_value("4"))
-                .arg(Arg::new("resume-queued").long("resume-queued").help("Resume fully admitted, never-started queued runs after restart"))
-                .arg(Arg::new("max-queued").long("max-queued").takes_value(true).default_value("0"))
+                .arg(
+                    Arg::new("listen")
+                        .long("listen")
+                        .takes_value(true)
+                        .default_value("127.0.0.1:6881"),
+                )
+                .arg(
+                    Arg::new("data-dir")
+                        .long("data-dir")
+                        .takes_value(true)
+                        .required(true),
+                )
+                .arg(
+                    Arg::new("max-runs")
+                        .long("max-runs")
+                        .takes_value(true)
+                        .default_value("4"),
+                )
+                .arg(
+                    Arg::new("resume-queued")
+                        .long("resume-queued")
+                        .help("Resume fully admitted, never-started queued runs after restart"),
+                )
+                .arg(
+                    Arg::new("max-queued")
+                        .long("max-queued")
+                        .takes_value(true)
+                        .default_value("0"),
+                )
                 .about("Serves authenticated independent host pipeline runs"),
         )
         .subcommand(
@@ -89,20 +143,43 @@ async fn main() -> Result<(), Error> {
     let matches = cli().get_matches();
     match matches.subcommand() {
         Some(("cache-diff", args)) => {
-            cmd::cache_diff::compare(std::path::Path::new(args.value_of("before").unwrap()), std::path::Path::new(args.value_of("after").unwrap()), args.is_present("json"))?;
+            cmd::cache_diff::compare(
+                std::path::Path::new(args.value_of("before").unwrap()),
+                std::path::Path::new(args.value_of("after").unwrap()),
+                args.is_present("json"),
+            )?;
         }
         Some(("watch", args)) => {
-            cmd::watch::watch(args.value_of("run-dir").unwrap(), args.value_of("progress").unwrap(), args.is_present("follow"), args.value_of("timeout-ms").map(str::parse).transpose()?, args.value_of("server")).await?;
+            cmd::watch::watch(
+                args.value_of("run-dir").unwrap(),
+                args.value_of("progress").unwrap(),
+                args.is_present("follow"),
+                args.value_of("timeout-ms").map(str::parse).transpose()?,
+                args.value_of("server"),
+            )
+            .await?;
         }
         Some(("execute", args)) => {
-            cmd::execute::execute(args.value_of("plan").unwrap(), args.value_of("run-dir").unwrap(), args.value_of("progress").unwrap()).await?;
+            cmd::execute::execute(
+                args.value_of("plan").unwrap(),
+                args.value_of("run-dir").unwrap(),
+                args.value_of("progress").unwrap(),
+            )
+            .await?;
         }
         Some(("run", args)) => {
             let command = args.values_of("command").unwrap();
             run(&command.collect::<Vec<_>>().join(" ")).await?;
         }
         Some(("serve-runs", args)) => {
-            fluentci_server::runs::start_with_recovery(args.value_of("listen").unwrap(), std::path::Path::new(args.value_of("data-dir").unwrap()), args.value_of("max-runs").unwrap().parse()?, args.value_of("max-queued").unwrap().parse()?, args.is_present("resume-queued")).await?;
+            fluentci_server::runs::start_with_recovery(
+                args.value_of("listen").unwrap(),
+                std::path::Path::new(args.value_of("data-dir").unwrap()),
+                args.value_of("max-runs").unwrap().parse()?,
+                args.value_of("max-queued").unwrap().parse()?,
+                args.is_present("resume-queued"),
+            )
+            .await?;
         }
         Some(("serve", args)) => {
             let listen = args.value_of("listen").unwrap();

@@ -162,9 +162,8 @@ pub fn download_module(url: &str) -> Result<Wasm, Error> {
         return Ok(Wasm::file(format!("{}/{}", work_dir, filename)));
     }
 
-    Pkgx::default().setup()?;
-
     if url.starts_with("azurecr.io/") || url.starts_with("ghcr.io/") || url.starts_with("gcr.io/") {
+        Pkgx::default().setup()?;
         fs::create_dir_all(&work_dir)?;
         setup_wasm_to_oci()?;
 
@@ -181,21 +180,8 @@ pub fn download_module(url: &str) -> Result<Wasm, Error> {
         return Ok(Wasm::file(format!("{}/{}", work_dir, filename)));
     }
 
-    let cmd = format!(
-        "pkgx +rockdaboot.github.io/libpsl +curl.se@8.5.0 curl -s {} -o {}",
-        url, filename
-    );
     fs::create_dir_all(&work_dir)?;
-
-    let mut child = Command::new("bash")
-        .arg("-c")
-        .arg(cmd)
-        .current_dir(&work_dir)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()?;
-
-    child.wait()?;
+    fluentci_ext::bootstrap::download(url, &std::path::Path::new(&work_dir).join(&filename))?;
 
     Ok(Wasm::file(format!("{}/{}", work_dir, filename)))
 }

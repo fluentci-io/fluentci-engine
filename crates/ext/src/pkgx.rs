@@ -51,15 +51,7 @@ impl Extension for Pkgx {
             format!("{}/.local/bin", env::var("HOME")?)
         );
         env::set_var("PATH", &path);
-        let mut child = Command::new("sh")
-            .arg("-c")
-            .arg("type pkgx > /dev/null || curl -fsS https://pkgx.sh | sh")
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()?;
-        child.wait()?;
-
+        crate::bootstrap::install("pkgx", "https://pkgx.sh", "/bin/sh", &[], &[])?;
         Ok(())
     }
 

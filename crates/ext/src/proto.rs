@@ -1,8 +1,4 @@
-use std::{
-    env,
-    process::{Command, ExitStatus, Stdio},
-    sync::mpsc::Sender,
-};
+use std::{env, process::ExitStatus, sync::mpsc::Sender};
 
 use crate::{exec, pkgx::Pkgx, Extension};
 use anyhow::Error;
@@ -47,15 +43,13 @@ impl Extension for Proto {
 
         pkgx.install(vec!["unzip", "zip", "git", "xz"])?;
 
-        let mut child = Command::new("sh")
-            .arg("-c")
-            .arg("type proto > /dev/null || curl -fsSL https://moonrepo.dev/install/proto.sh | bash -s -- --yes")
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()?;
-        child.wait()?;
-
+        crate::bootstrap::install(
+            "proto",
+            "https://moonrepo.dev/install/proto.sh",
+            "/bin/bash",
+            &["--yes"],
+            &[],
+        )?;
         Ok(())
     }
 }

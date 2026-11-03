@@ -81,10 +81,7 @@ pub async fn start(listen: &str) -> Result<(), Error> {
     let host =
         env::var("FLUENTCI_ENGINE_HOST").unwrap_or(listen.split(":").next().unwrap().to_string());
     let addr = format!("{}:{}", host, port);
-    println!(
-        "Server is running on {}",
-        addr.to_string().bright_green()
-    );
+    println!("Server is running on {}", addr.to_string().bright_green());
 
     let (tx, rx) = mpsc::channel();
 
@@ -93,14 +90,10 @@ pub async fn start(listen: &str) -> Result<(), Error> {
         Arc::new(Box::new(Runner::default())),
     )));
 
-    let schema = Schema::build(
-        Query::default(),
-        EmptyMutation,
-        EmptySubscription,
-    )
-    .data(graph)
-    .data(Arc::new(Mutex::new(rx)))
-    .finish();
+    let schema = Schema::build(Query::default(), EmptyMutation, EmptySubscription)
+        .data(graph)
+        .data(Arc::new(Mutex::new(rx)))
+        .finish();
 
     HttpServer::new(move || {
         let cors = Cors::permissive();

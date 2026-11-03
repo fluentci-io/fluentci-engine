@@ -64,7 +64,7 @@ jobs:
             brew_binary=/home/linuxbrew/.linuxbrew/bin/brew
           fi
           if [ ! -x "$brew_binary" ]; then
-            curl -fsSL https://raw.githubusercontent.com/Homebrew/install/8c82c081753d4263da0cfe615ef8d9433425f22b/install.sh -o "$RUNNER_TEMP/homebrew-install.sh"
+            /usr/bin/curl -fsSL https://raw.githubusercontent.com/Homebrew/install/8c82c081753d4263da0cfe615ef8d9433425f22b/install.sh -o "$RUNNER_TEMP/homebrew-install.sh"
             NONINTERACTIVE=1 /bin/bash "$RUNNER_TEMP/homebrew-install.sh"
           fi
           cargo test --release --locked -p fluentci-executor --test packages native_package_plan_install -- --ignored --exact

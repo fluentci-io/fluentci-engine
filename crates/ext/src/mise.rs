@@ -65,15 +65,7 @@ impl Extension for Mise {
             format!("{}/.local/bin", env::var("HOME")?)
         );
         env::set_var("PATH", &path);
-        let mut child = Command::new("sh")
-            .arg("-c")
-            .arg("type mise > /dev/null || curl https://mise.run | sh")
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()?;
-        child.wait()?;
-
+        crate::bootstrap::install("mise", "https://mise.run", "/bin/sh", &[], &[])?;
         Ok(())
     }
 

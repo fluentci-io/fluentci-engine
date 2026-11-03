@@ -278,7 +278,8 @@ fn invalid_service_contracts_are_rejected_without_effects() {
     invalid = base;
     invalid.inherit_env = false;
     invalid.cache_dir = Some(dir.path().join("cache"));
-    invalid.tasks[1].cache = Some(fluentci_executor::cache::CachePolicy { toolchain_files: vec![],
+    invalid.tasks[1].cache = Some(fluentci_executor::cache::CachePolicy {
+        toolchain_files: vec![],
         relocatable: false,
         inputs: vec![],
         outputs: vec!["out".into()],

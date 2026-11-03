@@ -47,15 +47,7 @@ impl Extension for Pixi {
             format!("{}/.pixi/bin", env::var("HOME")?)
         );
         env::set_var("PATH", &path);
-        let mut child = Command::new("sh")
-            .arg("-c")
-            .arg("type pixi > /dev/null || curl -fsSL https://pixi.sh/install.sh | bash")
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()?;
-        child.wait()?;
-
+        crate::bootstrap::install("pixi", "https://pixi.sh/install.sh", "/bin/bash", &[], &[])?;
         Ok(())
     }
 

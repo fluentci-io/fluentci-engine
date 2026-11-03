@@ -15,6 +15,7 @@ use superconsole::{
 };
 
 pub mod archive;
+pub mod bootstrap;
 pub mod bsd;
 pub mod cache;
 pub mod devbox;
@@ -26,8 +27,8 @@ pub mod git_checkout;
 pub mod git_last_commit;
 pub mod hash;
 pub mod hermit;
-pub mod http;
 pub mod homebrew;
+pub mod http;
 pub mod macports;
 pub mod mise;
 pub mod nix;

@@ -7,14 +7,14 @@ pool:
   vmImage: ubuntu-latest
 steps:
   - script: |
-        curl -fsSL https://deno.land/x/install/install.sh | sh
+        /usr/bin/curl -fsSL https://deno.land/x/install/install.sh | sh
         export DENO_INSTALL="$HOME/.deno"
         export PATH="$DENO_INSTALL/bin:$PATH"
     displayName: Install Deno
   - script: deno install -A -r https://cli.fluentci.io -n fluentci
     displayName: Setup Fluent CI CLI
   - script: |
-        curl -L https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=0.9.3 sh
+        /usr/bin/curl -L https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=0.9.3 sh
         sudo mv bin/dagger /usr/local/bin
         dagger version
     displayName: Setup Dagger

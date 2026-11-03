@@ -43,15 +43,7 @@ impl Extension for Envhub {
 
     fn setup(&self) -> Result<(), Error> {
         Nix::default().setup()?;
-        Pkgx::default().install(vec!["curl", "git"])?;
-        let mut child = Command::new("sh")
-            .arg("-c")
-            .arg("type envhub > /dev/null || curl -sSL https://install.envhub.sh | bash")
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()?;
-        child.wait().map_err(Error::from)?;
-        Ok(())
+        Pkgx::default().install(vec!["git"])?;
+        crate::bootstrap::install("envhub", "https://install.envhub.sh", "/bin/bash", &[], &[])
     }
 }
