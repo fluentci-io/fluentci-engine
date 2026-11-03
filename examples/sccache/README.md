@@ -53,11 +53,13 @@ installer files and the socket are removed after ordinary success/failure;
 interruption can leave staging files or an inactive socket for manual cleanup.
 
 Compiler caching is separate from FluentCI's action cache. Rebuild the library
-with a different `CARGO_TARGET_DIR` and a fresh run directory to observe a hit;
-otherwise Cargo may skip rustc entirely. Final executable linking is not cached
+after deleting its Cargo target directory, using the same `CARGO_TARGET_DIR`
+value and a fresh run directory, to observe a hit. Keep the compilation environment
+stable: changing `CARGO_TARGET_DIR` changes sccache's Rust cache key. Without
+removing outputs, Cargo may skip rustc entirely. Final executable linking is not cached
 by sccache. See the [Rust caching notes](https://github.com/mozilla/sccache#rust).
 
 CI compiles this PureScript plugin to Wasm, tests its pure plan constructors,
 then runs `tests/e2e_sccache.py` on a disposable Linux runner. That test provisions
-the binary, verifies cold misses and warm hits across fresh Cargo target
-directories, and checks managed-service shutdown and socket cleanup.
+the binary, verifies cold misses and warm hits after deleting Cargo build
+outputs, and checks failed builds, managed-service shutdown and socket cleanup.

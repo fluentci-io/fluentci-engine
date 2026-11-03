@@ -33,10 +33,14 @@ class CompilerCache(unittest.TestCase):
             environment = dict(os.environ, PATH=f"{tools}:/usr/bin:/bin:/usr/sbin:/sbin",
                                SCCACHE_INSTALL_DIR=str(root / "bin"),
                                SCCACHE_DIR=str(root / "cache"), SCCACHE_GHA_ENABLED="false")
+            target = root / "target"
+            environment["CARGO_TARGET_DIR"] = str(target)
             for attempt in range(2):
                 run = root / f"run-{attempt}"
-                target = root / f"target-{attempt}"
-                environment["CARGO_TARGET_DIR"] = str(target)
+                # Cargo's target environment participates in sccache's Rust key.
+                # Remove outputs, keeping the compile environment identical.
+                if target.exists():
+                    shutil.rmtree(target)
                 result = subprocess.run(
                     [str(BINARY), "call", "-m", str(PLUGIN), "build",
                      json.dumps([str(project), str(run)])], env=environment,
