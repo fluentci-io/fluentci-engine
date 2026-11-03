@@ -34,7 +34,8 @@ defmodule FluentCI.Host.Result.Task do
     :stderr,
     :cache,
     :probe_logs,
-    :wait_reason
+    :wait_reason,
+    :file_result
   ]
 
   @type status :: :succeeded | :failed | :skipped | :cancelled | :timed_out
@@ -48,7 +49,8 @@ defmodule FluentCI.Host.Result.Task do
           stderr: String.t(),
           cache: FluentCI.Host.Result.Cache.t(),
           probe_logs: FluentCI.Host.Result.ProbeLogs.t() | nil,
-          wait_reason: String.t() | nil
+          wait_reason: String.t() | nil,
+          file_result: term()
         }
 end
 
@@ -158,7 +160,8 @@ defmodule FluentCI.Host.Result do
          stderr: stderr,
          cache: cache,
          probe_logs: probe_logs,
-         wait_reason: wait_reason
+         wait_reason: wait_reason,
+         file_result: value["file_result"]
        }}
     end
   end

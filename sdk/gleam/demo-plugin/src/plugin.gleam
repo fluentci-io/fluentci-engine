@@ -1,4 +1,5 @@
 import fluentci/host
+import fluentci/host/files as fs
 import fluentci/host/result as reports
 import fluentci/matrix as parallel
 import fluentci/plugin
@@ -101,4 +102,31 @@ pub fn workflow(directory: String) -> Result(reports.RunResult, String) {
     True -> Ok(report)
     False -> Error("workflow failed; see result.json")
   }
+}
+
+pub fn files(directory: String) -> Result(reports.RunResult, String) {
+  let dir = fs.mkdir("directory", "data", True, ".")
+  let write =
+    fs.write_text(
+      "write",
+      "data/version.env",
+      "VERSION='héllo 世界; $(touch injected)'\n",
+      False,
+      ".",
+    )
+    |> parallel.after_jobs([dir])
+  let copy =
+    fs.copy_file("copy", "data/version.env", "copied.env", False, ".")
+    |> parallel.after_jobs([write])
+  let read =
+    fs.read_text("read", "copied.env", 1_048_576, ".")
+    |> parallel.after_jobs([copy])
+  let hash = fs.hash("hash", "copied.env", ".") |> parallel.after_jobs([copy])
+  let env =
+    host.task("env", "/usr/bin/printenv", ".")
+    |> host.with_args(["VERSION"])
+    |> fs.env_file("copied.env")
+    |> parallel.after_jobs([copy])
+  parallel.parallel([dir, write, copy, read, hash, env], 2)
+  |> parallel.run(directory)
 }

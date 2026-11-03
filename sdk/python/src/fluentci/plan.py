@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import asdict, dataclass, field, replace
 import json
-from typing import Any, Literal, Mapping
+from typing import Any, Literal, Mapping, TypeAlias
 from types import MappingProxyType
 
 @dataclass(frozen=True, slots=True)
@@ -10,6 +10,8 @@ class Cache:
     inputs: tuple[str, ...]
     outputs: tuple[str, ...]
     toolchain: str
+
+FileValue: TypeAlias = str | int | float | bool | None | list["FileValue"] | dict[str, "FileValue"]
 
 Condition = Literal["success", "failure", "always", "never"]
 
@@ -70,6 +72,8 @@ class Task:
     resource_wait_timeout_ms: int | None = None
     service: Service | None = None
     policy: Policy | None = None
+    file_operation: tuple[tuple[str, Any], ...] | None = None
+    env_files: tuple[str, ...] = ()
 
     def with_env(self, key: str, value: str) -> Task:
         return replace(self, env=(*self.env, (key, value)))
@@ -87,6 +91,10 @@ class Task:
             value["resource_wait_timeout_ms"] = self.resource_wait_timeout_ms
         if self.service is not None:
             value["service"] = asdict(self.service)
+        if self.file_operation is not None:
+            value["file_operation"] = dict(self.file_operation)
+        if self.env_files:
+            value["env_files"] = list(self.env_files)
         if self.policy is not None:
             value["policy"] = self.policy.to_dict()
         return value
@@ -119,6 +127,7 @@ class TaskResult:
     allowed_failure: bool = False
     condition_skipped: bool = False
     signal: int | None = None
+    file_result: FileValue = None
 
 @dataclass(frozen=True, slots=True)
 class RunResult:
@@ -162,5 +171,5 @@ class Plan:
                 MappingProxyType(dict(row.get("outputs", {}))),
                 MappingProxyType({name: Artifact(**artifact) for name, artifact in row.get("artifacts", {}).items()}),
                 tuple(Attempt(**attempt) for attempt in row.get("attempts", [])),
-                row.get("allowed_failure", False), row.get("condition_skipped", False), row.get("signal")))
+                row.get("allowed_failure", False), row.get("condition_skipped", False), row.get("signal"), row.get("file_result")))
         return RunResult(raw["outcome"], tuple(tasks))

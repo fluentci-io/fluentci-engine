@@ -51,3 +51,16 @@ let workflow = () => {
   | Error(error) => JsError.throwWithMessage(error)
   }
 }
+
+let files = () => {
+  let directory = Files.mkdir("directory", "data", true, ".")
+  let write = Files.writeText("write", "data/version.env", "VERSION='héllo 世界; $(touch injected)'\n", false, ".")->Matrix.afterJobs([directory])
+  let copy = Files.copyFile("copy", "data/version.env", "copied.env", false, ".")->Matrix.afterJobs([write])
+  let read = Files.readText("read", "copied.env", 1048576, ".")->Matrix.afterJobs([copy])
+  let hash = Files.hash("hash", "copied.env", ".")->Matrix.afterJobs([copy])
+  let env = Matrix.task("env", "/usr/bin/printenv", ["VERSION"], ".")->Files.envFile("copied.env")->Matrix.afterJobs([copy])
+  switch Matrix.run(Matrix.parallel([directory, write, copy, read, hash, env], 2), input()) {
+  | Ok(report) => if report.outcome == "succeeded" { output("files complete") } else { JsError.throwWithMessage("native files failed; see result.json") }
+  | Error(error) => JsError.throwWithMessage(error)
+  }
+}

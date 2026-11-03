@@ -7,6 +7,7 @@ import Effect (Effect)
 import Effect.Exception (throw)
 import FluentCI.Plugin as P
 import FluentCI.Host.Plan as Plan
+import FluentCI.Host.Files as F
 import FluentCI.Matrix as M
 import FluentCI.Host.Client as Reports
 import Data.Array as Array
@@ -149,3 +150,18 @@ workflow = do
   case report.outcome of
     Just Reports.RunSucceeded -> send "workflow complete"
     _ -> throw "workflow failed; see result.json"
+
+files :: Effect Unit
+files = do
+  directory <- request
+  let
+    dir = F.mkdir "directory" "data" true "."
+    write = F.writeText "write" "data/version.env" "VERSION='héllo 世界; $(touch injected)'\n" false "." # Plan.after [ dir ]
+    copy = F.copyFile "copy" "data/version.env" "copied.env" false "." # Plan.after [ write ]
+    read = F.readText "read" "copied.env" 1048576 "." # Plan.after [ copy ]
+    hash = F.hash "hash" "copied.env" "." # Plan.after [ copy ]
+    env = Plan.task "env" "/usr/bin/printenv" "." # Plan.withArgs [ "VERSION" ] # Plan.envFile "copied.env" # Plan.after [ copy ]
+  report <- P.runPlan directory (Plan.plan [ dir, write, copy, read, hash, env ] # Plan.withJobs 2) >>= unwrap
+  case report.outcome of
+    Just Reports.RunSucceeded -> send "files complete"
+    _ -> throw "native files failed; see result.json"

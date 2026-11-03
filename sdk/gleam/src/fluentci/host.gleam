@@ -94,6 +94,8 @@ pub opaque type Task {
     installation: Option(#(Provider, List(String))),
     packages: List(Provider),
     policy: Option(Policy),
+    file_operation: Option(FileOperation),
+    env_files: List(String),
   )
 }
 
@@ -133,6 +135,8 @@ pub fn task(id: String, program: String, cwd: String) -> Task {
     installation: None,
     packages: [],
     policy: None,
+    file_operation: None,
+    env_files: [],
   )
 }
 
@@ -543,6 +547,11 @@ fn encode_task(task: Task) -> String {
       ),
       optional(task.cache, "cache", encode_cache),
       optional(task.policy, "policy", encode_policy),
+      optional(task.file_operation, "file_operation", encode_file_operation),
+      case task.env_files {
+        [] -> []
+        values -> [#("env_files", strings(values))]
+      },
       optional(task.service, "service", encode_service),
       optional(task.installation, "package_install", fn(install) {
         object([
@@ -577,7 +586,11 @@ pub fn compile(plan: Plan) -> Result(String, PlanError) {
     list.all(plan.tasks, fn(task) {
       task.id != ""
       && task.cwd != ""
-      && { task.program != "" || task.installation != None }
+      && {
+        task.program != ""
+        || task.installation != None
+        || task.file_operation != None
+      }
       && option.unwrap(task.timeout_ms, 1) > 0
       && option.unwrap(task.resource_wait_timeout_ms, 1) > 0
     }),
@@ -612,5 +625,116 @@ pub fn compile(plan: Plan) -> Result(String, PlanError) {
         )),
       )
     }
+  }
+}
+
+pub type FileOperation {
+  ReadText(path: String, limit_bytes: Int)
+  ReadBytes(path: String, limit_bytes: Int)
+  WriteText(path: String, text: String, overwrite: Bool)
+  WriteBytes(path: String, bytes: List(Int), overwrite: Bool)
+  CopyFile(source: String, destination: String, overwrite: Bool)
+  CopyTree(source: String, destination: String, overwrite: Bool)
+  Move(source: String, destination: String, overwrite: Bool)
+  Mkdir(path: String, parents: Bool)
+  Remove(path: String, recursive: Bool, missing_ok: Bool)
+  Stat(path: String)
+  Exists(path: String)
+  ListEntries(path: String)
+  Glob(pattern: String)
+  Hash(path: String)
+  Chmod(path: String, mode: Int)
+  Symlink(target: String, path: String)
+}
+
+pub fn file_task(id: String, operation: FileOperation, cwd: String) -> Task {
+  Task(..task(id, "", cwd), file_operation: Some(operation))
+}
+
+pub fn env_file(task: Task, path: String) -> Task {
+  Task(..task, env_files: list.append(task.env_files, [path]))
+}
+
+fn encode_file_operation(operation: FileOperation) -> String {
+  case operation {
+    ReadText(path, limit_bytes) ->
+      object([
+        #("op", quote("read_text")),
+        #("path", quote(path)),
+        #("limit_bytes", int.to_string(limit_bytes)),
+      ])
+    ReadBytes(path, limit_bytes) ->
+      object([
+        #("op", quote("read_bytes")),
+        #("path", quote(path)),
+        #("limit_bytes", int.to_string(limit_bytes)),
+      ])
+    WriteText(path, text, overwrite) ->
+      object([
+        #("op", quote("write_text")),
+        #("path", quote(path)),
+        #("text", quote(text)),
+        #("overwrite", boolean(overwrite)),
+      ])
+    WriteBytes(path, bytes, overwrite) ->
+      object([
+        #("op", quote("write_bytes")),
+        #("path", quote(path)),
+        #("bytes", array(list.map(bytes, int.to_string))),
+        #("overwrite", boolean(overwrite)),
+      ])
+    CopyFile(source, destination, overwrite) ->
+      object([
+        #("op", quote("copy_file")),
+        #("source", quote(source)),
+        #("destination", quote(destination)),
+        #("overwrite", boolean(overwrite)),
+      ])
+    CopyTree(source, destination, overwrite) ->
+      object([
+        #("op", quote("copy_tree")),
+        #("source", quote(source)),
+        #("destination", quote(destination)),
+        #("overwrite", boolean(overwrite)),
+      ])
+    Move(source, destination, overwrite) ->
+      object([
+        #("op", quote("move")),
+        #("source", quote(source)),
+        #("destination", quote(destination)),
+        #("overwrite", boolean(overwrite)),
+      ])
+    Mkdir(path, parents) ->
+      object([
+        #("op", quote("mkdir")),
+        #("path", quote(path)),
+        #("parents", boolean(parents)),
+      ])
+    Remove(path, recursive, missing_ok) ->
+      object([
+        #("op", quote("remove")),
+        #("path", quote(path)),
+        #("recursive", boolean(recursive)),
+        #("missing_ok", boolean(missing_ok)),
+      ])
+    Stat(path) -> object([#("op", quote("stat")), #("path", quote(path))])
+    Exists(path) -> object([#("op", quote("exists")), #("path", quote(path))])
+    ListEntries(path) ->
+      object([#("op", quote("list")), #("path", quote(path))])
+    Glob(pattern) ->
+      object([#("op", quote("glob")), #("pattern", quote(pattern))])
+    Hash(path) -> object([#("op", quote("hash")), #("path", quote(path))])
+    Chmod(path, mode) ->
+      object([
+        #("op", quote("chmod")),
+        #("path", quote(path)),
+        #("mode", int.to_string(mode)),
+      ])
+    Symlink(target, path) ->
+      object([
+        #("op", quote("symlink")),
+        #("target", quote(target)),
+        #("path", quote(path)),
+      ])
   }
 }

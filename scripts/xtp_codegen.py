@@ -58,7 +58,7 @@ def generated():
     yield ROOT / 'sdk/python/src/fluentci/_imports.py', '\n'.join(python)
     yield ROOT / 'sdk/python/src/fluentci/_imports.pyi', '\n'.join(typing) + '\n'
     javascript = ['// Generated from schema/host.json. Guest import signatures.',
-                  'declare module "main" { export function greet(): I32; export function matrix(): I32; export function workflow(): I32; }',
+                  'declare module "main" { export function greet(): I32; export function matrix(): I32; export function workflow(): I32; export function files(): I32; }',
                   'declare module "extism:host" { interface user {']
     for name, function in schema['imports'].items():
         argument = 'value: I64' if 'input' in function else ''

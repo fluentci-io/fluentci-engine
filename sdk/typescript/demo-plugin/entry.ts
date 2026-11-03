@@ -1,3 +1,4 @@
+import * as F from "../src/files.ts";
 import * as M from "../src/matrix.ts";
 import { dag } from "../src/plugin.ts";
 export function greet() {
@@ -31,4 +32,16 @@ export function workflow() {
   const report = M.run(M.parallel([producer, consumer, optional, never, failure, cleanup], 2), Host.inputString());
   if (report.outcome !== "succeeded") throw Error("workflow failed; see result.json");
   Host.outputString("workflow complete");
+}
+
+export function files() {
+  const directory = F.mkdir("directory", "data", true);
+  const write = M.after([directory], F.writeText("write", "data/version.env", "VERSION='héllo 世界; $(touch injected)'\n"));
+  const copy = M.after([write], F.copyFile("copy", "data/version.env", "copied.env"));
+  const read = M.after([copy], F.readText("read", "copied.env"));
+  const hash = M.after([copy], F.hash("hash", "copied.env"));
+  const env = M.after([copy], F.envFile(M.task("env", "/usr/bin/printenv", ["VERSION"]), "copied.env"));
+  const report = M.run(M.parallel([directory, write, copy, read, hash, env], 2), Host.inputString());
+  if (report.outcome !== "succeeded") throw Error("native files failed; see result.json");
+  Host.outputString("files complete");
 }

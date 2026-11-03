@@ -29,6 +29,11 @@ defmodule FluentCI.Host do
           | {:invalid_task, String.t()}
 
   @spec task(String.t(), String.t(), String.t()) :: Task.t()
+  def file_task(id, operation, cwd), do: task(id, "", cwd) |> put(:file_operation, operation)
+
+  def env_file(task, path),
+    do: put(task, :env_files, Map.get(task.data, :env_files, []) ++ [path])
+
   def task(id, program, cwd), do: %Task{data: %{id: id, program: program, cwd: cwd}}
   @spec plan([Task.t()]) :: Plan.t()
   def plan(tasks \\ []),
@@ -218,6 +223,8 @@ defmodule FluentCI.Host do
   defp task_schema do
     {:object, %{id: :nonempty, program: :string, cwd: :nonempty},
      %{
+       file_operation: :file_operation,
+       env_files: {:list, :nonempty},
        args: {:list, :string},
        needs: {:list, :nonempty},
        env: :environment,
@@ -229,7 +236,7 @@ defmodule FluentCI.Host do
          {:object,
           %{
             inputs: {:list, :nonempty},
-            outputs: {:nonempty_list, :nonempty},
+            outputs: {:list, :nonempty},
             toolchain: :nonempty
           }, %{relocatable: :boolean, toolchain_files: {:list, :nonempty}}},
        service:
@@ -310,6 +317,13 @@ defmodule FluentCI.Host do
     end)
   end
 
+  defp validate(value, :file_operation, path) when is_map(value) do
+    case FluentCI.Files.schema(Map.get(value, :op)) do
+      nil -> {:error, {:invalid_field, path}}
+      schema -> validate(value, schema, path)
+    end
+  end
+
   defp validate(value, {:enum, allowed}, path), do: checked(value in allowed, path)
 
   defp validate(value, {:map, rule}, path) when is_map(value) and not is_struct(value) do
@@ -363,7 +377,13 @@ defmodule FluentCI.Host do
             not Map.has_key?(task, :cache) and not Map.has_key?(task, :service) and
             Map.get(task, :package_environment, []) == []
         else
-          task.program != "" and not (Map.has_key?(task, :cache) and Map.has_key?(task, :service))
+          if Map.has_key?(task, :file_operation) do
+            task.program == "" and Map.get(task, :args, []) == [] and
+              not Map.has_key?(task, :service) and Map.get(task, :package_environment, []) == []
+          else
+            task.program != "" and
+              not (Map.has_key?(task, :cache) and Map.has_key?(task, :service))
+          end
         end
 
       providers =

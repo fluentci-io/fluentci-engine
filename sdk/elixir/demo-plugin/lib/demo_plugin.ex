@@ -70,4 +70,27 @@ defmodule DemoPlugin do
 
     run_plan(M.parallel([producer, consumer, optional, never, failure, cleanup], 2), input())
   end
+
+  defplugin files do
+    alias FluentCI.Files, as: F
+    alias FluentCI.Host, as: H
+    alias FluentCI.Matrix, as: M
+    directory = F.mkdir("directory", "data", true)
+
+    write =
+      F.write_text("write", "data/version.env", "VERSION='héllo 世界; $(touch injected)'\n", false)
+      |> M.after_jobs([directory])
+
+    copy = F.copy_file("copy", "data/version.env", "copied.env", false) |> M.after_jobs([write])
+    read = F.read_text("read", "copied.env", 1_048_576) |> M.after_jobs([copy])
+    hash = F.hash("hash", "copied.env") |> M.after_jobs([copy])
+
+    env =
+      H.task("env", "/usr/bin/printenv", ".")
+      |> H.args(["VERSION"])
+      |> F.env_file("copied.env")
+      |> M.after_jobs([copy])
+
+    run_plan(M.parallel([directory, write, copy, read, hash, env], 2), input())
+  end
 end

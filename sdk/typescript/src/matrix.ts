@@ -4,11 +4,12 @@ export type Task = Readonly<{
   id: string; program: string; args: readonly string[]; cwd: string;
   env: Readonly<Record<string, string>>; needs: readonly string[];
   timeout_ms?: number; resource_wait_timeout_ms?: number;
+  file_operation?: import("./files.ts").FileOperation; env_files?: readonly string[];
   resources?: readonly string[]; service?: Service; policy?: Policy;
   cache?: Readonly<{ inputs: readonly string[]; outputs: readonly string[]; toolchain: string }>;
 }>;
 export type Plan = Readonly<{ version: 1; tasks: readonly Task[]; jobs: number; inherit_env: false; fail_fast: boolean; cache_dir?: string }>;
-export type TaskResult = Readonly<{ id: string; status: string; exit_code: number | null; stdout: string; stderr: string; error: string | null; outputs?: Readonly<Record<string,string>>; artifacts?: Readonly<Record<string,{path:string;size:number;sha256:string}>>; attempts?: readonly {number:number;status:string;exit_code:number|null;duration_ms:number;error:string|null}[]; allowed_failure?: boolean; condition_skipped?: boolean; signal?: number | null }>;
+export type TaskResult = Readonly<{ id: string; status: string; exit_code: number | null; stdout: string; stderr: string; error: string | null; outputs?: Readonly<Record<string,string>>; artifacts?: Readonly<Record<string,{path:string;size:number;sha256:string}>>; attempts?: readonly {number:number;status:string;exit_code:number|null;duration_ms:number;error:string|null}[]; allowed_failure?: boolean; condition_skipped?: boolean; signal?: number | null; file_result?: unknown }>;
 export type RunResult = Readonly<{ outcome: "succeeded" | "failed" | "cancelled"; tasks: readonly TaskResult[] }>;
 const component = (value: string) => encodeURIComponent(value).replace(/[!'()*]/g, char => "%" + char.charCodeAt(0).toString(16).toUpperCase());
 export const named = <A>(name: string, value: A): Case<A> => Object.freeze({ key: component(name), value });

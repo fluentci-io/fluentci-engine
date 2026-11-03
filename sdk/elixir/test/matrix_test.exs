@@ -71,4 +71,17 @@ defmodule FluentCI.MatrixTest do
     assert {:ok, _} = H.compile(H.plan([produced, consumer]))
     assert produced.data.policy.artifacts["report"] == "report.txt"
   end
+
+  test "native file tasks and env files compile without performing IO" do
+    alias FluentCI.Files, as: F
+    original = F.write_bytes("write", "path ' 世界", <<0, 255>>, false)
+    configured = F.env_file(original, "settings.env")
+    refute Map.has_key?(original.data, :env_files)
+    assert configured.data.env_files == ["settings.env"]
+    assert configured.data.file_operation.bytes == [0, 255]
+    assert {:ok, json} = H.compile(H.plan([configured]))
+    assert {:ok, decoded} = JSON.decode(json)
+    assert hd(decoded["tasks"])["file_operation"]["op"] == "write_bytes"
+    assert hd(decoded["tasks"])["program"] == ""
+  end
 end

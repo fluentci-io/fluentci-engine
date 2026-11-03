@@ -4,6 +4,7 @@ import extism
 from fluentci import pipeline
 from fluentci import matrix as M
 from fluentci import workflow as W
+from fluentci import files as F
 from fluentci.plan import Task, Plan, Cache
 
 
@@ -46,3 +47,16 @@ def workflow() -> None:
     if not report.succeeded:
         raise RuntimeError("workflow failed; see result.json")
     extism.output_str("workflow complete")
+
+@extism.plugin_fn
+def files() -> None:
+    directory = F.mkdir("directory", "data", parents=True)
+    write = M.after([directory], F.write_text("write", "data/version.env", "VERSION='héllo 世界; $(touch injected)'\n"))
+    copy = M.after([write], F.copy_file("copy", "data/version.env", "copied.env"))
+    query = M.after([copy], F.read_text("read", "copied.env"))
+    digest = M.after([copy], F.hash("hash", "copied.env"))
+    environment = M.after([copy], F.env_file(Task("env", "/usr/bin/printenv", ("VERSION",)), "copied.env"))
+    report = Plan((directory, write, copy, query, digest, environment), jobs=2).run(extism.input_str())
+    if not report.succeeded:
+        raise RuntimeError("native files failed; see result.json")
+    extism.output_str("files complete")
