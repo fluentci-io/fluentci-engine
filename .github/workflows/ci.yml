@@ -35,6 +35,13 @@ jobs:
           pipeline: rust
           args: build --release
           engine-version: 0.4.12
+      - name: Install native Flox
+        uses: flox/install-flox-action@61d86f71ca9fc8061fea04e5bc5e3a8206423dca
+        with:
+          version: '1.19.3'
+          disable-metrics: 'true'
+      - name: Verify native Flox
+        run: flox --version
       - name: Run Build and e2e tests
         run: |
           export PATH=${HOME}/.cargo/bin:${PATH}
