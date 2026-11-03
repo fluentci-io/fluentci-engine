@@ -67,7 +67,7 @@ actual per-task statuses.
 | TypeScript `matrix` | `retry`, `when`, `always`, `allowFailure`, `artifact`, `output`, `outputEnv`, `resource`, `service` |
 | ReScript `Matrix` | `retry`, `whenTask`, `always`, `allowFailure`, `artifact`, `output`, `outputEnv`, `resource`, `service` |
 | Gleam `fluentci/host` | `retry`, `when_task`, `always`, `allow_failure`, `artifact`, `output`, `output_env`, `resource`, `service` + `as_service` |
-| Elixir `FluentCI.Host` | `retry`, `when`, `always`, `allow_failure`, `artifact`, `output`, `output_env`, `resource`, `service` |
+| Elixir `FluentCI.Host` | `retry`, `when_task`, `always`, `allow_failure`, `artifact`, `output`, `output_env`, `resource`, `service` |
 
 PureScript uses configuration-first, task-last arguments for `#`; other SDKs use
 task-first arguments for their language's pipe/call conventions. Rust explicit

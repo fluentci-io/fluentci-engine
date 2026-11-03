@@ -193,6 +193,9 @@ pub(crate) fn collect(
 ) -> Result<Products, String> {
     let mut products = Products::default();
     for (name, relative) in &task.policy.outputs {
+        if cancel.is_cancelled() {
+            return Err("product publication cancelled".into());
+        }
         let path = cache::checked_path(&task.cwd, relative)?;
         let mut file = cache::open_storage_file(&path).map_err(|e| e.to_string())?;
         let mut bytes = Vec::new();
@@ -219,7 +222,7 @@ pub(crate) fn collect(
         .map_err(|e| e.to_string())?;
     let destination = root.join(index.to_string());
     for (name, relative) in &task.policy.artifacts {
-        let before = cache::snapshot(&task.cwd, &[relative.clone()], cancel)?;
+        let before = cache::snapshot(&task.cwd, std::slice::from_ref(relative), cancel)?;
         if before.len() != 1 || before[0].directory {
             return Err(
                 "named artifacts must be regular files; archive directories explicitly".into(),
@@ -227,9 +230,12 @@ pub(crate) fn collect(
         }
         let source = cache::checked_path(&task.cwd, relative)?;
         cache::copy_file(&source, &staging.path().join(name), cancel)?;
-        if before != cache::snapshot(&task.cwd, &[relative.clone()], cancel)? {
+        if before != cache::snapshot(&task.cwd, std::slice::from_ref(relative), cancel)? {
             return Err("artifact changed during publication".into());
         }
+        fs::File::open(staging.path().join(name))
+            .and_then(|file| file.sync_all())
+            .map_err(|e| e.to_string())?;
         let copied = cache::snapshot(staging.path(), &[PathBuf::from(name)], cancel)?;
         if copied[0].digest != before[0].digest || copied[0].mode != before[0].mode {
             return Err("artifact copy verification failed".into());
@@ -245,7 +251,15 @@ pub(crate) fn collect(
             },
         );
     }
+    #[cfg(unix)]
+    fs::File::open(staging.path())
+        .and_then(|directory| directory.sync_all())
+        .map_err(|e| e.to_string())?;
     fs::rename(staging.path(), &destination).map_err(|e| e.to_string())?;
+    #[cfg(unix)]
+    fs::File::open(&root)
+        .and_then(|directory| directory.sync_all())
+        .map_err(|e| e.to_string())?;
     Ok(products)
 }
 

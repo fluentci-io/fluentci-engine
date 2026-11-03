@@ -907,7 +907,7 @@ impl Plan {
                             && results[i].attempts.len() < policy.max_attempts as usize
                             && !cancel.is_cancelled()
                             && !stalled
-                            && !(self.fail_fast && failed && !self.tasks[i].policy.when.finalizer())
+                            && (self.tasks[i].policy.when.finalizer() || !self.fail_fast || !failed)
                     });
                     if let Some(policy) = retry {
                         retry_actions[i] = completed_action;
@@ -1008,7 +1008,16 @@ impl Plan {
                 }) {
                     results[i].status = Status::TimedOut;
                     results[i].cache.outcome = "cancelled".into();
-                    results[i].error = Some("cache preparation timeout".into());
+                    results[i].error = Some(
+                        if self.tasks[i].cache.is_some() {
+                            "cache preparation timeout"
+                        } else {
+                            "task timeout while waiting to retry"
+                        }
+                        .into(),
+                    );
+                    results[i].duration_ms =
+                        first_started[i].map_or(0, |start| start.elapsed().as_millis());
                     failed |= !self.tasks[i].policy.allow_failure;
                 } else if waiting_since[i].is_some_and(|since| {
                     self.tasks[i]
@@ -1093,6 +1102,8 @@ impl Plan {
                             continue;
                         }
                     };
+                    results[i].exit_code = None;
+                    results[i].error = None;
                     resolved_tasks[i] = match workflow::resolve(&self.tasks[i], &results) {
                         Ok(task) => task,
                         Err(error) => {

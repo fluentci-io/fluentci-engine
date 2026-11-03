@@ -104,7 +104,7 @@ defmodule FluentCI.Host do
         exit_codes: []
       })
 
-  def unquote(:when)(%Task{} = task, condition) do
+  def when_task(%Task{} = task, condition) do
     task = policy(task, :when, Atom.to_string(condition))
 
     if condition in [:always, :failure] do
@@ -116,7 +116,7 @@ defmodule FluentCI.Host do
     end
   end
 
-  def always(%Task{} = task), do: __MODULE__.when(task, :always)
+  def always(%Task{} = task), do: when_task(task, :always)
   def allow_failure(%Task{} = task, enabled \\ true), do: policy(task, :allow_failure, enabled)
   def artifact(%Task{} = task, name, path), do: named_policy(task, :artifacts, name, path)
   def output(%Task{} = task, name, path), do: named_policy(task, :outputs, name, path)

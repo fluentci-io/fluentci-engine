@@ -60,8 +60,8 @@ defmodule DemoPlugin do
 
     consumer = task.("consume", "consume") |> H.output_env("VALUE", producer, "version")
     optional = task.("optional", "optional") |> H.allow_failure()
-    never = task.("never", "never") |> H.when(:never)
-    failure = task.("failure", "failure") |> M.after_jobs([consumer]) |> H.when(:failure)
+    never = task.("never", "never") |> H.when_task(:never)
+    failure = task.("failure", "failure") |> M.after_jobs([consumer]) |> H.when_task(:failure)
 
     cleanup =
       task.("cleanup", "cleanup")
