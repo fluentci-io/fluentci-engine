@@ -93,10 +93,75 @@ consumer = H.task("jq", "jq", "/absolute/project")
 
 Installation is a separate uncached step with a prefix lease. No package manager
 is installed or bootstrapped by the SDK, and compilation never installs packages.
-This milestone does not include an Elixir-managed local process runner, HTTP run
-client, cancellation handle, or event decoder. The generated JSON can be passed to
-the existing CLI or authenticated run API; those SDK APIs remain work for subsequent
-milestones. Terminal report decoding is available independently of transport.
+The generated JSON can be passed to the existing CLI or authenticated run API.
+A managed local runner is also available; an Elixir HTTP client and event decoder
+remain work for subsequent milestones.
+
+## Managed local execution
+
+```elixir
+alias FluentCI.Host.Local
+
+{:ok, execution} = Local.start(plan,
+  binary: "/path/to/fluentci-engine/target/release/fluentci-engine",
+  cwd: "/absolute/path/to/project",
+  run_root: "/absolute/path/to/run-storage")
+
+try do
+  case Local.await(execution) do
+    {:ok, %Local.Report{result: result, exit_status: status}} ->
+      IO.inspect({result.outcome, status})
+    {:error, %Local.Error{} = error} ->
+      IO.inspect(error.kind)
+  end
+after
+  Local.close(execution)
+end
+```
+
+`start/2` compiles before creating run files and starts a temporary OTP-supervised
+worker. The `binary` option defaults to `fluentci-engine` on PATH; `cwd` defaults to
+the caller's current directory and `run_root` to the system temporary directory.
+A Unix `kill` executable is resolved once from PATH (with `/bin/kill` as fallback)
+for cancellation; a missing signal utility is rejected before starting the engine.
+Relative task directories (without copied workspaces), workspace source, cache
+and resource directories resolve against this captured cwd, not the wrapper directory.
+Each execution gets a fresh mode-0700 wrapper and mode-0600 plan file. `run_directory`
+identifies the engine's execution directory inside it. BEAM-global cwd/env are never
+modified. Optional `env: %{"NAME" => "value", "REMOVE_ME" => nil}` overrides only
+the engine process environment; task environments remain explicit plan data.
+
+`await/2` returns a typed `Local.Report` only after engine exit. Pipeline failure
+or cancellation is still `{:ok, report}`; startup, I/O and decoding failures return
+`{:error, %Local.Error{}}`. Reports must be regular files, at most 16 MiB, and match
+the submitted task IDs in order. CLI exit status is retained separately from the
+pipeline outcome. Repeated awaits return the same completed result.
+
+`cancel/2` sends SIGINT and waits for the engine's process/service cleanup and
+terminal result. Late cancellation preserves an already completed result. An early
+cancellation before engine startup may have no result file and returns an error
+instead of inventing a report. `await/2`, `cancel/2`, and `close/2` accept a millisecond
+call timeout (default `:infinity`); timing out the call does not kill the execution
+worker. An already requested cancellation continues. Only one pending wait is kept
+per caller; repeated timed-out polls replace it, and dead callers are removed.
+Use task/service deadlines to
+bound work and call `await` again to inspect its eventual result.
+
+The process calling `start` owns the execution. Its death initiates cancellation,
+including normal exit: do not return a handle from a short-lived Task unless that
+cancellation is intended. Temporary supervisor children never automatically replay
+an execution. `close/2` cancels and waits if needed, then releases the handle while
+retaining all run files. Use it to release completed handles owned by long-lived
+processes. Ordinary OTP worker termination also requests cleanup. Cleanup is
+cooperative and has no forced-kill deadline; a stuck engine can delay shutdown.
+VM crashes, forced worker kills, or engine crashes do not guarantee orphan cleanup.
+This does not replace the engine's still-unfinished hard-crash supervision.
+
+`Local.output/1` polls the most recent 64 KiB of merged CLI diagnostic output while
+running or after completion. It returns binary bytes and may start mid-UTF-8; it is
+not a complete or resumable log stream. Exact task/probe bytes remain in report log
+files. Errors include the run directory, exit status when available, and a bounded
+diagnostic tail; that tail may contain task output and should be handled accordingly.
 
 ## Terminal result decoding
 
@@ -147,6 +212,11 @@ Tests cover pure composition, dependency graphs, invalid wire values, every prov
 encoding, and actual release-engine workspace/cache, failed-dependency, and service
 execution, plus actual timeout results. Decoder tests cover terminal variants,
 legacy reports, malformed fields, outcome consistency, duplicate IDs, and integer
-precision. Package-manager encoding tests perform no installation. The workflow
+precision. Local-runner tests cover concurrent cwd/env isolation, repeatable results,
+live output, cancellation and descendant cleanup, owner death, OTP termination,
+service/health/consumer cancellation with lease reuse, early cancellation, private
+files, malformed or oversized reports, bounded waiters, and absence of automatic
+replay after handle termination. Package-manager encoding tests perform
+no installation. The workflow
 includes these tests on Ubuntu with Elixir 1.18.4/OTP 27.3.4; local validation also
 runs on macOS ARM64. A configured CI job is not evidence of a completed remote run.

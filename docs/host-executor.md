@@ -788,5 +788,9 @@ exercise copied-workspace cache reuse, failed dependencies, and service lifecycl
 `FluentCI.Host.Result` decodes terminal reports into structs and fixed status atoms,
 including cache components, probe logs, and wait diagnostics. It rejects duplicate
 IDs, nonterminal statuses, and contradictory outcomes; legacy missing outcomes
-remain absent. An Elixir-managed execution client and event decoder are not yet
-included.
+remain absent. `FluentCI.Host.Local` starts private, independently owned executions,
+returns typed reports after engine exit, and cooperatively cancels on request or
+owner death. Temporary OTP-supervised workers do not replay side effects on failure;
+ordinary termination waits for engine cleanup. A bounded live diagnostic tail is
+available, with exact bytes retained in task/probe files. Hard-crash supervision,
+an Elixir HTTP client, and event decoding remain unfinished.

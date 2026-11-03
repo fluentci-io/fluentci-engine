@@ -11,5 +11,5 @@ defmodule FluentCI.MixProject do
     ]
   end
 
-  def application, do: []
+  def application, do: [extra_applications: [:crypto], mod: {FluentCI.Application, []}]
 end
