@@ -50,7 +50,7 @@ jobs:
         uses: fluentci-io/setup-fluentci@v5
         with:
           wasm: true
-          engine-version: 0.4.12
+          engine-version: 0.5.0
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
         with:
           toolchain: '1.99.1'
