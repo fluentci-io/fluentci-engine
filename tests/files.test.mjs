@@ -7,6 +7,10 @@ for (const [name, sdk] of [['TypeScript', ts], ['ReScript', rs]]) {
     const original = sdk.writeText('write', "path ' 世界", '$(touch injected)\0', false, '.');
     assert.equal(original.program, '');
     assert.deepEqual(original.file_operation, {op:'write_text', path:"path ' 世界", text:'$(touch injected)\0', overwrite:false});
+    const bytes = [0,255];
+    const binary = sdk.writeBytes('binary', 'bytes', bytes, false, '.');
+    bytes[0] = 123;
+    assert.deepEqual(binary.file_operation.bytes, [0,255]);
     const configured = sdk.envFile(original, 'settings.env');
     assert.equal(original.env_files, undefined);
     assert.deepEqual(configured.env_files, ['settings.env']);

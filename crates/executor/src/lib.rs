@@ -967,6 +967,12 @@ impl Plan {
                         results[i]
                             .error
                             .get_or_insert_with(|| "exit code 130: task cancelled".into());
+                    } else if results[i].status == Status::Failed
+                        && self.tasks[i].file_operation.is_some()
+                    {
+                        results[i]
+                            .error
+                            .get_or_insert_with(|| "native file operation failed".into());
                     } else if results[i].status == Status::Failed {
                         let message = results[i].error.take();
                         results[i].error = Some(match message {

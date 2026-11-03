@@ -220,6 +220,7 @@ fn links_special_files_overwrites_and_read_limits_have_explicit_failures() {
         let error = result.tasks[0].error.as_ref().unwrap();
         assert!(error.contains("file operation"), "{error}");
         assert!(!error.contains("secret payload"));
+        assert!(!error.starts_with("exit code"));
     }
     assert_eq!(fs::read_to_string(root.join("value")).unwrap(), "original");
 }
@@ -318,4 +319,110 @@ fn env_file_changes_invalidate_cached_process_environment() {
         fs::read_to_string(&changed.tasks[0].stdout).unwrap(),
         "second\n"
     );
+}
+
+#[test]
+fn explicit_overwrite_merges_trees_and_removal_never_traverses_links() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    fs::create_dir(root.join("source")).unwrap();
+    fs::create_dir(root.join("target")).unwrap();
+    fs::write(root.join("source/value"), "replacement").unwrap();
+    fs::write(root.join("target/value"), "old").unwrap();
+    fs::write(root.join("target/keep"), "keep").unwrap();
+    let copied = run(
+        root,
+        "copy",
+        vec![p::copy_tree(
+            "copy",
+            "source".into(),
+            "target".into(),
+            true,
+            root,
+        )],
+    );
+    assert!(copied.success(), "{copied:?}");
+    assert_eq!(
+        fs::read_to_string(root.join("target/value")).unwrap(),
+        "replacement"
+    );
+    assert!(root.join("target/keep").exists());
+    std::os::unix::fs::symlink(root.join("target"), root.join("link")).unwrap();
+    let removed = run(
+        root,
+        "remove",
+        vec![p::remove("remove", "link".into(), true, false, root)],
+    );
+    assert!(removed.success(), "{removed:?}");
+    assert!(root.join("target/value").exists());
+    assert!(!root.join("link").exists());
+}
+#[test]
+fn dotenv_values_reach_service_processes_and_readiness_probes() {
+    use fluentci_executor::service::{Probe, Service};
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    fs::write(root.join("service.env"), "FILE_VAR=ready\n").unwrap();
+    let mut service = p::env_file(
+        p::exec(
+            "service",
+            "/bin/sh",
+            vec![
+                "-c".into(),
+                "test \"$FILE_VAR\" = ready || exit 7; exec /bin/sleep 60".into(),
+            ],
+            root,
+        ),
+        "service.env",
+    );
+    service.service = Some(Service {
+        readiness: Probe {
+            program: "/bin/sh".into(),
+            args: vec!["-c".into(), "test \"$FILE_VAR\" = ready".into()],
+            interval_ms: 10,
+            timeout_ms: 500,
+        },
+        health: None,
+        startup_timeout_ms: 3000,
+        shutdown_timeout_ms: 100,
+        failure_threshold: 1,
+    });
+    let consumer = p::needs(
+        p::exec(
+            "consumer",
+            "/bin/sh",
+            vec!["-c".into(), "printf consumer".into()],
+            root,
+        ),
+        vec!["service".into()],
+    );
+    let result = run(root, "run", vec![service, consumer]);
+    assert!(result.success(), "{result:?}");
+}
+#[test]
+fn dotenv_parse_failures_name_the_file_and_line_without_printing_values() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    fs::write(
+        root.join("bad.env"),
+        "KEY=secret\nPRIVATE SECRET MALFORMED\n",
+    )
+    .unwrap();
+    let task = p::env_file(
+        p::exec(
+            "task",
+            "/bin/sh",
+            vec!["-c".into(), "touch unexpected".into()],
+            root,
+        ),
+        "bad.env",
+    );
+    let result = run(root, "run", vec![task]);
+    assert_eq!(result.tasks[0].status, Status::Failed);
+    let error = result.tasks[0].error.as_ref().unwrap();
+    assert!(error.contains("bad.env"));
+    assert!(error.contains("line 2"));
+    assert!(!error.contains("SECRET"));
+    assert!(!error.contains("secret"));
+    assert!(!root.join("unexpected").exists());
 }

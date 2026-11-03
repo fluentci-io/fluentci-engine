@@ -29,6 +29,14 @@ impl Telemetry {
                 cx.span()
                     .set_attribute(KeyValue::new("pipeline.step.id", task.id.clone()));
                 cx.span().set_attribute(KeyValue::new(
+                    "pipeline.step.kind",
+                    if task.file_operation.is_some() {
+                        "file"
+                    } else {
+                        "process"
+                    },
+                ));
+                cx.span().set_attribute(KeyValue::new(
                     "pipeline.step.service",
                     task.service.is_some(),
                 ));

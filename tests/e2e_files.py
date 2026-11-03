@@ -9,6 +9,21 @@ from e2e_matrix import BINARY, LANGUAGES, plugin
 
 TEXT = "VERSION='héllo 世界; $(touch injected)'\n"
 class FileGuests(unittest.TestCase):
+    def test_cli_preserves_native_filesystem_diagnostics(self):
+        with tempfile.TemporaryDirectory(prefix="fluentci file error ") as directory:
+            root = Path(directory)
+            plan = {"version":1,"inherit_env":False,"tasks":[{"id":"read","cwd":str(root),"file_operation":{"op":"read_text","path":"missing.txt"}}]}
+            plan_path = root / "plan.json"
+            plan_path.write_text(json.dumps(plan))
+            process = subprocess.run([str(BINARY), "execute", str(plan_path), "--run-dir", str(root / "run"), "--progress", "plain"], cwd=root, capture_output=True, text=True, timeout=10)
+            self.assertEqual(process.returncode,1,process.stdout+process.stderr)
+            report = json.loads((root / "run/result.json").read_text())
+            task = report["tasks"][0]
+            self.assertIsNone(task["exit_code"])
+            self.assertIn("missing.txt",task["error"])
+            self.assertIn("file operation",task["error"])
+            self.assertIn("missing.txt",process.stderr)
+
     def test_every_sdk_runs_native_files_and_literal_env_files(self):
         for language in LANGUAGES:
             with self.subTest(language=language), tempfile.TemporaryDirectory(prefix="fluentci files ") as directory:

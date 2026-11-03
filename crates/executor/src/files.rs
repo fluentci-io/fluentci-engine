@@ -422,15 +422,21 @@ fn segment(pattern: &str, value: &str) -> bool {
     row[chars.len()]
 }
 fn matches(pattern: &[&str], path: &[&str]) -> bool {
-    match pattern.split_first() {
-        None => path.is_empty(),
-        Some((&"**", rest)) => {
-            matches(rest, path) || (!path.is_empty() && matches(pattern, &path[1..]))
+    let mut row = vec![false; path.len() + 1];
+    row[0] = true;
+    for part in pattern {
+        let mut next = vec![false; path.len() + 1];
+        next[0] = *part == "**" && row[0];
+        for (i, value) in path.iter().enumerate() {
+            next[i + 1] = if *part == "**" {
+                row[i + 1] || next[i]
+            } else {
+                row[i] && segment(part, value)
+            };
         }
-        Some((head, rest)) => {
-            !path.is_empty() && segment(head, path[0]) && matches(rest, &path[1..])
-        }
+        row = next;
     }
+    row[path.len()]
 }
 fn glob(
     root: &Path,
@@ -681,8 +687,14 @@ pub(crate) fn execute(
         let _ = writeln!(stderr, "{message}");
         message
     })?;
-    serde_json::to_writer(&mut stdout, &result).map_err(|e| e.to_string())?;
-    stdout.write_all(b"\n").map_err(|e| e.to_string())
+    let bytes = serde_json::to_vec(&result).map_err(|e| e.to_string())?;
+    if bytes.len() >= 8 * 1024 * 1024 {
+        return Err("file query result exceeds 8 MiB".into());
+    }
+    stdout
+        .write_all(&bytes)
+        .and_then(|_| stdout.write_all(b"\n"))
+        .map_err(|e| e.to_string())
 }
 pub(crate) fn result(stdout: &Path) -> Result<Value, String> {
     serde_json::from_slice(&read(stdout, 8 * 1024 * 1024, &Cancellation::default())?)

@@ -19,7 +19,7 @@ No shell, `cp`, `find`, `chmod`, or other external program implements these task
 | `hash` | SHA-256 hexadecimal string |
 | `chmod`, `symlink` | null |
 
-Query results are also written as a JSON document to the task's stdout log.
+Serialized query results are bounded to 8 MiB. Query results are also written as a JSON document to the task's stdout log.
 Filesystem tasks have no process exit code (`exit_code: null`). Their failures
 identify the operation, paths, and OS error in the result, journal and progress
 output; the CLI exits nonzero. Write payloads are omitted from error context.

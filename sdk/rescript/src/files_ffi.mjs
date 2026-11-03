@@ -1,5 +1,5 @@
 import {task} from "./matrix_ffi.mjs";
-const fileTask = (id, op, fields, cwd) => Object.freeze({...task(id, "", [], cwd), file_operation: Object.freeze({op, ...fields})});
+const fileTask = (id, op, fields, cwd) => Object.freeze({...task(id, "", [], cwd), file_operation: Object.freeze({op, ...fields, ...(fields.bytes ? {bytes: Object.freeze([...fields.bytes])} : {})})});
 export const envFile = (value, path) => Object.freeze({...value, env_files: Object.freeze([...(value.env_files ?? []), path])});
 export const resultValue = (report, id) => report.tasks.find(task => task.id === id)?.file_result ?? null;
 export const readText = (id, path, limitBytes, cwd) => fileTask(id, "read_text", { path, limit_bytes: limitBytes }, cwd);

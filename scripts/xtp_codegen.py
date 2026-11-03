@@ -68,8 +68,16 @@ def generated():
     for language in ['gleam', 'purescript', 'rescript', 'typescript']:
         declarations = list(javascript)
         if language == 'purescript':
-            exports = ['greet', 'echo', 'failure', 'invalid', 'service', 'cancel', 'nested', 'hash_file', 'copy_file', 'secret_env', 'action_plan', 'matrix', 'workflow']
+            exports = ['greet', 'echo', 'failure', 'invalid', 'service', 'cancel', 'nested', 'hash_file', 'copy_file', 'secret_env', 'action_plan', 'matrix', 'workflow', 'files']
             declarations[1] = 'declare module "main" { ' + ' '.join(f'export function {name}(): I32;' for name in exports) + ' }'
+        entry = (ROOT / f'sdk/{language}/demo-plugin/{"entry.ts" if language == "typescript" else "entry.mjs"}').read_text()
+        if language in ['purescript', 'rescript']:
+            actual_exports = {item.strip().split(' as ')[-1] for group in re.findall(r'export\s*\{([^}]+)\}', entry, re.DOTALL) for item in group.split(',') if item.strip()}
+        else:
+            actual_exports = set(re.findall(r'export function (\w+)\(', entry))
+        declared_exports = set(re.findall(r'export function (\w+)\(', declarations[1]))
+        if actual_exports != declared_exports:
+            raise ValueError(f'Guest export declarations differ from entry point: {language}: {actual_exports ^ declared_exports}')
         yield ROOT / f'sdk/{language}/demo-plugin/imports.d.ts', '\n'.join(declarations)
     for name, exports in plugins.items():
         if name != 'xtp-smoke':
