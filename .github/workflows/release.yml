@@ -12,7 +12,17 @@ jobs:
           - aarch64-unknown-linux-gnu
           - x86_64-unknown-linux-gnu
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Cache container Rust compiler results and Cargo downloads
+        uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
+        with:
+          path: .ci-cache/linux-release
+          key: container-rust-v1-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.fluentci/src/jobs.ts', '.fluentci/src/helpers.ts') }}-${{ hashFiles('crates/**/*.rs') }}
+          restore-keys: |
+            container-rust-v1-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.fluentci/src/jobs.ts', '.fluentci/src/helpers.ts') }}-
+            container-rust-v1-${{ matrix.target }}-
+      - name: Prepare compiler-cache transfer directory
+        run: mkdir -p .ci-cache/linux-release
       - uses: fluentci-io/setup-fluentci@v5
         with:
           engine-version: 0.4.12
@@ -25,6 +35,7 @@ jobs:
         env:
           TAG: ${{ env.RELEASE_VERSION }}
           TARGET: ${{ matrix.target }}
+          FLUENTCI_RUST_CACHE_DIR: .ci-cache/linux-release
           DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}
       #- name: Upload assets to Cloudflare R2
       #  run: |

@@ -15,7 +15,7 @@ export enum Job {
   typescriptE2e = "typescript_e2e",
 }
 
-export const exclude = ["target", ".devbox", ".fluentci"];
+export const exclude = ["target", ".devbox", ".fluentci", ".ci-cache"];
 
 export const getDirectory = async (
   src: string | Directory | undefined = "."
@@ -63,7 +63,7 @@ export async function clippy(
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
     .withMountedCache("/app/target", dag.cacheVolume("target"))
-    .withMountedCache("/root/cargo/registry", dag.cacheVolume("registry"))
+    .withMountedCache("/usr/local/cargo/registry", dag.cacheVolume("registry"))
     .withExec([
       "sh",
       "-c",
@@ -114,7 +114,7 @@ export async function llvmCov(
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
     .withMountedCache("/app/target", dag.cacheVolume("target"))
-    .withMountedCache("/root/cargo/registry", dag.cacheVolume("registry"))
+    .withMountedCache("/usr/local/cargo/registry", dag.cacheVolume("registry"))
     .withExec([
       "sh",
       "-c",
@@ -155,7 +155,7 @@ export async function test(
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
     .withMountedCache("/app/target", dag.cacheVolume("target"))
-    .withMountedCache("/root/cargo/registry", dag.cacheVolume("registry"))
+    .withMountedCache("/usr/local/cargo/registry", dag.cacheVolume("registry"))
     .withExec(["cargo", "test", ...options]);
 
   return ctr.stdout();
@@ -175,26 +175,31 @@ export async function test(
 export const build = async (src = "."): Promise<string> => {
   const rustflags = buildRustFlags();
   const context = await getDirectory(src);
+  const cacheRoot = env.get("FLUENTCI_RUST_CACHE_DIR");
+  const restoredCache = cacheRoot ? await getDirectory(cacheRoot) : dag.directory();
   const ctr = dag
     .pipeline(Job.build)
     .container()
     .from("rust:1.76-bullseye")
     .withExec([
       "wget",
-      "https://github.com/mozilla/sccache/releases/download/v0.7.7/sccache-v0.7.7-x86_64-unknown-linux-musl.tar.gz",
+      "https://github.com/mozilla/sccache/releases/download/v0.16.0/sccache-v0.16.0-x86_64-unknown-linux-musl.tar.gz",
     ])
     .withExec([
       "tar",
       "-xvf",
-      "sccache-v0.7.7-x86_64-unknown-linux-musl.tar.gz",
+      "sccache-v0.16.0-x86_64-unknown-linux-musl.tar.gz",
     ])
     .withExec([
       "mv",
-      "sccache-v0.7.7-x86_64-unknown-linux-musl/sccache",
+      "sccache-v0.16.0-x86_64-unknown-linux-musl/sccache",
       "/usr/local/bin",
     ])
     .withEnvVariable("RUSTC_WRAPPER", "/usr/local/bin/sccache")
     .withMountedCache("/root/.cache/sccache", dag.cacheVolume("sccache"))
+    .withEnvVariable("SCCACHE_DIR", "/root/.cache/sccache")
+    .withEnvVariable("SCCACHE_CACHE_SIZE", "1G")
+    .withEnvVariable("CARGO_INCREMENTAL", "0")
     .withExec(["dpkg", "--add-architecture", "armhf"])
     .withExec(["dpkg", "--add-architecture", "arm64"])
     .withExec(["apt-get", "update"])
@@ -264,8 +269,12 @@ export const build = async (src = "."): Promise<string> => {
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
     .withMountedCache("/app/target", dag.cacheVolume("target"))
-    .withMountedCache("/root/cargo/registry", dag.cacheVolume("registry"))
+    .withMountedCache("/usr/local/cargo/registry", dag.cacheVolume("registry"))
     .withMountedCache("/assets", dag.cacheVolume("gh-release-assets"))
+    .withDirectory("/tmp/rust-cache-restore", restoredCache)
+    .withExec(["sh", "-c", "cp -an /tmp/rust-cache-restore/sccache/. /root/.cache/sccache/ 2>/dev/null || test ! -d /tmp/rust-cache-restore/sccache"])
+    .withMountedCache("/usr/local/cargo/git", dag.cacheVolume("cargo-git"))
+    .withExec(["sh", "-c", "mkdir -p /usr/local/cargo/registry /usr/local/cargo/git; for part in registry git; do if [ -d /tmp/rust-cache-restore/$part ]; then cp -an /tmp/rust-cache-restore/$part/. /usr/local/cargo/$part/; fi; done"])
     .withEnvVariable("RUSTFLAGS", rustflags)
     .withEnvVariable(
       "PKG_CONFIG_ALLOW_CROSS",
@@ -283,7 +292,7 @@ export const build = async (src = "."): Promise<string> => {
     .withExec([
       "sh",
       "-c",
-      "cargo build -p fluentci-engine --release --target $TARGET",
+      "cargo build -p fluentci-engine --release --locked --target $TARGET",
     ])
     .withExec(["sh", "-c", "cp target/${TARGET}/release/fluentci-engine ."])
     .withExec([
@@ -306,6 +315,14 @@ export const build = async (src = "."): Promise<string> => {
       "-c",
       "cp /assets/fluentci-engine_${TAG}_${TARGET}.tar.gz.sha256 .",
     ]);
+
+  if (cacheRoot) {
+    // Stop the compiler-cache server before exporting its completed disk writes.
+    const cached = ctr.withExec(["sh", "-c", "sccache --show-stats; sccache --stop-server || true"]);
+    await cached.directory("/root/.cache/sccache").export(`${cacheRoot}/sccache`);
+    await cached.directory("/usr/local/cargo/registry").export(`${cacheRoot}/registry`);
+    await cached.directory("/usr/local/cargo/git").export(`${cacheRoot}/git`);
+  }
 
   const exe = await ctr.file(
     `/app/fluentci-engine_${env.get("TAG")}_${env.get("TARGET")}.tar.gz`
