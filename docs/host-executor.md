@@ -408,7 +408,12 @@ additional waiting runs in FIFO admission order; the default is zero, retaining
 immediate rejection when execution slots are full. A full execution/queue capacity
 returns 429 with `Retry-After: 1`. Queued runs expose `status: "queued"` in submission,
 state and history responses. Cancellation before they acquire a slot creates no
-execution directory or result report (result retrieval returns 404). Queue waiting
+execution directory or result report (result retrieval returns 404). A successful
+cancellation response for a still-queued run means its cancelled state has been
+atomically persisted and synced before acknowledgement. Cancellation and execution
+startup are serialized; if startup wins, cancellation remains cooperative and the
+worker publishes the final outcome after cleanup. Persistence failures return 500
+and still prevent that queued run from starting in the current process. Queue waiting
 does not consume task execution timeouts or perform workspace copying; plan
 validation still happens at admission and execution validates again when starting.
 Accepted queued plans and their idempotency associations are persisted, and their

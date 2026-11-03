@@ -113,7 +113,7 @@ class RunServer(unittest.TestCase):
         self.assertEqual(json.loads(replay)["id"], second.rsplit("/", 1)[1])
         self.assertFalse((self.root / "runs" / json.loads(replay)["id"] / "execution").exists())
         self.assertEqual(self.request("POST", second + "/cancel")[0], 202)
-        self.assertEqual(self.terminal(second)["status"], "cancelled")
+        self.assertEqual(json.loads(self.request("GET", second)[1])["status"], "cancelled")
         self.assertEqual(self.request("GET", second + "/result")[0], 404)
         fourth = self.submit(self.plan("echo fourth >> order"))
         _, history, _ = self.request("GET", "/v1/runs")

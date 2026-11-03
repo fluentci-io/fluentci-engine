@@ -14,14 +14,14 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
-        Mutex, RwLock,
+        Arc, Mutex, RwLock,
     },
     thread::JoinHandle,
 };
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 struct RunState {
     #[serde(default)]
     created_at_ms: u64,
@@ -34,8 +34,55 @@ struct Submission {
     run_id: String,
 }
 
-struct Active {
+// Serialize cancellation with the queued-to-running transition. A queued
+// cancellation is durable before acknowledgement and cannot be started afterward.
+struct RunControl {
     cancel: Cancellation,
+    path: PathBuf,
+    state: Mutex<RunState>,
+}
+impl RunControl {
+    fn cancel(&self) -> Result<(), String> {
+        let mut state = self.state.lock().unwrap();
+        // Even if persistence fails, prevent execution in this server process.
+        self.cancel.cancel();
+        if state.status == "queued" {
+            let mut cancelled = state.clone();
+            cancelled.status = "cancelled".into();
+            cancelled.error = Some("run cancelled before execution".into());
+            save(&self.path, &cancelled)?;
+            *state = cancelled;
+        }
+        Ok(())
+    }
+    fn start(&self) -> Result<(), String> {
+        let mut state = self.state.lock().unwrap();
+        if self.cancel.is_cancelled() {
+            return Err("run cancelled before execution".into());
+        }
+        if state.status == "queued" {
+            let mut running = state.clone();
+            running.status = "running".into();
+            save(&self.path, &running)?;
+            *state = running;
+        }
+        Ok(())
+    }
+    fn finish(&self, status: &str, error: Option<String>) -> Result<(), String> {
+        let mut state = self.state.lock().unwrap();
+        if state.status == "cancelled" {
+            return Ok(());
+        }
+        let mut terminal = state.clone();
+        terminal.status = status.into();
+        terminal.error = error;
+        save(&self.path, &terminal)?;
+        *state = terminal;
+        Ok(())
+    }
+}
+struct Active {
+    control: Arc<RunControl>,
     worker: JoinHandle<()>,
 }
 pub struct Runs {
@@ -238,7 +285,9 @@ impl Runs {
             std::mem::take(&mut *active)
         };
         for run in active.values() {
-            run.cancel.cancel();
+            if let Err(error) = run.control.cancel() {
+                eprintln!("could not persist queued cancellation: {error}");
+            }
         }
         for (_, run) in active {
             let _ = run.worker.join();
@@ -457,24 +506,19 @@ fn admit(
     let cancel = Cancellation::default();
     let worker_cancel = cancel.clone();
     let worker_path = path.clone();
-    let worker_id = id.clone();
+    let control = Arc::new(RunControl {
+        cancel,
+        path: path.join("state.json"),
+        state: Mutex::new(state.clone()),
+    });
+    let worker_control = control.clone();
     let worker = std::thread::Builder::new()
         .name(format!("run-{id}"))
         .spawn(move || {
             let _guard = parent.attach();
             let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 reservation.wait(&worker_cancel)?;
-                if queued {
-                    save(
-                        &worker_path.join("state.json"),
-                        &RunState {
-                            created_at_ms,
-                            id: worker_id.clone(),
-                            status: "running".into(),
-                            error: None,
-                        },
-                    )?;
-                }
+                worker_control.start()?;
                 plan.execute(&worker_path.join("execution"), &worker_cancel)
             }));
             let (status, error) = match outcome {
@@ -483,21 +527,13 @@ fn admit(
                 Ok(Err(error)) => ("failed", Some(error)),
                 Err(_) => ("failed", Some("executor panicked".into())),
             };
-            if let Err(error) = save(
-                &worker_path.join("state.json"),
-                &RunState {
-                    created_at_ms,
-                    id: worker_id,
-                    status: status.into(),
-                    error,
-                },
-            ) {
+            if let Err(error) = worker_control.finish(status, error) {
                 eprintln!("could not persist run completion: {error}");
             }
         });
     match worker {
         Ok(worker) => {
-            active.insert(id.clone(), Active { cancel, worker });
+            active.insert(id.clone(), Active { control, worker });
             Ok(state)
         }
         Err(_) => {
@@ -636,10 +672,27 @@ async fn cancel(
     if let Err(response) = runs.path(&id) {
         return response;
     }
-    if let Some(run) = runs.active.lock().unwrap().get(id.as_str()) {
-        run.cancel.cancel();
+    let id = id.into_inner();
+    match tokio::task::spawn_blocking(move || {
+        // Shutdown drains the active map before cancelling and joining workers.
+        // Wait for it rather than acknowledging a run it has not yet cancelled.
+        let _shutdown = runs.shutdown_lock.lock().unwrap();
+        let control = runs
+            .active
+            .lock()
+            .unwrap()
+            .get(&id)
+            .map(|run| run.control.clone());
+        match control {
+            Some(control) => control.cancel(),
+            None => Ok(()),
+        }
+    })
+    .await
+    {
+        Ok(Ok(())) => HttpResponse::Accepted().finish(),
+        _ => HttpResponse::InternalServerError().finish(),
     }
-    HttpResponse::Accepted().finish()
 }
 #[derive(Deserialize)]
 struct Cursor {
@@ -815,6 +868,71 @@ mod lifecycle_tests {
                 "cwd":root, "timeout_ms":5000}]
         }))
         .unwrap()
+    }
+
+    fn queued_control(root: &Path) -> RunControl {
+        let state = RunState {
+            created_at_ms: 1,
+            id: Uuid::new_v4().to_string(),
+            status: "queued".into(),
+            error: None,
+        };
+        let path = root.join("state.json");
+        save(&path, &state).unwrap();
+        RunControl {
+            cancel: Cancellation::default(),
+            path,
+            state: Mutex::new(state),
+        }
+    }
+
+    #[test]
+    fn queued_cancellation_is_durable_without_worker_and_prevents_start() {
+        let root = tempfile::tempdir().unwrap();
+        let control = queued_control(root.path());
+        control.cancel().unwrap();
+        let state: RunState = serde_json::from_slice(&fs::read(&control.path).unwrap()).unwrap();
+        assert_eq!(state.status, "cancelled");
+        assert!(control.start().is_err());
+        // Neither completion nor repeated cancellation may undo the durable result.
+        control
+            .finish("failed", Some("late worker failure".into()))
+            .unwrap();
+        control.cancel().unwrap();
+        let state: RunState = serde_json::from_slice(&fs::read(&control.path).unwrap()).unwrap();
+        assert_eq!(state.status, "cancelled");
+        assert_eq!(
+            state.error.as_deref(),
+            Some("run cancelled before execution")
+        );
+    }
+
+    #[test]
+    fn failed_cancellation_persistence_is_reported_and_prevents_start() {
+        let root = tempfile::tempdir().unwrap();
+        let control = queued_control(root.path());
+        fs::remove_file(&control.path).unwrap();
+        fs::create_dir(&control.path).unwrap();
+        assert!(control.cancel().is_err());
+        assert!(control.start().is_err());
+        fs::remove_dir(&control.path).unwrap();
+        control.cancel().unwrap();
+        let state: RunState = serde_json::from_slice(&fs::read(&control.path).unwrap()).unwrap();
+        assert_eq!(state.status, "cancelled");
+    }
+
+    #[test]
+    fn running_cancellation_waits_for_worker_outcome() {
+        let root = tempfile::tempdir().unwrap();
+        let control = queued_control(root.path());
+        control.start().unwrap();
+        control.cancel().unwrap();
+        let state: RunState = serde_json::from_slice(&fs::read(&control.path).unwrap()).unwrap();
+        assert_eq!(state.status, "running");
+        // A completed execution remains successful even if cancellation arrives late.
+        control.finish("succeeded", None).unwrap();
+        let state: RunState = serde_json::from_slice(&fs::read(&control.path).unwrap()).unwrap();
+        assert_eq!(state.status, "succeeded");
     }
 
     #[test]
