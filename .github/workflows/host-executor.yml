@@ -9,6 +9,7 @@ on:
       - 'sdk/gleam/**'
       - 'sdk/elixir/**'
       - '.github/workflows/host-executor.yml'
+      - 'rust-toolchain.toml'
   push:
     branches: [main]
   workflow_dispatch:
@@ -31,8 +32,9 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # pinned action; toolchain selected below
         with:
+          toolchain: '1.99.1'
           components: clippy
       - name: Executor, cache, server lifecycle, and legacy regression tests
         run: cargo test --release --locked -p fluentci-executor -p fluentci-core -p fluentci-server --lib --tests
@@ -119,7 +121,9 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # pinned action; toolchain selected below
+        with:
+          toolchain: '1.99.1'
       - name: Checkout pinned MacPorts base
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
