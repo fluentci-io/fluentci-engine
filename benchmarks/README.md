@@ -71,3 +71,24 @@ copy verification snapshots. There is no cross-task or metadata-only digest cach
 Regression coverage checks both parent-first and child-first declarations,
 unchanged snapshot digests, subsequent content mutations, missing paths and
 cancellation. Re-run on the same idle host to compare; OS page caches are not flushed.
+
+## Inactive-task journal polling workload
+
+```sh
+cargo test --release -p fluentci-executor --lib inactive_task_polling_benchmark -- --ignored --nocapture
+```
+
+This benchmark creates 2,000 task records: 1,000 pending tasks without log files
+and 1,000 completed tasks with empty stdout/stderr files. After the initial journal
+update, each of five samples measures 20 ordinary polling ticks. It isolates
+journal polling rather than process execution. Skipping unopened pending logs and
+terminal streams already observed at EOF reduced a local release median from
+355.425 ms to 0.810 ms. These are synthetic polling timings, not whole-pipeline
+speedup claims. State comparison still walks the task list each tick.
+
+Live tasks continue to be polled. Completed streams with unread backlogs continue
+until EOF; the run's final drain rechecks every terminal stream before emitting
+`run_finished`. Regression coverage exercises all four stdout/stderr/probe streams,
+output larger than the per-tick budget, later task starts, appended live output,
+final EOF rechecks, and duplicate-free journal capture. Raw log files remain the
+source of exact bytes; journal text remains a lossy UTF-8 display representation.

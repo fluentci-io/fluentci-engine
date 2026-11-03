@@ -55,6 +55,9 @@ pub(crate) struct Journal {
     sequence: u64,
     states: Vec<(Status, String, Option<String>)>,
     offsets: Vec<[u64; 4]>,
+    // Terminal streams reaching EOF no longer need polling on ordinary ticks.
+    // The final drain rechecks them once more before the run-finished event.
+    drained: Vec<[bool; 4]>,
 }
 impl Journal {
     pub fn new(path: &Path, tasks: &[Task]) -> Result<Self, String> {
@@ -76,6 +79,7 @@ impl Journal {
             sequence: 0,
             states: vec![(Status::Pending, String::new(), None); count],
             offsets: vec![[0; 4]; count],
+            drained: vec![[false; 4]; count],
         };
         journal.emit(EventKind::RunStarted { tasks: count })?;
         journal.writer.flush().map_err(|e| e.to_string())?;
@@ -126,12 +130,18 @@ impl Journal {
                 let Some(path) = path else { continue };
                 // A rejected restore can replace/remove these files before spawn.
                 // Do not emit tentative logs or advance their cursors.
-                if result.cache.outcome == "preparing" {
+                if result.status == Status::Pending
+                    || result.cache.outcome == "preparing"
+                    || (self.drained[i][stream] && !drain)
+                {
                     continue;
                 }
                 let mut file = match File::open(path.1) {
                     Ok(f) => f,
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                        self.drained[i][stream] = result.status.terminal();
+                        continue;
+                    }
                     Err(e) => return Err(e.to_string()),
                 };
                 file.seek(SeekFrom::Start(self.offsets[i][stream]))
@@ -143,6 +153,7 @@ impl Journal {
                 loop {
                     let n = file.read(&mut buffer).map_err(|e| e.to_string())?;
                     if n == 0 {
+                        self.drained[i][stream] = result.status.terminal();
                         break;
                     }
                     self.offsets[i][stream] += n as u64;
@@ -218,6 +229,137 @@ mod tests {
             .unwrap();
             let decoded: Event = serde_json::from_str(&encoded).unwrap();
             assert_eq!(serde_json::to_string(&decoded).unwrap(), encoded);
+        }
+    }
+}
+
+#[cfg(test)]
+mod polling_tests {
+    use super::*;
+    use std::fs;
+
+    fn fixture(root: &Path, count: usize) -> (Vec<Task>, Vec<TaskResult>) {
+        let tasks = (0..count)
+            .map(|i| {
+                serde_json::from_value(serde_json::json!({
+                    "id": format!("task-{i}"), "program": "/bin/true", "cwd": root
+                }))
+                .unwrap()
+            })
+            .collect::<Vec<Task>>();
+        let results = tasks
+            .iter()
+            .enumerate()
+            .map(|(i, task)| TaskResult {
+                id: task.id.clone(),
+                status: Status::Pending,
+                exit_code: None,
+                error: None,
+                duration_ms: 0,
+                stdout: root.join(format!("{i}.stdout")),
+                stderr: root.join(format!("{i}.stderr")),
+                probe_logs: None,
+                cache: crate::cache::CacheResult::disabled(),
+                wait_reason: None,
+            })
+            .collect();
+        (tasks, results)
+    }
+
+    #[test]
+    fn terminal_backlogs_and_later_task_output_are_drained_without_replay() {
+        let root = tempfile::tempdir().unwrap();
+        let (tasks, mut results) = fixture(root.path(), 2);
+        results[0].probe_logs = Some(crate::service::ProbeLogs {
+            stdout: root.path().join("probe.stdout"),
+            stderr: root.path().join("probe.stderr"),
+        });
+        let path = root.path().join("events.jsonl");
+        let mut journal = Journal::new(&path, &tasks).unwrap();
+        journal.update(&results, &[0, 1], false).unwrap();
+        // More than a tick's budget on all streams; terminal does not mean drained.
+        let large = "x".repeat(150_000);
+        for path in [
+            &results[0].stdout,
+            &results[0].stderr,
+            &results[0].probe_logs.as_ref().unwrap().stdout,
+            &results[0].probe_logs.as_ref().unwrap().stderr,
+        ] {
+            fs::write(path, &large).unwrap();
+        }
+        results[0].status = Status::Succeeded;
+        journal.update(&results, &[0, 1], false).unwrap();
+        results[1].status = Status::Running;
+        fs::write(&results[1].stdout, "first").unwrap();
+        journal.update(&results, &[0, 1], false).unwrap();
+        OpenOptions::new()
+            .append(true)
+            .open(&results[1].stdout)
+            .unwrap()
+            .write_all(b"second")
+            .unwrap();
+        results[1].status = Status::Succeeded;
+        journal.update(&results, &[0, 1], false).unwrap();
+        // Even a stream already observed at terminal EOF is rechecked at finish.
+        OpenOptions::new()
+            .append(true)
+            .open(&results[0].stdout)
+            .unwrap()
+            .write_all(b"late")
+            .unwrap();
+        journal.update(&results, &[0, 1], true).unwrap();
+        journal.update(&results, &[0, 1], true).unwrap();
+        journal.finish(true).unwrap();
+        let mut captured = std::collections::BTreeMap::<(String, String), String>::new();
+        for line in fs::read_to_string(path).unwrap().lines() {
+            let event: Event = serde_json::from_str(line).unwrap();
+            if let EventKind::Log { id, stream, text } = event.kind {
+                captured.entry((id, stream)).or_default().push_str(&text);
+            }
+        }
+        for stream in ["stdout", "stderr", "probe_stdout", "probe_stderr"] {
+            let expected = if stream == "stdout" {
+                format!("{large}late")
+            } else {
+                large.clone()
+            };
+            let actual = captured.get(&("task-0".into(), stream.into())).unwrap();
+            assert!(
+                actual == &expected,
+                "{stream} bytes differ: {} vs {}",
+                actual.len(),
+                expected.len()
+            );
+        }
+        assert_eq!(
+            captured.get(&("task-1".into(), "stdout".into())).unwrap(),
+            "firstsecond"
+        );
+        assert_eq!(captured.len(), 5);
+    }
+
+    #[test]
+    #[ignore = "release-only journal polling benchmark; no timing threshold"]
+    fn inactive_task_polling_benchmark() {
+        let root = tempfile::tempdir().unwrap();
+        let (tasks, mut results) = fixture(root.path(), 2000);
+        for result in results.iter_mut().take(1000) {
+            result.status = Status::Succeeded;
+            fs::write(&result.stdout, "").unwrap();
+            fs::write(&result.stderr, "").unwrap();
+        }
+        let order = (0..tasks.len()).collect::<Vec<_>>();
+        let mut journal = Journal::new(&root.path().join("events.jsonl"), &tasks).unwrap();
+        journal.update(&results, &order, false).unwrap();
+        for _ in 0..5 {
+            let started = Instant::now();
+            for _ in 0..20 {
+                journal.update(&results, &order, false).unwrap();
+            }
+            eprintln!(
+                "inactive_task_polling seconds={:.6}",
+                started.elapsed().as_secs_f64()
+            );
         }
     }
 }

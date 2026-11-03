@@ -77,7 +77,10 @@ milestones do not establish a claim of being the fastest engine.
    dependency chains, independent tasks, bounded parallelism, 1 MiB logs, and
    cold/warm artifact caching with outcome checks and machine-readable samples.
    Extend measurements to cancellation, large DAGs, services, server throughput,
-   and competing engines; optimize based on measured bottlenecks.
+   and competing engines; optimize based on measured bottlenecks. Journal polling now
+   skips pending-task files and terminal streams already at EOF on ordinary ticks,
+   while preserving active streams, bounded backlog reads and a final EOF recheck.
+   An opt-in release microbenchmark measures inactive-task polling separately.
 8. Improve UX for local/server workflows: concise actionable errors, attach to
    running jobs, inspect task logs/results, explain cache decisions, and sensible
    zero-daemon local defaults.
