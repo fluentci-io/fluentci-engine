@@ -25,6 +25,8 @@ pub fn exec(
         resources: vec![],
         shared_resources: vec![],
         package_install: None,
+        file_operation: None,
+        env_files: vec![],
         package_environment: vec![],
         resource_wait_timeout_ms: None,
         timeout_ms: None,
@@ -143,6 +145,176 @@ pub fn resource(mut task: Task, name: impl Into<String>) -> Task {
         task.resources.push(name);
     }
     task
+}
+
+/// Construct a native file task without performing IO.
+pub fn file_task(
+    id: impl Into<String>,
+    operation: crate::files::Operation,
+    cwd: impl Into<PathBuf>,
+) -> Task {
+    let mut task = exec(id, "", vec![], cwd);
+    task.file_operation = Some(operation);
+    task
+}
+pub fn env_file(mut task: Task, path: impl Into<PathBuf>) -> Task {
+    task.env_files.push(path.into());
+    task
+}
+pub fn read_text(
+    id: impl Into<String>,
+    path: PathBuf,
+    limit_bytes: u64,
+    cwd: impl Into<PathBuf>,
+) -> Task {
+    file_task(
+        id,
+        crate::files::Operation::ReadText { path, limit_bytes },
+        cwd,
+    )
+}
+pub fn read_bytes(
+    id: impl Into<String>,
+    path: PathBuf,
+    limit_bytes: u64,
+    cwd: impl Into<PathBuf>,
+) -> Task {
+    file_task(
+        id,
+        crate::files::Operation::ReadBytes { path, limit_bytes },
+        cwd,
+    )
+}
+pub fn write_text(
+    id: impl Into<String>,
+    path: PathBuf,
+    text: String,
+    overwrite: bool,
+    cwd: impl Into<PathBuf>,
+) -> Task {
+    file_task(
+        id,
+        crate::files::Operation::WriteText {
+            path,
+            text,
+            overwrite,
+        },
+        cwd,
+    )
+}
+pub fn write_bytes(
+    id: impl Into<String>,
+    path: PathBuf,
+    bytes: Vec<u8>,
+    overwrite: bool,
+    cwd: impl Into<PathBuf>,
+) -> Task {
+    file_task(
+        id,
+        crate::files::Operation::WriteBytes {
+            path,
+            bytes,
+            overwrite,
+        },
+        cwd,
+    )
+}
+pub fn copy_file(
+    id: impl Into<String>,
+    source: PathBuf,
+    destination: PathBuf,
+    overwrite: bool,
+    cwd: impl Into<PathBuf>,
+) -> Task {
+    file_task(
+        id,
+        crate::files::Operation::CopyFile {
+            source,
+            destination,
+            overwrite,
+        },
+        cwd,
+    )
+}
+pub fn copy_tree(
+    id: impl Into<String>,
+    source: PathBuf,
+    destination: PathBuf,
+    overwrite: bool,
+    cwd: impl Into<PathBuf>,
+) -> Task {
+    file_task(
+        id,
+        crate::files::Operation::CopyTree {
+            source,
+            destination,
+            overwrite,
+        },
+        cwd,
+    )
+}
+pub fn move_path(
+    id: impl Into<String>,
+    source: PathBuf,
+    destination: PathBuf,
+    overwrite: bool,
+    cwd: impl Into<PathBuf>,
+) -> Task {
+    file_task(
+        id,
+        crate::files::Operation::Move {
+            source,
+            destination,
+            overwrite,
+        },
+        cwd,
+    )
+}
+pub fn mkdir(id: impl Into<String>, path: PathBuf, parents: bool, cwd: impl Into<PathBuf>) -> Task {
+    file_task(id, crate::files::Operation::Mkdir { path, parents }, cwd)
+}
+pub fn remove(
+    id: impl Into<String>,
+    path: PathBuf,
+    recursive: bool,
+    missing_ok: bool,
+    cwd: impl Into<PathBuf>,
+) -> Task {
+    file_task(
+        id,
+        crate::files::Operation::Remove {
+            path,
+            recursive,
+            missing_ok,
+        },
+        cwd,
+    )
+}
+pub fn stat(id: impl Into<String>, path: PathBuf, cwd: impl Into<PathBuf>) -> Task {
+    file_task(id, crate::files::Operation::Stat { path }, cwd)
+}
+pub fn exists(id: impl Into<String>, path: PathBuf, cwd: impl Into<PathBuf>) -> Task {
+    file_task(id, crate::files::Operation::Exists { path }, cwd)
+}
+pub fn list(id: impl Into<String>, path: PathBuf, cwd: impl Into<PathBuf>) -> Task {
+    file_task(id, crate::files::Operation::List { path }, cwd)
+}
+pub fn glob(id: impl Into<String>, pattern: String, cwd: impl Into<PathBuf>) -> Task {
+    file_task(id, crate::files::Operation::Glob { pattern }, cwd)
+}
+pub fn hash(id: impl Into<String>, path: PathBuf, cwd: impl Into<PathBuf>) -> Task {
+    file_task(id, crate::files::Operation::Hash { path }, cwd)
+}
+pub fn chmod(id: impl Into<String>, path: PathBuf, mode: u32, cwd: impl Into<PathBuf>) -> Task {
+    file_task(id, crate::files::Operation::Chmod { path, mode }, cwd)
+}
+pub fn symlink(
+    id: impl Into<String>,
+    target: PathBuf,
+    path: PathBuf,
+    cwd: impl Into<PathBuf>,
+) -> Task {
+    file_task(id, crate::files::Operation::Symlink { target, path }, cwd)
 }
 
 #[cfg(test)]

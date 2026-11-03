@@ -342,9 +342,6 @@ impl CachePolicy {
                 return Err("toolchain files must be absolute file paths without '..'".into());
             }
         }
-        if self.outputs.is_empty() {
-            return Err("cache policy requires declared outputs".into());
-        }
         for path in self.inputs.iter().chain(&self.outputs) {
             if !safe_relative(path) {
                 return Err(format!(
@@ -623,7 +620,9 @@ pub(crate) fn prepare_cancellable(
     check_cancel(cancel)?;
     let policy = task.cache.as_ref().ok_or("missing cache policy")?;
     policy.validate()?;
-    let executable = if Path::new(&task.program).is_absolute() {
+    let executable = if task.file_operation.is_some() {
+        PathBuf::new()
+    } else if Path::new(&task.program).is_absolute() {
         PathBuf::from(&task.program)
     } else if Path::new(&task.program).components().count() > 1 {
         task.cwd.join(&task.program)
@@ -650,13 +649,20 @@ pub(crate) fn prepare_cancellable(
         "command".into(),
         encoded_digest(&(&task.program, &task.args))?,
     );
-    components.insert("executable".into(), file_digest(&executable, cancel)?);
-    components.insert(
-        "executable_mode".into(),
-        encoded_digest(&mode(
-            &fs::metadata(&executable).map_err(|e| e.to_string())?,
-        ))?,
-    );
+    if let Some(operation) = &task.file_operation {
+        components.insert(
+            "file_operation".into(),
+            encoded_digest(&("fluentci-files-v1", operation))?,
+        );
+    } else {
+        components.insert("executable".into(), file_digest(&executable, cancel)?);
+        components.insert(
+            "executable_mode".into(),
+            encoded_digest(&mode(
+                &fs::metadata(&executable).map_err(|e| e.to_string())?,
+            ))?,
+        );
+    }
     components.insert(
         "inputs".into(),
         encoded_digest(&snapshot(&task.cwd, &policy.inputs, cancel)?)?,
@@ -807,10 +813,11 @@ impl Prepared {
         #[cfg(all(test, unix))]
         crate::cache_worker_tests::pause_save(&task.cwd, &self.cancel)?;
         let policy = task.cache.as_ref().ok_or("missing cache policy")?;
-        if file_digest(&self.executable, &self.cancel)? != self.components["executable"]
-            || encoded_digest(&mode(
-                &fs::metadata(&self.executable).map_err(|e| e.to_string())?,
-            ))? != self.components["executable_mode"]
+        if task.file_operation.is_none()
+            && (file_digest(&self.executable, &self.cancel)? != self.components["executable"]
+                || encoded_digest(&mode(
+                    &fs::metadata(&self.executable).map_err(|e| e.to_string())?,
+                ))? != self.components["executable_mode"])
         {
             return Err("executable changed during execution; action was not cached".into());
         }

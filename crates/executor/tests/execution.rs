@@ -14,6 +14,8 @@ fn task(id: &str, script: &str, cwd: &Path, needs: &[&str]) -> Task {
         resources: vec![],
         shared_resources: vec![],
         package_install: None,
+        file_operation: None,
+        env_files: vec![],
         package_environment: vec![],
         resource_wait_timeout_ms: None,
         timeout_ms: Some(3000),

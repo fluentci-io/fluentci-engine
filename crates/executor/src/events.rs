@@ -266,6 +266,7 @@ mod polling_tests {
                 status: Status::Pending,
                 exit_code: None,
                 signal: None,
+                file_result: None,
                 error: None,
                 duration_ms: 0,
                 stdout: root.join(format!("{i}.stdout")),

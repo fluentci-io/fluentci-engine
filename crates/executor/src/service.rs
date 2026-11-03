@@ -119,7 +119,7 @@ impl Supervisor {
         };
         let phase = if self.ready { "health" } else { "readiness" };
         if let Some(probe) = &mut self.probe {
-            let outcome = match probe.child.try_wait() {
+            let outcome = match probe.child.as_mut().expect("probe process").try_wait() {
                 Ok(Some(status)) if status.success() => Some((Ok(()), "succeeded", status.code())),
                 Ok(Some(status)) => Some((
                     Err(format!("{phase} probe exited with {status}")),
@@ -211,7 +211,8 @@ impl Supervisor {
                     self.probe_span = Some(span);
                     self.probe = Some(Running {
                         index: usize::MAX,
-                        child,
+                        child: Some(child),
+                        native: None,
                         started: Instant::now(),
                         attempt_started: Instant::now(),
                         leases: None,

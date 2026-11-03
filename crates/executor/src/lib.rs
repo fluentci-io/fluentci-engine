@@ -3,6 +3,7 @@
 pub mod cache;
 pub mod diagnostics;
 pub mod events;
+pub mod files;
 pub mod graph;
 pub mod matrix;
 pub mod packages;
@@ -43,6 +44,10 @@ pub struct Task {
     #[serde(default)]
     pub args: Vec<String>,
     pub cwd: PathBuf,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_operation: Option<files::Operation>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub env_files: Vec<PathBuf>,
     #[serde(default)]
     pub env: BTreeMap<String, String>,
     /// Exclusive resource names, e.g. "checkout:app" or "cache:cargo".
@@ -170,6 +175,8 @@ pub struct TaskResult {
     pub exit_code: Option<i32>,
     #[serde(default)]
     pub signal: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_result: Option<serde_json::Value>,
     pub error: Option<String>,
     pub duration_ms: u128,
     pub stdout: PathBuf,
@@ -218,7 +225,8 @@ impl RunResult {
 
 struct Running {
     index: usize,
-    child: Child,
+    child: Option<Child>,
+    native: Option<worker::Worker<()>>,
     started: Instant,
     attempt_started: Instant,
     leases: Option<resources::Leases>,
@@ -227,12 +235,18 @@ struct Running {
 impl Running {
     /// Children share a dedicated Unix process group so cancellation includes subprocesses.
     fn terminate(&mut self) {
-        #[cfg(unix)]
-        unsafe {
-            libc::kill(-(self.child.id() as i32), libc::SIGKILL);
+        if let Some(worker) = self.native.take() {
+            worker.cancel();
+            drop(worker); // Join before releasing leases or publishing completion.
         }
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        if let Some(child) = &mut self.child {
+            #[cfg(unix)]
+            unsafe {
+                libc::kill(-(child.id() as i32), libc::SIGKILL);
+            }
+            let _ = child.kill();
+            let _ = child.wait();
+        }
     }
 }
 impl Drop for Running {
@@ -331,6 +345,10 @@ impl Plan {
         }
         for task in &self.tasks {
             task.policy.validate(task)?;
+            files::validate_env(task)?;
+            if let Some(operation) = &task.file_operation {
+                operation.validate(task)?;
+            }
             if task
                 .resources
                 .iter()
@@ -362,7 +380,7 @@ impl Plan {
                     self.cache_dir.as_ref().expect("checked cache directory"),
                 )?;
             }
-            if task.program.is_empty() {
+            if task.program.is_empty() && task.file_operation.is_none() {
                 return Err(format!("task {} has no program", task.id));
             }
             if !task.cwd.is_absolute() || !task.cwd.is_dir() {
@@ -509,6 +527,7 @@ impl Plan {
                 status: Status::Pending,
                 exit_code: None,
                 signal: None,
+                file_result: None,
                 error: None,
                 duration_ms: 0,
                 stdout: run_dir.join(format!("{i}.stdout")),
@@ -594,7 +613,12 @@ impl Plan {
                             results[i].cache.reason = found.reason;
                             if found.hit {
                                 results[i].status = Status::Succeeded;
-                                results[i].exit_code = Some(0);
+                                if self.tasks[i].file_operation.is_some() {
+                                    results[i].file_result =
+                                        Some(files::result(&results[i].stdout)?);
+                                } else {
+                                    results[i].exit_code = Some(0);
+                                }
                                 results[i].cache.outcome = "hit".into();
                                 if self.tasks[i].policy.products() {
                                     let task = resolved_tasks[i].clone();
@@ -630,16 +654,18 @@ impl Plan {
                                 results[i].cache.outcome = "cancelled".into();
                             } else {
                                 results[i].cache.outcome = "miss".into();
-                                match spawn(
+                                match start(
                                     &resolved_tasks[i],
                                     &results[i],
                                     &environment,
                                     Some(&found.action.executable),
+                                    &wake,
                                 ) {
-                                    Ok(child) => {
+                                    Ok((child, native)) => {
                                         running.push(Running {
                                             index: i,
                                             child,
+                                            native,
                                             started: lookup.started,
                                             attempt_started: Instant::now(),
                                             leases: lookup.leases.take(),
@@ -743,7 +769,7 @@ impl Plan {
                             .is_some_and(|shutdown| shutdown.status != Status::Succeeded)
                 });
                 let outcome = if let Some(config) = &self.tasks[i].service {
-                    let child_exit = running[n].child.try_wait();
+                    let child_exit = running[n].child.as_mut().expect("process task").try_wait();
                     if let Ok(Some(exit)) = child_exit {
                         let (code, signal) = diagnostics::process_exit(&exit);
                         results[i].signal = signal;
@@ -835,11 +861,16 @@ impl Plan {
                             {
                                 #[cfg(unix)]
                                 unsafe {
-                                    libc::kill(-(running[n].child.id() as i32), libc::SIGTERM);
+                                    libc::kill(
+                                        -(running[n].child.as_ref().expect("service process").id()
+                                            as i32),
+                                        libc::SIGTERM,
+                                    );
                                 }
                                 #[cfg(not(unix))]
                                 {
-                                    let _ = running[n].child.kill();
+                                    let _ =
+                                        running[n].child.as_mut().expect("service process").kill();
                                 }
                                 shutdown.started = Some(Instant::now());
                             }
@@ -871,8 +902,19 @@ impl Plan {
                         None,
                         None,
                     ))
+                } else if let Some(worker) = &mut running[n].native {
+                    worker.poll().map(|outcome| match outcome {
+                        Ok(()) => match files::result(&results[i].stdout) {
+                            Ok(value) => {
+                                results[i].file_result = Some(value);
+                                (Status::Succeeded, None, None)
+                            }
+                            Err(error) => (Status::Failed, None, Some(error)),
+                        },
+                        Err(error) => (Status::Failed, None, Some(error)),
+                    })
                 } else {
-                    match running[n].child.try_wait() {
+                    match running[n].child.as_mut().expect("process task").try_wait() {
                         Ok(Some(status)) => {
                             let (code, signal) = diagnostics::process_exit(&status);
                             results[i].signal = signal;
@@ -904,7 +946,9 @@ impl Plan {
                         supervisor.stop();
                     }
                     if results[i].status == Status::TimedOut {
-                        results[i].exit_code = Some(124);
+                        if self.tasks[i].file_operation.is_none() {
+                            results[i].exit_code = Some(124);
+                        }
                         let message = results[i].error.take().unwrap_or_else(|| {
                             format!(
                                 "task timed out after {} ms",
@@ -917,7 +961,9 @@ impl Plan {
                             &results[i].stdout,
                         ));
                     } else if results[i].status == Status::Cancelled {
-                        results[i].exit_code = Some(130);
+                        if self.tasks[i].file_operation.is_none() {
+                            results[i].exit_code = Some(130);
+                        }
                         results[i]
                             .error
                             .get_or_insert_with(|| "exit code 130: task cancelled".into());
@@ -971,9 +1017,10 @@ impl Plan {
                     let retry = self.tasks[i].policy.retry.as_ref().filter(|policy| {
                         results[i].status == Status::Failed
                             && results[i].signal.is_none()
-                            && code.is_some_and(|code| {
+                            && (code.is_some_and(|code| {
                                 policy.exit_codes.is_empty() || policy.exit_codes.contains(&code)
-                            })
+                            }) || self.tasks[i].file_operation.is_some()
+                                && policy.exit_codes.is_empty())
                             && results[i].attempts.len() < policy.max_attempts as usize
                             && !cancel.is_cancelled()
                             && !stalled
@@ -1187,7 +1234,9 @@ impl Plan {
                     results[i].exit_code = None;
                     results[i].signal = None;
                     results[i].error = None;
-                    resolved_tasks[i] = match workflow::resolve(&self.tasks[i], &results) {
+                    resolved_tasks[i] = match files::resolve_env(&self.tasks[i])
+                        .and_then(|task| workflow::resolve(&task, &results))
+                    {
                         Ok(task) => task,
                         Err(error) => {
                             results[i].status = Status::Failed;
@@ -1247,13 +1296,14 @@ impl Plan {
                         continue;
                     }
                     let action = retry_actions[i].take();
-                    match spawn(
+                    match start(
                         &resolved_tasks[i],
                         &results[i],
                         &environment,
                         action.as_ref().map(|a| a.executable.as_path()),
+                        &wake,
                     ) {
-                        Ok(child) => {
+                        Ok((child, native)) => {
                             resources.extend(self.tasks[i].resources.iter().cloned());
                             for resource in &self.tasks[i].shared_resources {
                                 *readers.entry(resource.clone()).or_default() += 1;
@@ -1262,6 +1312,7 @@ impl Plan {
                             running.push(Running {
                                 index: i,
                                 child,
+                                native,
                                 started,
                                 attempt_started: Instant::now(),
                                 leases: Some(task_leases),
@@ -1372,36 +1423,59 @@ fn service_ancestors(graph: &DependencyGraph, tasks: &[Task]) -> Vec<HashSet<usi
     ancestors
 }
 
+fn log_output(path: &Path, append: bool) -> std::io::Result<File> {
+    let mut options = OpenOptions::new();
+    options.write(true);
+    if append {
+        options.append(true);
+    } else {
+        options.create_new(true);
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options
+            .mode(0o600)
+            .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+    }
+    let file = options.open(path)?;
+    if !file.metadata()?.is_file() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "log is not a regular file",
+        ));
+    }
+    Ok(file)
+}
+
+fn start(
+    task: &Task,
+    result: &TaskResult,
+    inherited: &BTreeMap<OsString, OsString>,
+    executable: Option<&Path>,
+    wake: &worker::Wake,
+) -> std::io::Result<(Option<Child>, Option<worker::Worker<()>>)> {
+    if task.file_operation.is_some() {
+        let stdout = log_output(&result.stdout, !result.attempts.is_empty())?;
+        stdout.set_len(0)?;
+        let stderr = log_output(&result.stderr, !result.attempts.is_empty())?;
+        let task = task.clone();
+        let worker = worker::Worker::spawn(wake, move |cancel| {
+            files::execute(&task, stdout, stderr, &cancel)
+        })
+        .map_err(std::io::Error::other)?;
+        Ok((None, Some(worker)))
+    } else {
+        spawn(task, result, inherited, executable).map(|child| (Some(child), None))
+    }
+}
+
 fn spawn(
     task: &Task,
     result: &TaskResult,
     inherited: &BTreeMap<OsString, OsString>,
     executable: Option<&Path>,
 ) -> std::io::Result<Child> {
-    fn output(path: &Path, append: bool) -> std::io::Result<File> {
-        let mut options = OpenOptions::new();
-        options.write(true);
-        if append {
-            options.append(true);
-        } else {
-            options.create_new(true);
-        }
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            options
-                .mode(0o600)
-                .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
-        }
-        let file = options.open(path)?;
-        if !file.metadata()?.is_file() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "log is not a regular file",
-            ));
-        }
-        Ok(file)
-    }
     let mut command = Command::new(executable.unwrap_or_else(|| Path::new(&task.program)));
     command
         .args(&task.args)
@@ -1410,8 +1484,8 @@ fn spawn(
         .envs(inherited)
         .envs(&task.env)
         .stdin(Stdio::null())
-        .stdout(output(&result.stdout, !result.attempts.is_empty())?)
-        .stderr(output(&result.stderr, !result.attempts.is_empty())?);
+        .stdout(log_output(&result.stdout, !result.attempts.is_empty())?)
+        .stderr(log_output(&result.stderr, !result.attempts.is_empty())?);
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;
