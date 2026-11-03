@@ -208,7 +208,8 @@ jobs:
           printf '%s\n' 'https://distfiles.macports.org/ports.tar.gz [default]' | sudo -n tee /opt/local/etc/macports/sources.conf
           sudo -n /usr/sbin/installer -pkg "$package" -target /
           /opt/local/bin/port version
-          sudo -n /opt/local/bin/port -N sync
+      - name: Synchronize and verify the native MacPorts catalog as the install user
+        run: sudo -n env HOME=/var/root /bin/sh .github/scripts/prepare-macports-catalog.sh
       - name: Install pinned Rust backend binary
         if: matrix.backend == 'rust'
         run: |
@@ -229,6 +230,17 @@ jobs:
           sudo -n install -d /usr/local/bin
           sudo -n install -m 755 "$extract/port" /usr/local/bin/port
           /usr/local/bin/port version
+      - name: Verify jq lookup through the selected backend before building tests
+        env:
+          MACPORTS_BACKEND: ${{ matrix.backend }}
+        run: |
+          set -euo pipefail
+          case "$MACPORTS_BACKEND" in
+            native) binary=/opt/local/bin/port ;;
+            rust) binary=/usr/local/bin/port ;;
+            *) echo 'Unknown MacPorts backend' >&2; exit 1 ;;
+          esac
+          sudo -n env HOME=/var/root "$binary" -q info jq
       - name: Build release native-install tests without elevation
         run: |
           set -euo pipefail

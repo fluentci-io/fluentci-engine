@@ -60,3 +60,9 @@ OpenBSD compiler comes from its native package repository and uses a compatible
 OpenBSD-only runtime dependency selection.
 All vendored Rust sources and manifests participate in source cache keys, including
 the pinned Wasmtime backport used for NetBSD. See [BSD releases](BSD-RELEASES.md).
+
+MacPorts native-install jobs verify `jq` lookup under the same root/HOME context
+as installation before compiling tests. A missing catalog entry after ordinary
+HTTPS sync triggers one forced signed snapshot refresh and index regeneration;
+a failed recheck stops setup. The selected native/Rust backend is then queried
+explicitly, so catalog failures are reported before a Rust test build.
