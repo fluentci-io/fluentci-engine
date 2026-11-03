@@ -15,7 +15,7 @@ version = "0.4.12"
 [dependencies]
 fluentci-executor = { path = "../executor", version = "0.1.0" }
 serde_json = "1.0"
-crossterm = "0.23.2"
+crossterm = { workspace = true }
 anyhow = "1.0.81"
 clap = "3.2.20"
 extism = { workspace = true }
