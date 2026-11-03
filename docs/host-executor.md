@@ -314,11 +314,23 @@ predecessor spans. Execution JSONL events carry matching trace/span IDs when a
 provider is enabled, including log events. Raw log text, command arguments, working
 directories, and environment values are not exported as span attributes.
 
+Each readiness and health probe attempt creates a `pipeline.service.probe` child
+span under its service's step. Attributes include `pipeline.probe.phase`,
+`pipeline.probe.outcome`, `pipeline.probe.duration_ms`, and `process.exit.code`
+when available. Outcomes distinguish success, nonzero exit, timeout, spawn/log/wait
+errors, and cancellation. Active probe spans end after process-group cleanup,
+including service exit and executor error paths. Probe commands, output, paths,
+environment values, and OS error text are not exported. Probe log journal events
+remain correlated to the owning step; they do not acquire a new wire format.
+Recurring probes can produce many spans on long runs; the host controls sampling
+and exporter queue limits.
+
 The library uses the host's global OpenTelemetry provider and current parent context;
 it does not initialize or shut down an exporter. The CLI flushes its exporter on a
 blocking worker before exiting, including on failed runs. Exporters should use bounded
-batch processing. Spans currently cover the host executor; metrics, remote context propagation, and server run API integration remain follow-up
-work. Queue duration includes scheduler/dependency waiting, with polling granularity.
+batch processing. The authenticated run API also propagates submitted W3C trace
+context into execution spans. Metrics remain follow-up work. Queue duration
+includes scheduler/dependency waiting, with polling granularity.
 
 
 ### Long-running services

@@ -51,7 +51,14 @@ fn each_step_has_parented_correlated_spans_without_sensitive_command_data() {
         .unwrap();
     assert!(!result.success());
     let spans = capture.0.lock().unwrap();
-    assert_eq!(spans.len(), 6);
+    assert!(spans.iter().any(|s| s.name == "pipeline.service.probe"));
+    assert_eq!(
+        spans
+            .iter()
+            .filter(|s| s.name != "pipeline.service.probe")
+            .count(),
+        6
+    );
     let run = spans.iter().find(|s| s.name == "pipeline.run").unwrap();
     assert_eq!(run.parent_span_id, parent.span().span_context().span_id());
     let steps: Vec<_> = spans.iter().filter(|s| s.name == "pipeline.step").collect();

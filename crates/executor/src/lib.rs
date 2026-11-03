@@ -426,7 +426,13 @@ impl Plan {
         let ancestors = service_ancestors(&graph, &self.tasks);
         let mut supervisors: Vec<_> = results
             .iter()
-            .map(|result| result.probe_logs.clone().map(service::Supervisor::new))
+            .enumerate()
+            .map(|(i, result)| {
+                result
+                    .probe_logs
+                    .clone()
+                    .map(|logs| service::Supervisor::new(logs, journal.step_context(i)))
+            })
             .collect();
         let mut shutdowns: Vec<Option<service::Shutdown>> =
             (0..self.tasks.len()).map(|_| None).collect();

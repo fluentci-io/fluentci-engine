@@ -65,6 +65,9 @@ impl Telemetry {
             finished: false,
         }
     }
+    pub fn step_context(&self, index: usize) -> Context {
+        self.steps[index].clone()
+    }
     pub fn ids(&self, index: Option<usize>) -> (Option<String>, Option<String>) {
         let cx = index.map_or(&self.run, |i| &self.steps[i]);
         let span = cx.span();
@@ -165,5 +168,52 @@ impl Drop for Telemetry {
                 .set_status(SpanStatus::error("executor interrupted"));
             self.run.span().end();
         }
+    }
+}
+
+/// One supervised probe attempt. Attributes deliberately omit command, paths,
+/// environment, output, and OS error text. Dropping an unfinished attempt records
+/// cancellation, including executor error/unwind paths.
+pub(crate) struct ProbeSpan {
+    context: Option<Context>,
+    started: Instant,
+}
+impl ProbeSpan {
+    pub fn new(parent: &Context, phase: &'static str) -> Self {
+        let span = global::tracer("fluentci-executor")
+            .start_with_context("pipeline.service.probe", parent);
+        let context = parent.with_span(span);
+        context
+            .span()
+            .set_attribute(KeyValue::new("pipeline.probe.phase", phase));
+        Self {
+            context: Some(context),
+            started: Instant::now(),
+        }
+    }
+
+    pub fn finish(&mut self, outcome: &'static str, exit_code: Option<i32>) {
+        if let Some(context) = self.context.take() {
+            let span = context.span();
+            span.set_attribute(KeyValue::new("pipeline.probe.outcome", outcome));
+            span.set_attribute(KeyValue::new(
+                "pipeline.probe.duration_ms",
+                self.started.elapsed().as_millis().min(i64::MAX as u128) as i64,
+            ));
+            if let Some(code) = exit_code {
+                span.set_attribute(KeyValue::new("process.exit.code", code as i64));
+            }
+            span.set_status(if outcome == "succeeded" {
+                SpanStatus::Ok
+            } else {
+                SpanStatus::error(outcome)
+            });
+            span.end();
+        }
+    }
+}
+impl Drop for ProbeSpan {
+    fn drop(&mut self) {
+        self.finish("cancelled", None);
     }
 }

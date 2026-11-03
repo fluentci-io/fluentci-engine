@@ -1,5 +1,5 @@
 //! Readiness and health probes run as supervised children, never in the scheduler thread.
-use crate::{Running, Status, Task};
+use crate::{telemetry::ProbeSpan, Running, Status, Task};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
@@ -82,6 +82,8 @@ pub(crate) enum Health {
 }
 pub(crate) struct Supervisor {
     probe: Option<Running>,
+    probe_span: Option<ProbeSpan>,
+    context: opentelemetry::Context,
     next: Instant,
     failures: usize,
     last_failure: Option<String>,
@@ -89,9 +91,11 @@ pub(crate) struct Supervisor {
     logs: ProbeLogs,
 }
 impl Supervisor {
-    pub fn new(logs: ProbeLogs) -> Self {
+    pub fn new(logs: ProbeLogs, context: opentelemetry::Context) -> Self {
         Self {
             probe: None,
+            probe_span: None,
+            context,
             next: Instant::now(),
             failures: 0,
             last_failure: None,
@@ -104,6 +108,7 @@ impl Supervisor {
     }
     pub fn stop(&mut self) {
         self.probe.take();
+        self.probe_span.take();
     }
     pub fn poll(&mut self, task: &Task, inherited: &BTreeMap<OsString, OsString>) -> Health {
         let config = task.service.as_ref().expect("service configuration");
@@ -115,19 +120,34 @@ impl Supervisor {
         let phase = if self.ready { "health" } else { "readiness" };
         if let Some(probe) = &mut self.probe {
             let outcome = match probe.child.try_wait() {
-                Ok(Some(status)) if status.success() => Some(Ok(())),
-                Ok(Some(status)) => Some(Err(format!("{phase} probe exited with {status}"))),
+                Ok(Some(status)) if status.success() => Some((Ok(()), "succeeded", status.code())),
+                Ok(Some(status)) => Some((
+                    Err(format!("{phase} probe exited with {status}")),
+                    "failed",
+                    status.code(),
+                )),
                 Ok(None) if probe.started.elapsed() < Duration::from_millis(check.timeout_ms) => {
                     None
                 }
-                Ok(None) => Some(Err(format!(
-                    "{phase} probe timed out after {} ms",
-                    check.timeout_ms
-                ))),
-                Err(error) => Some(Err(format!("could not wait for {phase} probe: {error}"))),
+                Ok(None) => Some((
+                    Err(format!(
+                        "{phase} probe timed out after {} ms",
+                        check.timeout_ms
+                    )),
+                    "timed_out",
+                    None,
+                )),
+                Err(error) => Some((
+                    Err(format!("could not wait for {phase} probe: {error}")),
+                    "wait_error",
+                    None,
+                )),
             };
-            if let Some(outcome) = outcome {
+            if let Some((outcome, label, code)) = outcome {
                 self.probe.take();
+                if let Some(mut span) = self.probe_span.take() {
+                    span.finish(label, code);
+                }
                 let next_check = if outcome.is_ok() {
                     config.health.as_ref().unwrap_or(&config.readiness)
                 } else {
@@ -156,6 +176,7 @@ impl Supervisor {
                 }
             }
         } else if Instant::now() >= self.next {
+            let mut span = ProbeSpan::new(&self.context, phase);
             let open = |path: &PathBuf| -> Result<_, std::io::Error> {
                 let mut file = OpenOptions::new().create(true).append(true).open(path)?;
                 writeln!(file, "--- {phase} probe ---")?;
@@ -166,7 +187,8 @@ impl Supervisor {
             let (stdout, stderr) = match streams {
                 Ok(streams) => streams,
                 Err(error) => {
-                    return Health::Failed(format!("could not open {phase} probe logs: {error}"))
+                    span.finish("log_error", None);
+                    return Health::Failed(format!("could not open {phase} probe logs: {error}"));
                 }
             };
             let mut command = Command::new(&check.program);
@@ -186,6 +208,7 @@ impl Supervisor {
             }
             match command.spawn() {
                 Ok(child) => {
+                    self.probe_span = Some(span);
                     self.probe = Some(Running {
                         index: usize::MAX,
                         child,
@@ -195,11 +218,19 @@ impl Supervisor {
                     })
                 }
                 Err(error) => {
-                    return Health::Failed(format!("could not spawn {phase} probe: {error}"))
+                    span.finish("spawn_error", None);
+                    return Health::Failed(format!("could not spawn {phase} probe: {error}"));
                 }
             }
         }
         Health::Waiting
+    }
+}
+
+impl Drop for Supervisor {
+    fn drop(&mut self) {
+        // Child/process-group cleanup precedes ending the active probe span.
+        self.stop();
     }
 }
 

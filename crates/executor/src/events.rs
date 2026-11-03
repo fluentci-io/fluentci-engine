@@ -85,6 +85,9 @@ impl Journal {
         journal.writer.flush().map_err(|e| e.to_string())?;
         Ok(journal)
     }
+    pub fn step_context(&self, index: usize) -> opentelemetry::Context {
+        self.telemetry.step_context(index)
+    }
     fn emit(&mut self, kind: EventKind) -> Result<(), String> {
         let index = match &kind {
             EventKind::TaskState { id, .. } | EventKind::Log { id, .. } => {

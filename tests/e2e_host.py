@@ -191,12 +191,21 @@ class HostExecution(unittest.TestCase):
             env = {k: v for k, v in os.environ.items() if not k.startswith("OTEL_")}
             env.update(OTEL_EXPORTER_OTLP_ENDPOINT=f"http://127.0.0.1:{server.server_port}/v1/traces",
                        OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf")
-            plan = self.plan([self.task("exported-step", "echo private-log; exit 9"),
+            service = self.task("exported-service", "trap 'exit 0' TERM; while :; do /bin/sleep 0.02; done")
+            service["service"] = dict(readiness=dict(program="/bin/sh", args=["-c", "echo private-probe-output"],
+                                                     interval_ms=10, timeout_ms=1000),
+                                      shutdown_timeout_ms=100)
+            plan = self.plan([service,
+                              self.task("exported-step", "echo private-log; exit 9", ["exported-service"]),
                               self.task("skipped-step", "echo should-not-run", ["exported-step"])])
             result = subprocess.run(self.command(plan), capture_output=True, text=True, env=env, timeout=20)
             self.assertNotEqual(result.returncode, 0)
             data = b"".join(payloads)
             self.assertIn(b"pipeline.run", data)
+            self.assertIn(b"pipeline.service.probe", data)
+            self.assertIn(b"pipeline.probe.phase", data)
+            self.assertIn(b"readiness", data)
+            self.assertNotIn(b"private-probe-output", data)
             self.assertIn(b"exported-step", data)
             self.assertIn(b"skipped-step", data)
             self.assertNotIn(b"private-log", data)
