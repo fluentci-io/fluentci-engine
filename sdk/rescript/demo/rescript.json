@@ -9,11 +9,7 @@
     "in-source": true
   },
   "suffix": ".res.mjs",
-  "bs-dependencies": [
-    "@rescript/core",
+  "dependencies": [
     "rescript-fluentci"
-  ],
-  "bsc-flags": [
-    "-open RescriptCore"
   ]
 }

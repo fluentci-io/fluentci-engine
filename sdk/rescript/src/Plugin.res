@@ -37,7 +37,7 @@ module Devbox = {
   external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
 
   @send
-  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+  external withExec: (t, ~args: array<string>) => t = "withExec"
 
   @send
   external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
@@ -75,7 +75,7 @@ module Devenv = {
   external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
 
   @send
-  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+  external withExec: (t, ~args: array<string>) => t = "withExec"
 
   @send
   external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
@@ -113,7 +113,7 @@ module Envhub = {
   external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
 
   @send
-  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+  external withExec: (t, ~args: array<string>) => t = "withExec"
 
   @send
   external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
@@ -151,7 +151,7 @@ module Flox = {
   external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
 
   @send
-  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+  external withExec: (t, ~args: array<string>) => t = "withExec"
 
   @send
   external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
@@ -192,7 +192,7 @@ module Mise = {
   external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
 
   @send
-  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+  external withExec: (t, ~args: array<string>) => t = "withExec"
 
   @send
   external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
@@ -230,7 +230,7 @@ module Nix = {
   external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
 
   @send
-  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+  external withExec: (t, ~args: array<string>) => t = "withExec"
 
   @send
   external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
@@ -268,7 +268,7 @@ module Pixi = {
   external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
 
   @send
-  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+  external withExec: (t, ~args: array<string>) => t = "withExec"
 
   @send
   external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
@@ -306,7 +306,7 @@ module Pkgx = {
   external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
 
   @send
-  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+  external withExec: (t, ~args: array<string>) => t = "withExec"
 
   @send
   external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
@@ -344,7 +344,7 @@ module Proto = {
   external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
 
   @send
-  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+  external withExec: (t, ~args: array<string>) => t = "withExec"
 
   @send
   external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
@@ -385,7 +385,7 @@ module Hermite = {
   external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
 
   @send
-  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+  external withExec: (t, ~args: array<string>) => t = "withExec"
 
   @send
   external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
@@ -418,7 +418,7 @@ module SecretManager = {
   type t
 
   @send
-  external getSecret: (t, ~name: string) => Belt.Array.t<Secret.t> = "getSecret"
+  external getSecret: (t, ~name: string) => array<Secret.t> = "getSecret"
 
   @send
   external id: t => string = "id"
@@ -480,7 +480,7 @@ module Pipeline = {
   external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
 
   @send
-  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+  external withExec: (t, ~args: array<string>) => t = "withExec"
 
   @send
   external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
@@ -540,7 +540,7 @@ module Directory = {
   external directory: (t, ~path: string) => t = "directory"
 
   @send
-  external entries: t => Belt.Array.t<string> = "entries"
+  external entries: t => array<string> = "entries"
 
   @send
   external envhub: t => Envhub.t = "envhub"
@@ -582,7 +582,7 @@ module Directory = {
   external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
 
   @send
-  external withExec: (t, ~args: Belt.Array.t<string>) => t = "withExec"
+  external withExec: (t, ~args: array<string>) => t = "withExec"
 
   @send
   external withSecretVariable: (t, ~name: string, ~secretID: string, ~secretName: string) => t =
@@ -663,7 +663,7 @@ module Client = {
   external cache: (t, ~key: string) => Cache.t = "cache"
 
   @send
-  external call: (t, ~func: string, ~args: Belt.Array.t<string>) => string = "call"
+  external call: (t, ~func: string, ~args: array<string>) => string = "call"
 
   @send
   external devbox: t => Devbox.t = "devbox"
@@ -732,7 +732,7 @@ module Client = {
   external removeEnv: (t, ~name: string) => unit = "removeEnv"
 
   @send
-  external setEnvs: (t, ~envs: Belt.Map.String.t<string>) => unit = "setEnvs"
+  external setEnvs: (t, ~envs: dict<string>) => unit = "setEnvs"
 
   @send
   external setSecret: (t, ~name: string, ~value: string) => Secret.t = "setSecret"

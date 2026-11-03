@@ -7,7 +7,7 @@ Official ReScript starter template.
 ## Installation
 
 ```sh
-npm install
+npm ci
 ```
 
 ## Build
@@ -19,5 +19,5 @@ npm install
 ## Run
 
 ```sh
-node src/Demo.res.js
+fluentci-engine run -- deno run -A src/Demo.res.mjs
 ```

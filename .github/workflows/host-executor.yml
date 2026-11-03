@@ -147,8 +147,8 @@ jobs:
         if: matrix.os == 'ubuntu-24.04'
         run: |
           npm install --global bun@1.4.3
-          (cd sdk/rescript && bun install --frozen-lockfile && bun run res:build)
-          (cd sdk/rescript/demo && bun install --frozen-lockfile && bun run res:build)
+          (cd sdk/rescript && npm ci && npm run res:build)
+          (cd sdk/rescript/demo && npm ci && npm run res:build)
       - name: Bundle local TypeScript plugin examples
         if: matrix.os == 'ubuntu-24.04'
         working-directory: sdk/typescript/demo-ext

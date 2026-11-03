@@ -4,7 +4,9 @@
   "scripts": {
     "res:build": "rescript",
     "res:clean": "rescript clean",
-    "res:dev": "rescript -w"
+    "res:dev": "rescript watch",
+    "res:format": "rescript format",
+    "res:format:check": "rescript format --check"
   },
   "keywords": [
     "rescript"
@@ -13,11 +15,16 @@
   "license": "MIT",
   "dependencies": {
     "@fluentci/sdk": "npm:@jsr/fluentci__sdk@0.4.3",
-    "@rescript/core": "1.5.2",
-    "rescript": "11.1.3",
-    "rescript-fluentci": "file:.."
+    "rescript-fluentci": "file:..",
+    "@rescript/runtime": "12.3.1"
   },
   "trustedDependencies": [
     "rescript"
-  ]
+  ],
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "devDependencies": {
+    "rescript": "12.3.1"
+  }
 }

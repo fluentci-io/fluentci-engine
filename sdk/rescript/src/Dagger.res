@@ -79,7 +79,7 @@ module EnumTypeDef = {
   external sourceModuleName: t => Promise.t<string> = "sourceModuleName"
 
   @send
-  external values: t => Promise.t<Belt.Array.t<EnumValueTypeDef.t>> = "values"
+  external values: t => Promise.t<array<EnumValueTypeDef.t>> = "values"
 }
 
 module FieldTypeDef = {
@@ -112,7 +112,7 @@ module InputTypeDef = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external fields: t => Promise.t<Belt.Array.t<FieldTypeDef.t>> = "fields"
+  external fields: t => Promise.t<array<FieldTypeDef.t>> = "fields"
 
   @send
   external name: t => Promise.t<string> = "name"
@@ -154,7 +154,7 @@ module InterfaceTypeDef = {
     external id: t => Promise.t<string> = "id"
 
     @send
-    external args: t => Promise.t<Belt.Array.t<FunctionArg.t>> = "args"
+    external args: t => Promise.t<array<FunctionArg.t>> = "args"
 
     @send
     external description: t => Promise.t<string> = "description"
@@ -179,7 +179,7 @@ module InterfaceTypeDef = {
   external description: t => Promise.t<string> = "description"
 
   @send
-  external functions: t => Promise.t<Belt.Array.t<Function.t>> = "functions"
+  external functions: t => Promise.t<array<Function.t>> = "functions"
 
   @send
   external name: t => Promise.t<string> = "name"
@@ -224,7 +224,7 @@ module ObjectTypeDef = {
     external id: t => Promise.t<string> = "id"
 
     @send
-    external args: t => Promise.t<Belt.Array.t<FunctionArg.t>> = "args"
+    external args: t => Promise.t<array<FunctionArg.t>> = "args"
 
     @send
     external description: t => Promise.t<string> = "description"
@@ -249,10 +249,10 @@ module ObjectTypeDef = {
   external description: t => Promise.t<string> = "description"
 
   @send
-  external fields: t => Promise.t<Belt.Array.t<FieldTypeDef.t>> = "fields"
+  external fields: t => Promise.t<array<FieldTypeDef.t>> = "fields"
 
   @send
-  external fucntions: t => Promise.t<Belt.Array.t<Function.t>> = "fucntions"
+  external fucntions: t => Promise.t<array<Function.t>> = "fucntions"
 }
 
 module ScalarTypeDef = {
@@ -310,7 +310,7 @@ module TypeDef = {
     external id: f => Promise.t<string> = "id"
 
     @send
-    external args: f => Promise.t<Belt.Array.t<FunctionArg.f>> = "args"
+    external args: f => Promise.t<array<FunctionArg.f>> = "args"
 
     @send
     external description: f => Promise.t<string> = "description"
@@ -412,7 +412,7 @@ module Service = {
   external hostname: t => Promise.t<string> = "hostname"
 
   @send
-  external ports: t => Promise.t<Belt.Array.t<Port.t>> = "ports"
+  external ports: t => Promise.t<array<Port.t>> = "ports"
 
   @send
   external start: t => Promise.t<t> = "start"
@@ -475,7 +475,7 @@ module Directory = {
     external from: (t, string) => t = "from"
 
     @send
-    external withExec: (t, Belt.Array.t<string>) => t = "withExec"
+    external withExec: (t, array<string>) => t = "withExec"
 
     @send
     external stdout: t => Promise.t<string> = "stdout"
@@ -496,7 +496,7 @@ module Directory = {
     external user: t => Promise.t<string> = "user"
 
     @send
-    external withDefaultArgs: (t, Belt.Array.t<string>) => t = "withDefaultArgs"
+    external withDefaultArgs: (t, array<string>) => t = "withDefaultArgs"
 
     @send
     external withDefaultTerminalCmd: (t, string) => t = "withDefaultTerminalCmd"
@@ -505,7 +505,7 @@ module Directory = {
     external withDirectory: (t, ~path: string, ~directory: string) => t = "withDirectory"
 
     @send
-    external withEntrypoint: (t, Belt.Array.t<string>) => t = "withEntrypoint"
+    external withEntrypoint: (t, array<string>) => t = "withEntrypoint"
 
     @send
     external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
@@ -517,7 +517,7 @@ module Directory = {
     external withFile: (t, ~path: string, ~source: string) => t = "withFile"
 
     @send
-    external withFiles: (t, ~path: string, ~sources: Belt.Array.t<string>) => t = "withFiles"
+    external withFiles: (t, ~path: string, ~sources: array<string>) => t = "withFiles"
 
     @send
     external withFocus: t => t = "withFocus"
@@ -619,7 +619,7 @@ module Directory = {
     external id: t => Promise.t<string> = "id"
 
     @send
-    external dependencies: t => Promise.t<Belt.Array.t<t>> = "dependencies"
+    external dependencies: t => Promise.t<array<t>> = "dependencies"
 
     @send
     external dependencyConfig: t => Promise.t<ModuleDependency.t> = "dependencyConfig"
@@ -628,7 +628,7 @@ module Directory = {
     external description: t => Promise.t<string> = "description"
 
     @send
-    external enums: t => Promise.t<Belt.Array.t<TypeDef.t>> = "enums"
+    external enums: t => Promise.t<array<TypeDef.t>> = "enums"
 
     @send
     external generatedContextDiff: t => d = "generatedContextDiff"
@@ -653,7 +653,7 @@ module Directory = {
   external dockerBuild: d => Container.t = "dockerBuild"
 
   @send
-  external entries: d => Promise.t<Belt.Array.t<string>> = "entries"
+  external entries: d => Promise.t<array<string>> = "entries"
 
   @send
   external export: (d, string) => Promise.t<string> = "export"
@@ -662,7 +662,7 @@ module Directory = {
   external file: (d, string) => File.t = "file"
 
   @send
-  external glob: (d, string) => Promise.t<Belt.Array.t<string>> = "glob"
+  external glob: (d, string) => Promise.t<array<string>> = "glob"
 
   @send
   external pipeline: (d, string) => Container.t = "pipeline"
@@ -680,7 +680,7 @@ module Directory = {
   external withFile: (d, ~path: string, ~source: File.t) => d = "withFile"
 
   @send
-  external withFiles: (d, ~path: string, ~sources: Belt.Array.t<File.t>) => d = "withFiles"
+  external withFiles: (d, ~path: string, ~sources: array<File.t>) => d = "withFiles"
 
   @send
   external withNewDirectory: (d, ~path: string) => d = "withNewDirectory"
@@ -758,7 +758,7 @@ module GitRepository = {
   external tag: (t, string) => GitRef.t = "tag"
 
   @send
-  external tags: t => Promise.t<Belt.Array.t<string>> = "tags"
+  external tags: t => Promise.t<array<string>> = "tags"
 
   @send
   external withAuthHeader: (t, Secret.t) => t = "withAuthHeader"
@@ -802,7 +802,7 @@ module Container = {
   external from: (t, string) => t = "from"
 
   @send
-  external withExec: (t, Belt.Array.t<string>, ~opts: ContainerExecOpts.t=?) => t = "withExec"
+  external withExec: (t, array<string>, ~opts: ContainerExecOpts.t=?) => t = "withExec"
 
   @send
   external stdout: t => Promise.t<string> = "stdout"
@@ -817,25 +817,25 @@ module Container = {
   external build: (t, ~context: Directory.d) => t = "build"
 
   @send
-  external defaultArgs: t => Promise.t<Belt.Array.t<string>> = "defaultArgs"
+  external defaultArgs: t => Promise.t<array<string>> = "defaultArgs"
 
   @send
   external directory: t => Directory.d = "directory"
 
   @send
-  external entrypoint: t => Promise.t<Belt.Array.t<string>> = "entrypoint"
+  external entrypoint: t => Promise.t<array<string>> = "entrypoint"
 
   @send
   external envVariable: (t, string) => Promise.t<string> = "envVariable"
 
   @send
-  external envVariables: t => Promise.t<Belt.Array.t<EnvVariable.t>> = "envVariables"
+  external envVariables: t => Promise.t<array<EnvVariable.t>> = "envVariables"
 
   @send
   external export: (t, ~path: string) => Promise.t<string> = "export"
 
   @send
-  external exposedPorts: t => Promise.t<Belt.Array.t<Port.t>> = "exposedPorts"
+  external exposedPorts: t => Promise.t<array<Port.t>> = "exposedPorts"
 
   @send
   external file: (t, string) => File.t = "file"
@@ -850,10 +850,10 @@ module Container = {
   external label: (t, string) => Promise.t<string> = "label"
 
   @send
-  external labels: t => Promise.t<Belt.Array.t<Label.t>> = "labels"
+  external labels: t => Promise.t<array<Label.t>> = "labels"
 
   @send
-  external mounts: t => Promise.t<Belt.Array.t<string>> = "mounts"
+  external mounts: t => Promise.t<array<string>> = "mounts"
 
   @send
   external pipeline: (t, string) => t = "pipeline"
@@ -877,7 +877,7 @@ module Container = {
   external user: t => Promise.t<string> = "user"
 
   @send
-  external withDefaultArgs: (t, Belt.Array.t<string>) => t = "withDefaultArgs"
+  external withDefaultArgs: (t, array<string>) => t = "withDefaultArgs"
 
   @send
   external withDefaultTerminalCmd: (t, string) => t = "withDefaultTerminalCmd"
@@ -886,7 +886,7 @@ module Container = {
   external withDirectory: (t, ~path: string, ~directory: string) => t = "withDirectory"
 
   @send
-  external withEntrypoint: (t, Belt.Array.t<string>) => t = "withEntrypoint"
+  external withEntrypoint: (t, array<string>) => t = "withEntrypoint"
 
   @send
   external withEnvVariable: (t, ~name: string, ~value: string) => t = "withEnvVariable"
@@ -898,7 +898,7 @@ module Container = {
   external withFile: (t, ~path: string, ~source: string) => t = "withFile"
 
   @send
-  external withFiles: (t, ~path: string, ~sources: Belt.Array.t<string>) => t = "withFiles"
+  external withFiles: (t, ~path: string, ~sources: array<string>) => t = "withFiles"
 
   @send
   external withFocus: t => t = "withFocus"
@@ -1007,7 +1007,7 @@ module Module = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external dependencies: t => Promise.t<Belt.Array.t<t>> = "dependencies"
+  external dependencies: t => Promise.t<array<t>> = "dependencies"
 
   @send
   external dependencyConfig: t => Promise.t<ModuleDependency.t> = "dependencyConfig"
@@ -1016,7 +1016,7 @@ module Module = {
   external description: t => Promise.t<string> = "description"
 
   @send
-  external enums: t => Promise.t<Belt.Array.t<TypeDef.t>> = "enums"
+  external enums: t => Promise.t<array<TypeDef.t>> = "enums"
 
   @send
   external generatedContextDiff: t => Directory.d = "generatedContextDiff"
@@ -1028,13 +1028,13 @@ module Module = {
   external intialize: t => t = "intialize"
 
   @send
-  external interfaces: t => Promise.t<Belt.Array.t<TypeDef.t>> = "interfaces"
+  external interfaces: t => Promise.t<array<TypeDef.t>> = "interfaces"
 
   @send
   external name: t => Promise.t<string> = "name"
 
   @send
-  external objects: t => Promise.t<Belt.Array.t<TypeDef.t>> = "objects"
+  external objects: t => Promise.t<array<TypeDef.t>> = "objects"
 
   @send
   external runtime: t => Promise.t<Container.t> = "runtime"
@@ -1093,7 +1093,7 @@ module Function = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external args: t => Promise.t<Belt.Array.t<FunctionArg.t>> = "args"
+  external args: t => Promise.t<array<FunctionArg.t>> = "args"
 
   @send
   external description: t => Promise.t<string> = "description"
@@ -1131,7 +1131,7 @@ module FunctionCall = {
   external id: t => Promise.t<string> = "id"
 
   @send
-  external inputArgs: t => Promise.t<Belt.Array.t<FunctionCallArgValue.t>> = "inputArgs"
+  external inputArgs: t => Promise.t<array<FunctionCallArgValue.t>> = "inputArgs"
 
   @send
   external name: t => Promise.t<string> = "name"

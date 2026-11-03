@@ -1,6 +1,6 @@
-# FluentCI Rescript SDK
+# FluentCI ReScript SDK
 
-This is the official [FluentCI](https://fluentci.io) SDK for Rescript. It allows you to write CI/CD pipelines in Rescript.
+This is the official [FluentCI](https://fluentci.io) SDK for ReScript. It allows you to write CI/CD pipelines in ReScript.
 
 ## Installation
 
@@ -34,7 +34,11 @@ See [fluentci-engine](https://github.com/fluentci-io/fluentci-engine) and [fluen
 
 ## Development
 
-Run `bun install && bun run res:build` here, then run the same commands in
-`demo`. The demo uses `file:..` so it compiles against this checkout. These are
+Use Node.js 20.11 or newer. Run `npm ci && npm run res:build` here, then
+run the same commands in `demo`. The demo uses `file:..` so it compiles against this checkout. These are
 legacy GraphQL/plugin/Dagger bindings; immutable host-plan bindings are still
 pending for ReScript. Compilation does not start an engine or execute pipelines.
+
+The SDK and demo use ReScript 12.3.1 with its bundled standard library.
+Use `npm run res:dev` for watch mode and `npm run res:format` to format sources.
+The checked-in npm lockfiles pin the compiler and JavaScript dependencies.
