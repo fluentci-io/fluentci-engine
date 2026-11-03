@@ -30,6 +30,7 @@ pub fn exec(
         timeout_ms: None,
         cache: None,
         service: None,
+        policy: Default::default(),
     }
 }
 pub fn env(mut task: Task, values: BTreeMap<String, String>) -> Task {
@@ -111,4 +112,63 @@ mod tests {
         assert!(!pipeline.inherit_env);
         assert_eq!(pipeline.jobs, 4);
     }
+}
+
+/// Opt-in retries count the initial execution as attempt one. Nonzero exits only.
+pub fn retry(mut task: Task, max_attempts: u32, delay_ms: u64) -> Task {
+    task.policy.retry = Some(crate::workflow::Retry {
+        max_attempts,
+        delay_ms,
+        max_delay_ms: 60_000,
+        exit_codes: vec![],
+    });
+    task
+}
+pub fn when(mut task: Task, condition: crate::workflow::Condition) -> Task {
+    task.policy.when = condition;
+    if condition.finalizer() {
+        task.timeout_ms.get_or_insert(30_000);
+        task.resource_wait_timeout_ms.get_or_insert(30_000);
+    }
+    task
+}
+pub fn always(task: Task) -> Task {
+    when(task, crate::workflow::Condition::Always)
+}
+pub fn allow_failure(mut task: Task, enabled: bool) -> Task {
+    task.policy.allow_failure = enabled;
+    task
+}
+pub fn artifact(mut task: Task, name: impl Into<String>, path: impl Into<PathBuf>) -> Task {
+    task.policy.artifacts.insert(name.into(), path.into());
+    task
+}
+pub fn output(mut task: Task, name: impl Into<String>, path: impl Into<PathBuf>) -> Task {
+    task.policy.outputs.insert(name.into(), path.into());
+    task
+}
+pub fn output_env(
+    mut task: Task,
+    key: impl Into<String>,
+    producer: &Task,
+    name: impl Into<String>,
+) -> Task {
+    if !task.needs.contains(&producer.id) {
+        task.needs.push(producer.id.clone());
+    }
+    task.policy.bindings.insert(
+        key.into(),
+        crate::workflow::OutputRef {
+            task: producer.id.clone(),
+            name: name.into(),
+        },
+    );
+    task
+}
+pub fn resource(mut task: Task, name: impl Into<String>) -> Task {
+    let name = name.into();
+    if !task.resources.contains(&name) {
+        task.resources.push(name);
+    }
+    task
 }

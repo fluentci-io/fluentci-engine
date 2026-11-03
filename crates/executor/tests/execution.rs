@@ -19,6 +19,7 @@ fn task(id: &str, script: &str, cwd: &Path, needs: &[&str]) -> Task {
         timeout_ms: Some(3000),
         cache: None,
         service: None,
+        policy: Default::default(),
     }
 }
 fn plan(tasks: Vec<Task>) -> Plan {

@@ -16,7 +16,8 @@ fn plan(root: &Path) -> Plan {
             id: "build".into(), needs: vec![], program: "/bin/sh".into(),
             args: vec!["-c".into(), "/bin/cat input > output; printf executed >> executions; printf log; printf error >&2".into()],
             cwd: root.into(), env: BTreeMap::new(), resources: vec![], shared_resources: vec![], package_install: None, package_environment: vec![], resource_wait_timeout_ms: None, timeout_ms: Some(3000),
-            service: None, cache: Some(CachePolicy { toolchain_files: vec![], relocatable: false, inputs: vec!["input".into()], outputs: vec!["output".into()], toolchain: "fixture-v1".into() })
+            service: None,
+        policy: Default::default(), cache: Some(CachePolicy { toolchain_files: vec![], relocatable: false, inputs: vec!["input".into()], outputs: vec!["output".into()], toolchain: "fixture-v1".into() })
         }] }
 }
 fn run(p: &Plan, root: &Path, name: &str) -> fluentci_executor::RunResult {

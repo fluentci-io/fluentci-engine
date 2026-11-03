@@ -212,6 +212,11 @@ mod tests {
                 cache: "miss".into(),
                 reason: "new action".into(),
                 wait_reason: None,
+                attempts: vec![],
+                outputs: Default::default(),
+                artifacts: Default::default(),
+                condition_skipped: false,
+                allowed_failure: false,
                 error: None,
                 duration_ms: 12,
             },
@@ -264,6 +269,11 @@ mod polling_tests {
                 probe_logs: None,
                 cache: crate::cache::CacheResult::disabled(),
                 wait_reason: None,
+                attempts: vec![],
+                outputs: Default::default(),
+                artifacts: Default::default(),
+                condition_skipped: false,
+                allowed_failure: false,
             })
             .collect();
         (tasks, results)

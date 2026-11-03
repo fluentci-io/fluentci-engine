@@ -143,6 +143,10 @@ fn recovered_outcome(path: &Path) -> Option<&'static str> {
         }
         match task.get("status")?.as_str()? {
             "succeeded" => {}
+            "failed" | "timed_out"
+                if expected.policy.allow_failure
+                    && task.get("allowed_failure").and_then(|v| v.as_bool()) == Some(true) => {}
+            "skipped" if task.get("condition_skipped").and_then(|v| v.as_bool()) == Some(true) => {}
             "failed" | "skipped" | "cancelled" | "timed_out" => success = false,
             _ => return None,
         }

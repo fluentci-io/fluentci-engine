@@ -53,7 +53,7 @@ pub(crate) struct Entry {
     pub path: PathBuf,
     pub directory: bool,
     pub mode: u32,
-    digest: Option<String>,
+    pub(crate) digest: Option<String>,
 }
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -150,7 +150,7 @@ fn stream_digest(file: &mut impl Read, cancel: &Cancellation) -> Result<String, 
 // Storage leaves must be ordinary files. Open nonblocking before inspecting the
 // descriptor so a substituted FIFO cannot trap a cache worker before cancellation.
 // This protects the final component; the cache root/ancestors remain trusted.
-fn open_storage_file(path: &Path) -> std::io::Result<File> {
+pub(crate) fn open_storage_file(path: &Path) -> std::io::Result<File> {
     open_regular_file(path, false)
 }
 

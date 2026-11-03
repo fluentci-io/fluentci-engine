@@ -10,6 +10,7 @@ mod resources;
 pub mod service;
 mod telemetry;
 mod worker;
+pub mod workflow;
 pub mod workspace;
 mod workspace_copy;
 
@@ -60,6 +61,8 @@ pub struct Task {
     pub cache: Option<cache::CachePolicy>,
     #[serde(default)]
     pub service: Option<service::Service>,
+    #[serde(default, skip_serializing_if = "workflow::Policy::is_default")]
+    pub policy: workflow::Policy,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -172,6 +175,11 @@ pub struct TaskResult {
     pub probe_logs: Option<service::ProbeLogs>,
     pub cache: cache::CacheResult,
     pub wait_reason: Option<String>,
+    pub attempts: Vec<workflow::Attempt>,
+    pub outputs: BTreeMap<String, String>,
+    pub artifacts: BTreeMap<String, workflow::Artifact>,
+    pub condition_skipped: bool,
+    pub allowed_failure: bool,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -196,7 +204,7 @@ pub struct RunResult {
 }
 impl RunResult {
     pub fn success(&self) -> bool {
-        self.tasks.iter().all(|r| r.status == Status::Succeeded)
+        self.outcome == RunOutcome::Succeeded
     }
 }
 
@@ -204,6 +212,7 @@ struct Running {
     index: usize,
     child: Child,
     started: Instant,
+    attempt_started: Instant,
     leases: Option<resources::Leases>,
     action: Option<cache::Prepared>,
 }
@@ -237,7 +246,8 @@ struct Saving {
     index: usize,
     started: Instant,
     // Field order matters: join the worker before releasing its resource leases.
-    worker: worker::Worker<()>,
+    worker: worker::Worker<workflow::Products>,
+    cache_outcome: String,
     _leases: Option<resources::Leases>,
     stop: Option<Status>,
 }
@@ -312,6 +322,7 @@ impl Plan {
             return Err("resource_dir must be absolute".into());
         }
         for task in &self.tasks {
+            task.policy.validate(task)?;
             if task
                 .resources
                 .iter()
@@ -370,6 +381,22 @@ impl Plan {
                 .map(|t| t.needs.clone())
                 .collect::<Vec<_>>(),
         )?;
+        for (i, task) in self.tasks.iter().enumerate() {
+            for reference in task.policy.bindings.values() {
+                let producer = graph.dependencies[i]
+                    .iter()
+                    .find(|&&p| self.tasks[p].id == reference.task)
+                    .copied()
+                    .ok_or_else(|| "output bindings require a direct dependency".to_string())?;
+                if !self.tasks[producer]
+                    .policy
+                    .outputs
+                    .contains_key(&reference.name)
+                {
+                    return Err("output binding references an undeclared output".into());
+                }
+            }
+        }
         cache::validate_workspace(&self.tasks, &graph)?;
         let ancestors = service_ancestors(&graph, &self.tasks);
         for (i, parents) in ancestors.iter().enumerate() {
@@ -483,6 +510,11 @@ impl Plan {
                 }),
                 cache: cache::CacheResult::disabled(),
                 wait_reason: None,
+                attempts: vec![],
+                outputs: BTreeMap::new(),
+                artifacts: BTreeMap::new(),
+                condition_skipped: false,
+                allowed_failure: t.policy.allow_failure,
             })
             .collect();
         let mut journal = events::Journal::new(&run_dir.join("events.jsonl"), &self.tasks)?;
@@ -499,7 +531,6 @@ impl Plan {
             .collect();
         let mut shutdowns: Vec<Option<service::Shutdown>> =
             (0..self.tasks.len()).map(|_| None).collect();
-        let mut remaining: Vec<_> = graph.dependencies.iter().map(Vec::len).collect();
         let wake = worker::Wake::default();
         let mut running: Vec<Running> = Vec::new();
         let mut saving: Vec<Saving> = Vec::new();
@@ -509,6 +540,10 @@ impl Plan {
         let mut waiting_since: Vec<Option<Instant>> = vec![None; self.tasks.len()];
         let mut retry_at: Vec<Option<Instant>> = vec![None; self.tasks.len()];
         let mut cache_started: Vec<Option<Instant>> = vec![None; self.tasks.len()];
+        let mut resolved_tasks = self.tasks.clone();
+        let mut retry_actions: Vec<Option<cache::Prepared>> =
+            (0..self.tasks.len()).map(|_| None).collect();
+        let mut first_started: Vec<Option<Instant>> = vec![None; self.tasks.len()];
         let mut failed = false;
         let mut stalled = false;
         loop {
@@ -519,7 +554,7 @@ impl Plan {
                 let i = lookup.index;
                 results[i].duration_ms = lookup.started.elapsed().as_millis();
                 if lookup.stop.is_none() {
-                    if stopping {
+                    if stopping && !self.tasks[i].policy.when.finalizer() {
                         lookup.stop = Some(Status::Cancelled);
                     } else if self.tasks[i]
                         .timeout_ms
@@ -541,7 +576,7 @@ impl Plan {
                     results[i].cache.outcome = "cancelled".into();
                     results[i].cache.reason = "cache preparation interrupted".into();
                     results[i].error = Some(results[i].cache.reason.clone());
-                    failed = true;
+                    failed |= !self.tasks[i].policy.allow_failure;
                 } else {
                     match outcome {
                         Ok(Some(found)) => {
@@ -552,16 +587,42 @@ impl Plan {
                                 results[i].status = Status::Succeeded;
                                 results[i].exit_code = Some(0);
                                 results[i].cache.outcome = "hit".into();
-                                for &next in &graph.successors[i] {
-                                    remaining[next] -= 1;
+                                if self.tasks[i].policy.products() {
+                                    let task = resolved_tasks[i].clone();
+                                    let publication_dir = run_dir.clone();
+                                    let action = found.action;
+                                    match worker::Worker::spawn(&wake, move |token| {
+                                        let _action = action;
+                                        workflow::collect(&task, &publication_dir, i, &token)
+                                    }) {
+                                        Ok(worker) => {
+                                            saving.push(Saving {
+                                                index: i,
+                                                started: lookup.started,
+                                                worker,
+                                                cache_outcome: "hit".into(),
+                                                _leases: lookup.leases.take(),
+                                                stop: None,
+                                            });
+                                            results[i].status = Status::Running;
+                                            continue;
+                                        }
+                                        Err(error) => {
+                                            results[i].status = Status::Failed;
+                                            results[i].error = Some(error);
+                                            failed |= !self.tasks[i].policy.allow_failure;
+                                        }
+                                    }
                                 }
-                            } else if cancel.is_cancelled() || (self.fail_fast && failed) {
+                            } else if (cancel.is_cancelled() || (self.fail_fast && failed))
+                                && !self.tasks[i].policy.when.finalizer()
+                            {
                                 results[i].status = Status::Cancelled;
                                 results[i].cache.outcome = "cancelled".into();
                             } else {
                                 results[i].cache.outcome = "miss".into();
                                 match spawn(
-                                    &self.tasks[i],
+                                    &resolved_tasks[i],
                                     &results[i],
                                     &environment,
                                     Some(&found.action.executable),
@@ -571,6 +632,7 @@ impl Plan {
                                             index: i,
                                             child,
                                             started: lookup.started,
+                                            attempt_started: Instant::now(),
                                             leases: lookup.leases.take(),
                                             action: Some(found.action),
                                         });
@@ -579,7 +641,7 @@ impl Plan {
                                     Err(error) => {
                                         results[i].status = Status::Failed;
                                         results[i].error = Some(error.to_string());
-                                        failed = true;
+                                        failed |= !self.tasks[i].policy.allow_failure;
                                     }
                                 }
                             }
@@ -595,7 +657,7 @@ impl Plan {
                             results[i].error = Some(error.clone());
                             results[i].cache.outcome = "error".into();
                             results[i].cache.reason = error;
-                            failed = true;
+                            failed |= !self.tasks[i].policy.allow_failure;
                         }
                     }
                 }
@@ -608,7 +670,7 @@ impl Plan {
                 let i = save.index;
                 results[i].duration_ms = save.started.elapsed().as_millis();
                 if save.stop.is_none() {
-                    if stopping {
+                    if stopping && !self.tasks[i].policy.when.finalizer() {
                         save.stop = Some(Status::Cancelled);
                     } else if self.tasks[i]
                         .timeout_ms
@@ -629,10 +691,10 @@ impl Plan {
                         }
                     });
                     if status == Status::Succeeded {
-                        results[i].cache.outcome = "stored".into();
-                        for &next in &graph.successors[i] {
-                            remaining[next] -= 1;
-                        }
+                        let products = outcome.expect("successful publication");
+                        results[i].outputs = products.outputs;
+                        results[i].artifacts = products.artifacts;
+                        results[i].cache.outcome = save.cache_outcome.clone();
                     } else {
                         results[i].cache.outcome = if status == Status::Failed {
                             "error"
@@ -645,7 +707,7 @@ impl Plan {
                             .unwrap_or_else(|| "cache publication interrupted".into());
                         results[i].cache.reason = error.clone();
                         results[i].error = Some(error);
-                        failed = true;
+                        failed |= !self.tasks[i].policy.allow_failure;
                     }
                     results[i].status = status;
                     saving.swap_remove(publication);
@@ -659,12 +721,14 @@ impl Plan {
             while n < running.len() {
                 let i = running[n].index;
                 let elapsed = running[n].started.elapsed();
+                let attempt_elapsed = running[n].attempt_started.elapsed();
                 results[i].duration_ms = elapsed.as_millis();
                 let timed_out = self.tasks[i]
                     .timeout_ms
                     .is_some_and(|ms| elapsed >= Duration::from_millis(ms));
                 let dependency_failed = ancestors[i].iter().any(|&p| {
-                    (results[p].status.terminal() && results[p].status != Status::Succeeded)
+                    (results[p].status.terminal()
+                        && !workflow::satisfied(&results[p], &self.tasks[p]))
                         || shutdowns[p]
                             .as_ref()
                             .is_some_and(|shutdown| shutdown.status != Status::Succeeded)
@@ -731,9 +795,6 @@ impl Plan {
                                 {
                                     service::Health::Ready => {
                                         results[i].status = Status::Ready;
-                                        for &next in &graph.successors[i] {
-                                            remaining[next] -= 1;
-                                        }
                                         None
                                     }
                                     service::Health::Failed(error) => {
@@ -745,7 +806,7 @@ impl Plan {
                             if let Some((status, error)) = stop {
                                 supervisors[i].as_mut().unwrap().stop();
                                 if status != Status::Succeeded {
-                                    failed = true;
+                                    failed |= !self.tasks[i].policy.allow_failure;
                                 }
                                 shutdowns[i] = Some(service::Shutdown {
                                     started: None,
@@ -786,7 +847,9 @@ impl Plan {
                             None
                         }
                     }
-                } else if stopping || timed_out || dependency_failed {
+                } else if (stopping || dependency_failed) && !self.tasks[i].policy.when.finalizer()
+                    || timed_out
+                {
                     running[n].terminate();
                     Some((
                         if timed_out {
@@ -825,47 +888,90 @@ impl Plan {
                     if let Some(supervisor) = &mut supervisors[i] {
                         supervisor.stop();
                     }
-                    if let Some(action) = completed_action {
-                        if results[i].status == Status::Succeeded {
-                            let task = self.tasks[i].clone();
-                            let stdout = results[i].stdout.clone();
-                            let stderr = results[i].stderr.clone();
-                            match worker::Worker::spawn(&wake, move |token| {
+                    if self.tasks[i].service.is_none() {
+                        let number = results[i].attempts.len() + 1;
+                        let attempt = workflow::Attempt {
+                            number,
+                            status: results[i].status.clone(),
+                            exit_code: code,
+                            duration_ms: attempt_elapsed.as_millis(),
+                            error: results[i].error.clone(),
+                        };
+                        results[i].attempts.push(attempt);
+                    }
+                    let retry = self.tasks[i].policy.retry.as_ref().filter(|policy| {
+                        results[i].status == Status::Failed
+                            && code.is_some_and(|code| {
+                                policy.exit_codes.is_empty() || policy.exit_codes.contains(&code)
+                            })
+                            && results[i].attempts.len() < policy.max_attempts as usize
+                            && !cancel.is_cancelled()
+                            && !stalled
+                            && !(self.fail_fast && failed && !self.tasks[i].policy.when.finalizer())
+                    });
+                    if let Some(policy) = retry {
+                        retry_actions[i] = completed_action;
+                        release_resources(&self.tasks[i], &mut resources, &mut readers);
+                        drop(completed_leases);
+                        retry_at[i] = Some(
+                            Instant::now()
+                                + Duration::from_millis(policy.delay(results[i].attempts.len())),
+                        );
+                        results[i].status = Status::Pending;
+                        results[i].wait_reason = Some(format!(
+                            "retry attempt {} of {}",
+                            results[i].attempts.len() + 1,
+                            policy.max_attempts
+                        ));
+                        continue;
+                    }
+                    if results[i].status == Status::Succeeded
+                        && (completed_action.is_some() || self.tasks[i].policy.products())
+                    {
+                        let cache_outcome = if completed_action.is_some() {
+                            "stored"
+                        } else {
+                            "disabled"
+                        }
+                        .to_string();
+                        let task = resolved_tasks[i].clone();
+                        let stdout = results[i].stdout.clone();
+                        let stderr = results[i].stderr.clone();
+                        let publication_dir = run_dir.clone();
+                        match worker::Worker::spawn(&wake, move |token| {
+                            let products = workflow::collect(&task, &publication_dir, i, &token)?;
+                            if let Some(action) = completed_action {
                                 action
                                     .with_cancellation(token)
-                                    .save(&task, &stdout, &stderr)
-                            }) {
-                                Ok(worker) => {
-                                    saving.push(Saving {
-                                        index: i,
-                                        started: task_started,
-                                        worker,
-                                        _leases: completed_leases,
-                                        stop: None,
-                                    });
-                                    results[i].status = Status::Running;
-                                    results[i].cache.outcome = "storing".into();
-                                    continue;
-                                }
-                                Err(error) => {
-                                    results[i].status = Status::Failed;
-                                    results[i].error = Some(error.clone());
-                                    results[i].cache.outcome = "error".into();
-                                    results[i].cache.reason = error;
-                                }
+                                    .save(&task, &stdout, &stderr)?;
+                            }
+                            Ok(products)
+                        }) {
+                            Ok(worker) => {
+                                saving.push(Saving {
+                                    index: i,
+                                    started: task_started,
+                                    worker,
+                                    cache_outcome,
+                                    _leases: completed_leases,
+                                    stop: None,
+                                });
+                                results[i].status = Status::Running;
+                                results[i].cache.outcome = "storing".into();
+                                continue;
+                            }
+                            Err(error) => {
+                                results[i].status = Status::Failed;
+                                results[i].error = Some(error.clone());
+                                results[i].cache.outcome = "error".into();
+                                results[i].cache.reason = error;
                             }
                         }
                     }
                     release_resources(&self.tasks[i], &mut resources, &mut readers);
                     drop(completed_leases);
-                    if results[i].status == Status::Succeeded {
-                        if self.tasks[i].service.is_none() {
-                            for &next in &graph.successors[i] {
-                                remaining[next] -= 1;
-                            }
-                        }
-                    } else {
-                        failed = true;
+                    if results[i].status != Status::Succeeded {
+                        failed |= !self.tasks[i].policy.allow_failure;
                     }
                 } else {
                     n += 1;
@@ -876,20 +982,26 @@ impl Plan {
                 if results[i].status != Status::Pending {
                     continue;
                 }
-                if graph.dependencies[i]
-                    .iter()
-                    .chain(ancestors[i].iter())
-                    .any(|&p| {
-                        (results[p].status.terminal() && results[p].status != Status::Succeeded)
-                            || shutdowns[p]
-                                .as_ref()
-                                .is_some_and(|shutdown| shutdown.status != Status::Succeeded)
-                    })
-                {
+                let gate = workflow::gate(
+                    &self.tasks[i],
+                    &graph.dependencies[i],
+                    &results,
+                    &self.tasks,
+                );
+                if matches!(gate, workflow::Gate::Skip) {
                     results[i].status = Status::Skipped;
-                } else if stalled || cancel.is_cancelled() || (self.fail_fast && failed) {
+                    results[i].condition_skipped = self.tasks[i].policy.when
+                        != workflow::Condition::Success
+                        || graph.dependencies[i].iter().all(|&p| {
+                            results[p].condition_skipped
+                                || workflow::satisfied(&results[p], &self.tasks[p])
+                        });
+                } else if stalled
+                    || (cancel.is_cancelled() || (self.fail_fast && failed))
+                        && !self.tasks[i].policy.when.finalizer()
+                {
                     results[i].status = Status::Cancelled;
-                } else if cache_started[i].is_some_and(|start| {
+                } else if cache_started[i].or(first_started[i]).is_some_and(|start| {
                     self.tasks[i]
                         .timeout_ms
                         .is_some_and(|ms| start.elapsed() >= Duration::from_millis(ms))
@@ -897,7 +1009,7 @@ impl Plan {
                     results[i].status = Status::TimedOut;
                     results[i].cache.outcome = "cancelled".into();
                     results[i].error = Some("cache preparation timeout".into());
-                    failed = true;
+                    failed |= !self.tasks[i].policy.allow_failure;
                 } else if waiting_since[i].is_some_and(|since| {
                     self.tasks[i]
                         .resource_wait_timeout_ms
@@ -908,8 +1020,8 @@ impl Plan {
                     // lease retry is backed off. Never admit an expired waiter.
                     results[i].status = Status::TimedOut;
                     results[i].error = Some("resource wait timeout".into());
-                    failed = true;
-                } else if remaining[i] == 0
+                    failed |= !self.tasks[i].policy.allow_failure;
+                } else if matches!(gate, workflow::Gate::Ready)
                     && if self.tasks[i].service.is_some() {
                         running
                             .iter()
@@ -968,7 +1080,7 @@ impl Plan {
                             }) {
                                 results[i].status = Status::TimedOut;
                                 results[i].error = Some("resource wait timeout".into());
-                                failed = true;
+                                failed |= !self.tasks[i].policy.allow_failure;
                             } else {
                                 retry_at[i] = Some(Instant::now() + Duration::from_millis(50));
                             }
@@ -977,11 +1089,21 @@ impl Plan {
                         Err(error) => {
                             results[i].status = Status::Failed;
                             results[i].error = Some(format!("resource lease: {error}"));
-                            failed = true;
+                            failed |= !self.tasks[i].policy.allow_failure;
                             continue;
                         }
                     };
-                    if self.tasks[i].cache.is_some() {
+                    resolved_tasks[i] = match workflow::resolve(&self.tasks[i], &results) {
+                        Ok(task) => task,
+                        Err(error) => {
+                            results[i].status = Status::Failed;
+                            results[i].error = Some(error);
+                            failed |= !self.tasks[i].policy.allow_failure;
+                            continue;
+                        }
+                    };
+                    let started = *first_started[i].get_or_insert(started);
+                    if self.tasks[i].cache.is_some() && retry_actions[i].is_none() {
                         let started = *cache_started[i].get_or_insert(started);
                         let dependency_keys: Vec<_> = graph.dependencies[i]
                             .iter()
@@ -991,7 +1113,7 @@ impl Plan {
                                 })
                             })
                             .collect();
-                        let task = self.tasks[i].clone();
+                        let task = resolved_tasks[i].clone();
                         let root = self
                             .cache_dir
                             .as_ref()
@@ -1021,16 +1143,22 @@ impl Plan {
                                 results[i].status = Status::Failed;
                                 results[i].error = Some(error);
                                 results[i].cache.outcome = "error".into();
-                                failed = true;
+                                failed |= !self.tasks[i].policy.allow_failure;
                             }
                         }
                         continue;
                     }
-                    if cancel.is_cancelled() {
+                    if cancel.is_cancelled() && !self.tasks[i].policy.when.finalizer() {
                         results[i].status = Status::Cancelled;
                         continue;
                     }
-                    match spawn(&self.tasks[i], &results[i], &environment, None) {
+                    let action = retry_actions[i].take();
+                    match spawn(
+                        &resolved_tasks[i],
+                        &results[i],
+                        &environment,
+                        action.as_ref().map(|a| a.executable.as_path()),
+                    ) {
                         Ok(child) => {
                             resources.extend(self.tasks[i].resources.iter().cloned());
                             for resource in &self.tasks[i].shared_resources {
@@ -1041,14 +1169,15 @@ impl Plan {
                                 index: i,
                                 child,
                                 started,
+                                attempt_started: Instant::now(),
                                 leases: Some(task_leases),
-                                action: None,
+                                action,
                             });
                         }
                         Err(e) => {
                             results[i].status = Status::Failed;
                             results[i].error = Some(e.to_string());
-                            failed = true;
+                            failed |= !self.tasks[i].policy.allow_failure;
                         }
                     }
                 }
@@ -1069,7 +1198,15 @@ impl Plan {
                 })
                 && !results.iter().enumerate().any(|(i, r)| {
                     r.status == Status::Pending
-                        && remaining[i] == 0
+                        && matches!(
+                            workflow::gate(
+                                &self.tasks[i],
+                                &graph.dependencies[i],
+                                &results,
+                                &self.tasks
+                            ),
+                            workflow::Gate::Ready
+                        )
                         && self.tasks[i]
                             .resources
                             .iter()
@@ -1092,7 +1229,16 @@ impl Plan {
         }
         // Capture the terminal outcome once; later cancellation requests must not
         // change how a published report is interpreted by the server or recovery.
-        let outcome = if results.iter().all(|task| task.status == Status::Succeeded) {
+        for (i, started) in first_started.iter().enumerate() {
+            if let Some(started) = started {
+                results[i].duration_ms = started.elapsed().as_millis();
+            }
+        }
+        let outcome = if results.iter().all(|task| {
+            task.status == Status::Succeeded
+                || task.condition_skipped
+                || task.allowed_failure && matches!(task.status, Status::Failed | Status::TimedOut)
+        }) {
             RunOutcome::Succeeded
         } else if cancel.is_cancelled() {
             RunOutcome::Cancelled
@@ -1143,15 +1289,29 @@ fn spawn(
     inherited: &BTreeMap<OsString, OsString>,
     executable: Option<&Path>,
 ) -> std::io::Result<Child> {
-    fn output(path: &Path) -> std::io::Result<File> {
+    fn output(path: &Path, append: bool) -> std::io::Result<File> {
         let mut options = OpenOptions::new();
-        options.write(true).create_new(true);
+        options.write(true);
+        if append {
+            options.append(true);
+        } else {
+            options.create_new(true);
+        }
         #[cfg(unix)]
         {
             use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o600);
+            options
+                .mode(0o600)
+                .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
         }
-        options.open(path)
+        let file = options.open(path)?;
+        if !file.metadata()?.is_file() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "log is not a regular file",
+            ));
+        }
+        Ok(file)
     }
     let mut command = Command::new(executable.unwrap_or_else(|| Path::new(&task.program)));
     command
@@ -1161,8 +1321,8 @@ fn spawn(
         .envs(inherited)
         .envs(&task.env)
         .stdin(Stdio::null())
-        .stdout(output(&result.stdout)?)
-        .stderr(output(&result.stderr)?);
+        .stdout(output(&result.stdout, !result.attempts.is_empty())?)
+        .stderr(output(&result.stderr, !result.attempts.is_empty())?);
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;
