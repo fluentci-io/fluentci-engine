@@ -35,6 +35,10 @@ milestones do not establish a claim of being the fastest engine.
   workflows, including native/Rust MacPorts on macOS ARM64 and x86_64, are
   configured but not remotely executed/verified yet.
 
+The 0.6.0 release boundary is **unified execution with legacy API compatibility**,
+not retirement of the legacy API. See [compatibility notes](compatibility-0.6.md).
+Guest plugin build paths are documented in the [SDK guides](../sdk/README.md).
+
 ## Required follow-through
 
 1. Homebrew, MacPorts/native-or-rust, and BSD providers now work in explicit local

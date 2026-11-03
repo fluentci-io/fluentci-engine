@@ -1,7 +1,7 @@
 # Host execution plans
 
 The `execute` command runs an explicit dependency graph on the host. This is the
-first execution-core milestone toward a non-containerized Dagger alternative.
+shared execution core for a non-containerized Dagger alternative.
 The GraphQL/Wasm compatibility APIs compile into this same executor. Full graphs,
 eager file/hash/cache operations, provider initialization, service lifecycles and
 cache finalization use executor-managed tasks. Compatibility plans retain serial
@@ -48,6 +48,8 @@ gets separate stdout/stderr files and the run produces `result.json`. Output is
 spooled to disk rather than buffered in memory. The CLI exits unsuccessfully if
 any task failed, timed out, was skipped, or was cancelled. Ctrl-C cancels running
 processes and waits for cleanup before returning.
+
+For release-specific migration boundaries, see [0.6.0 compatibility notes](compatibility-0.6.md).
 
 ## Plan version 1
 
@@ -664,9 +666,10 @@ metadata is reconciled to a terminal report or `interrupted`. Hard kills or mach
 crashes cannot guarantee child cleanup on every supported OS; interrupted runs are
 not automatically rerun. Run-store garbage collection is not yet implemented.
 
-`serve-runs` is separate from the existing GraphQL `serve` command. The legacy SDK
-server retains its existing semantics until the SDK compatibility path is migrated;
-the new run API does not share its mutable current-pipeline graph.
+`serve-runs` is separate from the existing GraphQL `serve` command. Both use the
+shared executor, while the GraphQL compatibility API retains its mutable
+current-pipeline graph. It does not expose the durable run API or automatically
+share its run history. See [0.6.0 compatibility notes](compatibility-0.6.md).
 
 
 ### Cross-run resource leases

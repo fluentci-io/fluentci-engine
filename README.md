@@ -33,7 +33,7 @@ FluentCI Engine is a programmable CI/CD engine (used by [FluentCI](https://githu
 - [x] Built-in support for Secrets (backends: [Google Secret Manager](https://cloud.google.com/secret-manager), [AWS Secrets Manager](https://aws.amazon.com/fr/secrets-manager/), [Azure Key Vault](https://azure.microsoft.com/fr-fr/products/key-vault) and [HashiCorp Vault](https://www.vaultproject.io/))
 - [x] Built-in support for Services
 - [x] Cache support (backends: local, S3, GCS, R2)
-- [x] SDK for writing pipelines in TypeScript, Gleam, Rescript and Purescript, see [@fluentci/sdk](./sdk)
+- [x] Wasm plugin SDKs for Python, Elixir (CI DSL), Gleam, ReScript, PureScript, and TypeScript; see [SDK guides](./sdk)
 - [x] GraphQL API, see [API Documentation](./docs/api.md)
 - [x] [OpenTelemetry](https://opentelemetry.io/) tracing
 - [x] Plugin system in WebAssembly, see [examples](./examples)
@@ -45,8 +45,12 @@ adapters, with
 bounded parallelism, dependency validation, per-task environments, cancellation,
 and structured results. See [host execution plans](docs/host-executor.md) for the
 versioned plan format, functional SDK direction, and current limitations.
-[Elixir host plans](sdk/elixir/README.md) provide immutable `|>` builders, pure
+[Elixir host plans](sdk/elixir/HOST_PLANS.md) provide immutable `|>` builders, pure
 JSON compilation, typed results, and managed local execution with cancellation.
+
+The development version is **0.6.0**, with unified execution and legacy API
+compatibility. See the [0.6.0 compatibility notes](docs/compatibility-0.6.md) for
+migration guidance, legacy scheduling/service limits, and supported guest build paths.
 
 ## 🚀 Quick Start
 
@@ -67,6 +71,9 @@ cargo run --release -p fluentci-engine -- serve
 > Quickly setup Nix on your machine with [DeterminateSystems Nix installer](https://github.com/DeterminateSystems/nix-installer)
 
 ## 📦 Downloads
+
+The links below are for the published **0.5.0** release. Version **0.6.0** is in
+preparation; its artifacts will be linked after publication.
 
 - `Mac`: arm64: [fluentci-engine_v0.5.0_aarch64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.5.0/fluentci-engine_v0.5.0_aarch64-apple-darwin.tar.gz) intel: [fluentci-engine_v0.5.0_x86_64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.5.0/fluentci-engine_v0.5.0_x86_64-apple-darwin.tar.gz)
 - `Linux`: intel: [fluentci-engine_v0.5.0_x86_64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.5.0/fluentci-engine_v0.5.0_x86_64-unknown-linux-gnu.tar.gz) arm64: [fluentci-engine_v0.5.0_aarch64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.5.0/fluentci-engine_v0.5.0_aarch64-unknown-linux-gnu.tar.gz)
