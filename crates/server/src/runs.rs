@@ -882,7 +882,8 @@ async fn events(
     };
     let read = async {
         let mut file = tokio::fs::File::open(path.join("execution/events.jsonl")).await?;
-        if cursor.cursor > file.metadata().await?.len() {
+        let length = file.metadata().await?.len();
+        if cursor.cursor > length {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 "cursor beyond journal",
@@ -902,14 +903,17 @@ async fn events(
         }
         file.seek(std::io::SeekFrom::Start(cursor.cursor)).await?;
         let mut bytes = Vec::new();
-        file.take(4 * 1024 * 1024).read_to_end(&mut bytes).await?;
-        let length = bytes.iter().rposition(|b| *b == b'\n').map_or(0, |n| n + 1);
-        bytes.truncate(length);
-        Ok::<_, std::io::Error>(bytes)
+        file.take((length - cursor.cursor).min(4 * 1024 * 1024))
+            .read_to_end(&mut bytes)
+            .await?;
+        let complete = bytes.iter().rposition(|b| *b == b'\n').map_or(0, |n| n + 1);
+        bytes.truncate(complete);
+        Ok::<_, std::io::Error>((bytes, length))
     }
     .await;
     match read {
-        Ok(bytes) => HttpResponse::Ok()
+        Ok((bytes, length)) => HttpResponse::Ok()
+            .insert_header(("X-Journal-Length", length.to_string()))
             .insert_header((
                 "X-Next-Cursor",
                 (cursor.cursor + bytes.len() as u64).to_string(),
@@ -917,6 +921,7 @@ async fn events(
             .content_type("application/x-ndjson")
             .body(bytes),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => HttpResponse::Ok()
+            .insert_header(("X-Journal-Length", "0"))
             .insert_header(("X-Next-Cursor", cursor.cursor.to_string()))
             .content_type("application/x-ndjson")
             .finish(),
