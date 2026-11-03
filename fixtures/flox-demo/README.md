@@ -22,3 +22,8 @@ This Linux x86_64 smoke fixture uses manifest format 1. Its obsolete format-0
 lockfile has been removed. First activation resolves jq through the Flox catalog;
 this fixture therefore requires network access and is not a pinned toolchain.
 A successful native CI run is needed to validate catalog resolution and activation.
+
+Catalog resolution requires authentication. Both Flox CI execution paths map the
+repository secret `FLOX_HUB_TOKEN` to the CLI's `FLOX_FLOXHUB_TOKEN` environment
+variable. No interactive login is needed, and credentials are not written into
+the fixture or passed as command-line arguments.

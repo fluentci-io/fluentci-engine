@@ -307,6 +307,7 @@ jobs:
       - name: Bootstrap Flox and activate jq through the extension
         env:
           FLOX_VERSION: '1.19.3'
+          FLOX_FLOXHUB_TOKEN: ${{ secrets.FLOX_HUB_TOKEN }}
           FLOX_DISABLE_METRICS: 'true'
           FLUENTCI_REQUIRE_FLOX_BOOTSTRAP: '1'
         run: cargo test --release --locked -p fluentci-ext --test native_packages native_flox_auto_provision -- --ignored --exact --nocapture

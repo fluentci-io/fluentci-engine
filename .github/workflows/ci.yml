@@ -62,6 +62,8 @@ jobs:
           fluentci-engine run -- deno run -A ../.fluentci/e2e.ts
         working-directory: fixtures
         env:
+          FLOX_FLOXHUB_TOKEN: ${{ secrets.FLOX_HUB_TOKEN }}
+          FLOX_DISABLE_METRICS: 'true'
           FLUENTCI_CACHE_CDN_ENDPOINT: https://cache.fluentci.io
           FLUENTCI_CACHE_S3_ENDPOINT: https://fe5b1e2ce9f94f4c0415ab94ce402012.r2.cloudflarestorage.com
           FLUENTCI_CACHE_S3_BUCKET: cache
