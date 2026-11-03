@@ -3,12 +3,12 @@ use std::{
     fs::{self, metadata},
     path::Path,
     process::{Command, ExitStatus, Stdio},
-    sync::mpsc::{self, Sender},
+    sync::mpsc::Sender,
     thread,
 };
 
 use crate::{exec, pkgx::Pkgx, Extension};
-use anyhow::Error;
+use anyhow::{Context, Error};
 use async_trait::async_trait;
 use fluentci_types::Output;
 use owo_colors::OwoColorize;
@@ -116,7 +116,7 @@ pub async fn upload(key: &str) -> Result<(), Error> {
         default_backend = Some("S3");
     }
 
-    if let Ok(_) = std::env::var("FLUENTCI_CACHE_GCS_ENDPOINT") {
+    if let Ok(_) = std::env::var("FLUENTCI_CACHE_GCS_BUCKET") {
         default_backend = Some("GCS");
     }
 
@@ -194,13 +194,11 @@ impl Extension for Cache {
 
         if !Path::new(&cache_file).exists() {
             let key = self.key.clone();
-            let (dtx, drx) = mpsc::channel();
-            thread::spawn(move || {
-                let rt = tokio::runtime::Runtime::new().unwrap();
-                rt.block_on(download(&key)).unwrap();
-                dtx.send(0).unwrap();
-            });
-            drx.recv().unwrap();
+            thread::spawn(move || -> Result<(), Error> {
+                tokio::runtime::Runtime::new()?.block_on(download(&key))
+            })
+            .join()
+            .map_err(|_| Error::msg("cache download worker panicked"))??;
         }
 
         if Path::new(&cache_file).exists() {
@@ -209,8 +207,13 @@ impl Extension for Cache {
 
             fs::create_dir_all(&work_dir)?;
 
-            let cmd = format!("tar xzvf {}", cache_file);
-            exec(&cmd, tx, Output::Stdout, true, &work_dir)?;
+            let cmd = format!("tar xzvf {}", crate::bootstrap::quote(&cache_file));
+            let status = exec(&cmd, tx, Output::Stdout, true, &work_dir)?;
+            if !status.success() {
+                return Err(Error::msg(format!(
+                    "cache archive command failed ({status})"
+                )));
+            }
             let label = format!("[{}]", "withCache");
             println!("{} Cached restored", label.cyan());
             return Ok(ExitStatus::default());
@@ -247,26 +250,38 @@ impl Extension for Cache {
             if let Some(file_or_dir) = Path::new(&self.path).file_name() {
                 let cmd = match (is_dir, is_file) {
                     (true, false) => {
-                        format!("tar czvf {} {}", output_file, file_or_dir.to_str().unwrap())
+                        format!(
+                            "tar czvf {} -- {}",
+                            crate::bootstrap::quote(&output_file),
+                            crate::bootstrap::quote(file_or_dir.to_str().unwrap())
+                        )
                     }
                     (false, true) => {
-                        format!("tar czvf {} {}", output_file, file_or_dir.to_str().unwrap())
+                        format!(
+                            "tar czvf {} -- {}",
+                            crate::bootstrap::quote(&output_file),
+                            crate::bootstrap::quote(file_or_dir.to_str().unwrap())
+                        )
                     }
                     _ => return Err(Error::msg("Invalid file or directory")),
                 };
 
                 let work_dir = String::from(parent.to_str().unwrap());
 
-                exec(&cmd, tx, Output::Stdout, true, &work_dir)?;
+                let status = exec(&cmd, tx, Output::Stdout, true, &work_dir)?;
+                if !status.success() {
+                    return Err(Error::msg(format!(
+                        "cache archive command failed ({status})"
+                    )));
+                }
 
                 let key = self.key.clone();
-                let (utx, urx) = mpsc::channel();
-                thread::spawn(move || {
-                    let rt = tokio::runtime::Runtime::new().unwrap();
-                    rt.block_on(upload(&key)).unwrap();
-                    utx.send(0).unwrap();
-                });
-                urx.recv().unwrap();
+                thread::spawn(move || -> Result<(), Error> {
+                    tokio::runtime::Runtime::new()?.block_on(upload(&key))
+                })
+                .join()
+                .map_err(|_| Error::msg("cache upload worker panicked"))?
+                .context("cache upload failed")?;
 
                 return Ok(ExitStatus::default());
             }

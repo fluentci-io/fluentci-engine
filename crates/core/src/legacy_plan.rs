@@ -198,7 +198,12 @@ fn compile(
                 root,
                 &graph.environment,
             )?;
-            finalizer.timeout_ms = Some(30_000);
+            finalizer.timeout_ms = Some(cache_finalization_timeout(
+                graph
+                    .environment
+                    .get("FLUENTCI_CACHE_FINALIZE_TIMEOUT_MS")
+                    .map(String::as_str),
+            )?);
             cleanup.push(finalizer);
         }
         tasks.push(lowered);
@@ -354,7 +359,7 @@ impl Display {
         Ok(())
     }
 }
-fn run(
+pub(crate) fn run(
     plan: &Plan,
     directory: &Path,
     cancel: &Cancellation,
@@ -391,6 +396,45 @@ fn run(
         }
     })
 }
+fn cache_finalization_timeout(value: Option<&str>) -> Result<u64, Error> {
+    let milliseconds = value
+        .map(str::parse::<u64>)
+        .transpose()
+        .context("FLUENTCI_CACHE_FINALIZE_TIMEOUT_MS must be an integer")?
+        .unwrap_or(300_000);
+    if !(1..=3_600_000).contains(&milliseconds) {
+        bail!("FLUENTCI_CACHE_FINALIZE_TIMEOUT_MS must be in 1..=3600000");
+    }
+    Ok(milliseconds)
+}
+fn finalization_failure(task: &fluentci_executor::TaskResult) -> String {
+    let status = task
+        .exit_code
+        .map(|code| format!("exit status {code}"))
+        .unwrap_or_else(|| format!("{:?}", task.status).to_lowercase());
+    let mut detail = task
+        .error
+        .clone()
+        .unwrap_or_else(|| "provider finalizer failed".into());
+    if let Ok(mut file) = fs::File::open(&task.stderr) {
+        if let Ok(length) = file.metadata().map(|metadata| metadata.len()) {
+            if file
+                .seek(SeekFrom::Start(length.saturating_sub(4096)))
+                .is_ok()
+            {
+                let mut tail = vec![];
+                if file.take(4096).read_to_end(&mut tail).is_ok() && !tail.is_empty() {
+                    detail.push_str(": ");
+                    detail.push_str(String::from_utf8_lossy(&tail).trim());
+                }
+            }
+        }
+    }
+    format!(
+        "cache finalization failed for {} ({status}): {detail}",
+        task.id
+    )
+}
 pub(crate) fn execute(
     graph: &mut Graph,
     requested: Option<&str>,
@@ -415,8 +459,15 @@ pub(crate) fn execute(
             &root.path().join("cleanup"),
             &graph.cancellation,
         );
-        if result.as_ref().is_ok_and(|r| r.success()) && !cleanup?.success() {
-            bail!("cache finalization failed");
+        if result.as_ref().is_ok_and(|r| r.success()) {
+            let cleanup = cleanup.context("cache finalization failed")?;
+            if let Some(task) = cleanup
+                .tasks
+                .iter()
+                .find(|task| task.status != fluentci_executor::Status::Succeeded)
+            {
+                bail!("{}", finalization_failure(task));
+            }
         }
     }
 
@@ -478,6 +529,15 @@ mod tests {
     use crate::deps::GraphCommand;
     use fluentci_ext::{runner::Runner, Extension};
     use std::sync::{mpsc, Arc};
+
+    #[test]
+    fn cache_finalization_timeout_is_bounded_configurable_and_not_thirty_seconds() {
+        assert_eq!(cache_finalization_timeout(None).unwrap(), 300_000);
+        assert_eq!(cache_finalization_timeout(Some("600000")).unwrap(), 600_000);
+        for invalid in ["0", "-1", "invalid", "3600001"] {
+            assert!(cache_finalization_timeout(Some(invalid)).is_err());
+        }
+    }
 
     fn graph(root: &Path) -> (Graph, mpsc::Receiver<(String, usize)>) {
         let (tx, rx) = mpsc::channel();

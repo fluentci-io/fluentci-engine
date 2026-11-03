@@ -37,7 +37,10 @@ liveness, and clean up process groups through the executor. For database readine
 use an explicit host `service.readiness` probe. Compatibility run/request files
 are private and temporary; durable history remains available through explicit
 CLI/server runs. Cache finalization uses bounded executor tasks on success/failure
-and is skipped after explicit cancellation.
+and is skipped after explicit cancellation. Legacy cache finalization has a five-minute
+default budget covering archive creation and upload. Set
+`FLUENTCI_CACHE_FINALIZE_TIMEOUT_MS` to override it (1..3600000 milliseconds).
+Timeout/exit details and a bounded stderr tail are preserved in finalization errors.
 
 ```sh
 cargo run --release -p fluentci-engine -- execute fixtures/plans/diamond.json --run-dir /tmp/fluentci-example-run

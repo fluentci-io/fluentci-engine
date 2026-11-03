@@ -1,6 +1,6 @@
 use std::{env, fs, io::Write};
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use async_trait::async_trait;
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_s3::{primitives::ByteStream, Client};
@@ -58,7 +58,7 @@ impl CacheBackend for S3 {
     async fn save(&self, path: &str) -> Result<(), Error> {
         let body = ByteStream::read_from()
             .path(path)
-            .buffer_size(2048)
+            .buffer_size(1024 * 1024)
             .build()
             .await?;
 
@@ -67,22 +67,15 @@ impl CacheBackend for S3 {
         let filename = path.split("/").last().unwrap();
         let key = format!("{}/{}", self.prefix, filename);
 
-        match self
-            .client
+        self.client
             .put_object()
             .bucket(bucket)
             .key(key)
             .body(body)
             .send()
             .await
-        {
-            Ok(_) => {
-                println!(" Uploaded succesfully")
-            }
-            Err(e) => {
-                println!(" Failed to upload: {}", e)
-            }
-        }
+            .context("S3 cache upload failed")?;
+        println!(" Uploaded successfully");
 
         Ok(())
     }
