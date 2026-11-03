@@ -1,24 +1,5 @@
-# demo
+# Local Gleam SDK demo
 
-[![Package Version](https://img.shields.io/hexpm/v/demo)](https://hex.pm/packages/demo)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/demo/)
-
-```sh
-gleam add demo@1
-```
-```gleam
-import demo
-
-pub fn main() {
-  // TODO: An example of the project in use
-}
-```
-
-Further documentation can be found at <https://hexdocs.pm/demo>.
-
-## Development
-
-```sh
-gleam run   # Run the project
-gleam test  # Run the tests
-```
+This package depends on the SDK in `..`. Run `gleam build` to compile it.
+`gleam run` executes legacy GraphQL examples and requires an engine session.
+See the parent README for immutable host plans, local/HTTP clients, and journals.

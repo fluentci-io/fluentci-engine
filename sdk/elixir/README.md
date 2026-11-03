@@ -279,3 +279,8 @@ Package-manager encoding tests perform
 no installation. The workflow
 includes these tests on Ubuntu with Elixir 1.20.4/OTP 29.1.2; local validation also
 runs on macOS ARM64. A configured CI job is not evidence of a completed remote run.
+
+Cached plans can verify external toolchain bytes using
+`Host.cache(task, inputs, outputs, identity, toolchain_files: ["/opt/tools/compiler"])`.
+Paths must be absolute regular-file targets. The engine rechecks their bytes and
+permissions before publication. This option requires a current host engine.

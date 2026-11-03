@@ -31,3 +31,10 @@ fluentci-engine run -- deno run -A src/Demo.res.mjs
 ```
 
 See [fluentci-engine](https://github.com/fluentci-io/fluentci-engine) and [fluentci](https://github.com/fluentci-io/fluentci) for more information.
+
+## Development
+
+Run `bun install && bun run res:build` here, then run the same commands in
+`demo`. The demo uses `file:..` so it compiles against this checkout. These are
+legacy GraphQL/plugin/Dagger bindings; immutable host-plan bindings are still
+pending for ReScript. Compilation does not start an engine or execute pipelines.

@@ -22,7 +22,7 @@ allow_all = true
 # https://gleam.run/writing-gleam/gleam-toml/.
 
 [dependencies]
-fluentci = ">= 1.1.0 and < 2.0.0"
+fluentci = { path = ".." }
 gleam_javascript = ">= 0.11.0 and < 1.0.0"
 gleam_stdlib = ">= 0.34.0 and < 2.0.0"
 

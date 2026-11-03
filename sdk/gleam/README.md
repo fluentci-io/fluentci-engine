@@ -289,3 +289,9 @@ fluentci-engine run -- gleam run
 See [fluentci-engine](https://github.com/fluentci-io/fluentci-engine) and [fluentci](https://github.com/fluentci-io/fluentci) for more information.
 
 Further documentation can be found at <https://hexdocs.pm/fluentci>.
+
+To verify external toolchain files, compose
+`host.cache(inputs, outputs, identity) |> host.with_toolchain_files(paths)` before
+attaching the cache to a task. Paths identify absolute regular-file targets.
+The engine checks their contents and permissions before publishing a cached result.
+The `demo` package uses the SDK from this checkout; run `cd demo && gleam build`.

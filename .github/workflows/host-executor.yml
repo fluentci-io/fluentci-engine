@@ -6,7 +6,7 @@ on:
       - 'crates/**'
       - 'Cargo.*'
       - 'tests/**'
-      - 'sdk/gleam/**'
+      - 'sdk/**'
       - 'sdk/elixir/**'
       - '.github/workflows/host-executor.yml'
       - 'rust-toolchain.toml'
@@ -92,6 +92,34 @@ jobs:
           gleam format --check src/fluentci/host.gleam src/fluentci/host/local.gleam src/fluentci/host/result.gleam src/fluentci/host/client.gleam src/fluentci/host/journal.gleam test/host_test.gleam test/host_local_test.gleam test/host_client_test.gleam test/host_journal_test.gleam
           gleam test --runtime nodejs
           gleam test --runtime deno
+
+      - name: Check TypeScript SDK and demo
+        if: matrix.os == 'ubuntu-24.04'
+        working-directory: sdk/typescript
+        run: deno task check
+      - name: Compile PureScript SDK examples
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          npm install --global purescript@0.15.16 spago@1.0.5
+          for example in demo demo-dagger demo-host; do
+            (cd "sdk/purescript/$example" && spago build)
+          done
+          python3 tests/e2e_purescript.py
+      - name: Build the local Gleam demo
+        if: matrix.os == 'ubuntu-24.04'
+        working-directory: sdk/gleam/demo
+        run: gleam build
+
+      - name: Compile ReScript SDK and local demo
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          npm install --global bun@1.4.3
+          (cd sdk/rescript && bun install --frozen-lockfile && bun run res:build)
+          (cd sdk/rescript/demo && bun install --frozen-lockfile && bun run res:build)
+      - name: Bundle local TypeScript plugin examples
+        if: matrix.os == 'ubuntu-24.04'
+        working-directory: sdk/typescript/demo-ext
+        run: bun install --frozen-lockfile && node esbuild.js
 
       - name: Set up Elixir host plan contracts
         if: matrix.os == 'ubuntu-24.04'
