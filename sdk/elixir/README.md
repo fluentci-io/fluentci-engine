@@ -251,7 +251,7 @@ decoding errors contain no raw report values.
 
 ## Validation
 
-Use Elixir 1.18.4 for formatting, matching CI. Newer Elixir formatters can
+Use Elixir 1.20.4 for formatting, matching CI. Newer Elixir formatters can
 produce different layouts even when the code compiles on both versions.
 From the engine root, then the SDK directory:
 
@@ -277,5 +277,5 @@ partial writes, Unicode byte cursors, bounded and boundary-sized pages, invalid
 records/cursors, live local reads, and service-probe events after cancellation.
 Package-manager encoding tests perform
 no installation. The workflow
-includes these tests on Ubuntu with Elixir 1.18.4/OTP 27.3.4; local validation also
+includes these tests on Ubuntu with Elixir 1.20.4/OTP 29.1.2; local validation also
 runs on macOS ARM64. A configured CI job is not evidence of a completed remote run.
