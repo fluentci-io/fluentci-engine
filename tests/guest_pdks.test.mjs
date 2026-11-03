@@ -11,7 +11,11 @@ function guest() {
   const allocate = value => { const offset = next++; values.set(offset, value); return offset; };
   globalThis.Memory = {
     fromString: value => ({ offset: allocate(value) }),
-    find: offset => ({ readString: () => { assert(values.has(offset)); return values.get(offset); } }),
+    fromJsonObject: value => ({ offset: allocate(JSON.stringify(value)) }),
+    find: offset => ({
+      readString: () => { assert(values.has(offset)); return values.get(offset); },
+      readJsonObject: () => { assert(values.has(offset)); return JSON.parse(values.get(offset)); },
+    }),
   };
   globalThis.Host = { getFunctions: () => new Proxy({}, {
     get: (_, name) => offset => {
@@ -69,4 +73,13 @@ test("NUL arguments fail before with_exec reaches the engine", () => {
   const plan = rescript.exec(rescript.pipeline("build"), ["printf", "bad\0argument"]);
   assert.match(rescript.run(plan, false, ok, error).error, /NUL/);
   assert(!calls.some(call => call.name === "with_exec"));
+});
+
+test("TypeScript Pipeline.withExec sends the canonical JSON array to the host", async () => {
+  const calls = guest();
+  const { dag } = await import("../sdk/typescript/src/plugin.ts");
+  const args = ["printf", "%s", "héllo 世界; 'quotes' and  two spaces"];
+  const output = dag.pipeline("build").withExec(args).stdout();
+  assert.equal(output, "héllo 世界");
+  assert.deepEqual(JSON.parse(calls.find(call => call.name === "with_exec").input), args);
 });

@@ -24,7 +24,9 @@ class GuestPDKs(unittest.TestCase):
                     cwd=directory, capture_output=True, text=True, timeout=90,
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertEqual(result.stdout.splitlines()[-1], value, result.stdout)
+                # Captured command output and CLI return-value printing each add
+                # a newline. Ignore only line terminators, preserving spaces.
+                self.assertEqual(result.stdout.rstrip("\r\n").splitlines()[-1], value, result.stdout)
                 self.assertFalse((Path(directory) / "injected").exists(), "exec interpreted a literal argument as shell code")
 
 

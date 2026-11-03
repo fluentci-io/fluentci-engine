@@ -2136,7 +2136,7 @@ export class Pipeline extends BaseClient {
   withExec = (args: string[]): Pipeline => {
     let mem = Memory.fromString("default");
     set_runner(mem.offset);
-    mem = Memory.fromString(args.join(" "));
+    mem = Memory.fromJsonObject(args);
     with_exec(mem.offset);
     return this;
   };
