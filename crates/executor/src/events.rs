@@ -212,12 +212,6 @@ mod tests {
                 cache: "miss".into(),
                 reason: "new action".into(),
                 wait_reason: None,
-                attempts: vec![],
-                outputs: Default::default(),
-                artifacts: Default::default(),
-                condition_skipped: false,
-                allowed_failure: false,
-                error: None,
                 duration_ms: 12,
             },
             EventKind::Log {
