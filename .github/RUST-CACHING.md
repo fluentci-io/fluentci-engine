@@ -46,3 +46,9 @@ sccache hit after cleaning that fixture's Cargo output; it does not measure CI
 backend throughput or native BSD/container cache transfers. Cache eviction and
 runner image/toolchain updates can still cause cold builds. Compilation of final
 binaries and test harnesses can remain non-cacheable even with sccache.
+
+Vendored SuperConsole source and its manifest participate in native sccache and
+BSD artifact-cache keys. The native workflow also watches `vendor/superconsole/`
+so dependency patches trigger the same OS matrix as engine changes. See
+[the vendoring record](../vendor/superconsole/FLUENTCI-VENDOR.md) for the pinned
+revision and reproducible patch.
