@@ -92,3 +92,28 @@ until EOF; the run's final drain rechecks every terminal stream before emitting
 output larger than the per-tick budget, later task starts, appended live output,
 final EOF rechecks, and duplicate-free journal capture. Raw log files remain the
 source of exact bytes; journal text remains a lossy UTF-8 display representation.
+
+
+## Duplicate-content cache publication workload
+
+```sh
+cargo test --release -p fluentci-executor --lib duplicate_blob_publication_benchmark -- --ignored --nocapture
+```
+
+This benchmark publishes 16 separate 4 MiB output files plus stdout/stderr with
+identical contents. After one initial publication populates the local CAS, five
+samples time another publication, including source snapshots, executable/input
+verification, blob verification, and synced manifest replacement. It then restores
+all outputs and logs and checks their exact bytes. OS page caches are not flushed;
+there is no timing threshold.
+
+On one local Darwin ARM64 release comparison, the median fell from 273.872 ms to
+149.451 ms (about 45% less time) after verifying each unique blob once per
+publication. This deliberately duplicate-heavy workload does not represent a
+general pipeline speedup. Distinct source output paths are still fully hashed;
+the optimization avoids repeated verification of the same CAS destination.
+
+The verified-digest set is discarded after each save. Regression coverage corrupts
+a shared blob between saves, verifies repair, changes one output and one log, and
+checks that restoration retains every file's correct contents. Verification on
+restore and the staged-publication protocol are unchanged.

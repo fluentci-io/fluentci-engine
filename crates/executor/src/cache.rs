@@ -601,15 +601,24 @@ impl Prepared {
             return Err("declared inputs changed during execution; action was not cached".into());
         }
         let entries = snapshot(&task.cwd, &policy.outputs, &self.cancel)?;
+        // CAS blobs are immutable by digest. Verify/publish each unique blob
+        // once in this save, including logs that duplicate an output. Keep this
+        // set local: a later save must detect and repair newly corrupted blobs.
+        let mut stored = std::collections::HashSet::new();
         for entry in &entries {
             if let Some(hash) = &entry.digest {
-                self.store_blob(&checked_path(&task.cwd, &entry.path)?, hash)?;
+                if stored.insert(hash.clone()) {
+                    self.store_blob(&checked_path(&task.cwd, &entry.path)?, hash)?;
+                }
             }
         }
         let stdout_digest = file_digest(stdout, &self.cancel)?;
         let stderr_digest = file_digest(stderr, &self.cancel)?;
-        self.store_blob(stdout, &stdout_digest)?;
-        self.store_blob(stderr, &stderr_digest)?;
+        for (source, hash) in [(stdout, &stdout_digest), (stderr, &stderr_digest)] {
+            if stored.insert(hash.clone()) {
+                self.store_blob(source, hash)?;
+            }
+        }
         let manifest = Manifest {
             version: 1,
             key: self.key.clone(),
@@ -984,5 +993,92 @@ mod snapshot_tests {
                 elapsed.as_secs_f64()
             );
         }
+    }
+}
+
+#[cfg(all(test, unix))]
+mod duplicate_blob_tests {
+    use super::*;
+
+    fn fixture(root: &Path, count: usize, bytes: &[u8]) -> (Task, Prepared, PathBuf, PathBuf) {
+        fs::create_dir(root.join("outputs")).unwrap();
+        for index in 0..count {
+            fs::write(root.join("outputs").join(index.to_string()), bytes).unwrap();
+        }
+        let stdout = root.join("stdout");
+        let stderr = root.join("stderr");
+        fs::write(&stdout, bytes).unwrap();
+        fs::write(&stderr, bytes).unwrap();
+        let task: Task = serde_json::from_value(serde_json::json!({
+            "id":"duplicate-blobs", "program":"/bin/sh", "cwd":root,
+            "cache":{"inputs":[],"outputs":["outputs"],"toolchain":"fixture"}
+        }))
+        .unwrap();
+        let action = prepare(&root.join("cache"), &task, &[]).unwrap().unwrap();
+        (task, action, stdout, stderr)
+    }
+
+    #[test]
+    fn duplicate_outputs_and_logs_repair_corruption_and_refresh_between_saves() {
+        let root = tempfile::tempdir().unwrap();
+        let (task, action, stdout, stderr) = fixture(root.path(), 2, b"shared");
+        action.save(&task, &stdout, &stderr).unwrap();
+        let shared_blob = action.blob(&digest(b"shared")).unwrap();
+        assert_eq!(
+            fs::read_dir(root.path().join("cache/blobs"))
+                .unwrap()
+                .count(),
+            1
+        );
+        fs::write(&shared_blob, b"corrupted").unwrap();
+        action.save(&task, &stdout, &stderr).unwrap();
+        assert_eq!(fs::read(&shared_blob).unwrap(), b"shared");
+        fs::write(root.path().join("outputs/0"), b"changed output").unwrap();
+        fs::write(&stdout, b"changed stdout").unwrap();
+        action.save(&task, &stdout, &stderr).unwrap();
+        fs::remove_dir_all(root.path().join("outputs")).unwrap();
+        fs::remove_file(&stdout).unwrap();
+        fs::remove_file(&stderr).unwrap();
+        assert!(action.restore(&task, &stdout, &stderr).unwrap());
+        assert_eq!(
+            fs::read(root.path().join("outputs/0")).unwrap(),
+            b"changed output"
+        );
+        assert_eq!(fs::read(root.path().join("outputs/1")).unwrap(), b"shared");
+        assert_eq!(fs::read(&stdout).unwrap(), b"changed stdout");
+        assert_eq!(fs::read(&stderr).unwrap(), b"shared");
+        assert_eq!(
+            fs::read_dir(root.path().join("cache/blobs"))
+                .unwrap()
+                .count(),
+            3
+        );
+    }
+
+    #[test]
+    #[ignore = "release-only duplicate blob publication benchmark; no timing threshold"]
+    fn duplicate_blob_publication_benchmark() {
+        let root = tempfile::tempdir().unwrap();
+        let bytes = vec![42; 4 * 1024 * 1024];
+        let (task, action, stdout, stderr) = fixture(root.path(), 16, &bytes);
+        action.save(&task, &stdout, &stderr).unwrap();
+        for _ in 0..5 {
+            let start = std::time::Instant::now();
+            action.save(&task, &stdout, &stderr).unwrap();
+            eprintln!(
+                "duplicate_blob_publication seconds={:.6}",
+                start.elapsed().as_secs_f64()
+            );
+        }
+        fs::remove_dir_all(root.path().join("outputs")).unwrap();
+        assert!(action.restore(&task, &stdout, &stderr).unwrap());
+        for index in 0..16 {
+            assert_eq!(
+                fs::read(root.path().join("outputs").join(index.to_string())).unwrap(),
+                bytes
+            );
+        }
+        assert_eq!(fs::read(stdout).unwrap(), bytes);
+        assert_eq!(fs::read(stderr).unwrap(), bytes);
     }
 }

@@ -221,7 +221,11 @@ inputs/toolchain identity; this is an explicit cacheability contract, not a
 hermetic sandbox. Side-effecting deployment and publishing tasks should not opt in.
 
 Blobs are content-addressed with SHA-256. Writes are staged and atomically
-published. Action locks deduplicate concurrent identical executions on Unix.
+published. Each publication verifies/stores a unique blob once even when several
+outputs or logs share its digest. This deduplication is local to that publication;
+later publications verify stored contents again and repair corrupted blobs.
+Source snapshots still hash every distinct output path. Action locks deduplicate
+concurrent identical executions on Unix.
 Restoration verifies all staged artifacts and logs before replacing outputs.
 Output replacement keeps backups and rolls back earlier replacements if a later
 filesystem operation fails. If rollback itself fails, backups are retained and
