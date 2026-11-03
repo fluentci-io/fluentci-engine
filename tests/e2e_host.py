@@ -411,6 +411,7 @@ s.serve_forever()
         result = subprocess.run(self.command(self.plan([self.task("ok", "echo hello")]), progress="plain"), capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, 0)
         self.assertIn("hello", result.stdout)
+        self.assertIn("exit=0", result.stdout)
         self.assertNotIn("\x1b", result.stdout)
 
 

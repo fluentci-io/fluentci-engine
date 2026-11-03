@@ -281,9 +281,12 @@ impl Progress {
                 if self.mode == Mode::Plain {
                     writeln!(
                         io::stdout().lock(),
-                        "[{}] {:?} cache={} {}",
+                        "[{}] {:?}{} cache={} {}",
                         clean(&id),
                         status,
+                        exit_code
+                            .map(|code| format!(" exit={code}"))
+                            .unwrap_or_default(),
                         cache,
                         clean(
                             error
@@ -430,11 +433,14 @@ impl Progress {
                 row.duration_ms
             };
             lines.push(format!(
-                " => {icon} [#{:<2}] {:<24} {:<10?} {:>6.1}s {}",
+                " => {icon} [#{:<2}] {:<24} {:<10?} {:>6.1}s {} {}",
                 row.number,
                 one_line(id).chars().take(24).collect::<String>(),
                 row.status,
                 duration as f64 / 1000.0,
+                row.exit_code
+                    .map(|code| format!("exit={code}"))
+                    .unwrap_or_default(),
                 one_line(row.error.as_deref().unwrap_or_else(|| {
                     if row.cache == "hit" {
                         "CACHED"
