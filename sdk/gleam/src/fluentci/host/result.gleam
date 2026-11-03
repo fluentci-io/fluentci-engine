@@ -3,7 +3,6 @@ import gleam/dict
 import gleam/dynamic.{type DecodeErrors, type Dynamic, DecodeError}
 import gleam/list
 import gleam/option.{type Option, Some}
-import gleam/option
 import gleam/result
 
 pub type Outcome {
