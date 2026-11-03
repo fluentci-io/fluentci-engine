@@ -33,11 +33,33 @@ pub type TaskResult {
     stdout: String,
     stderr: String,
     cache: Cache,
+    attempts: List(Attempt),
     outputs: dict.Dict(String, String),
     artifacts: dict.Dict(String, Artifact),
     allowed_failure: Bool,
     condition_skipped: Bool,
   )
+}
+
+pub type Attempt {
+  Attempt(
+    number: Int,
+    status: TaskStatus,
+    exit_code: Option(Int),
+    duration_ms: Int,
+    error: Option(String),
+  )
+}
+
+fn attempt(data: Dynamic) -> Result(Attempt, DecodeErrors) {
+  use number <- result.try(dynamic.field("number", dynamic.int)(data))
+  use status <- result.try(dynamic.field("status", status)(data))
+  use exit_code <- result.try(dynamic.optional_field("exit_code", dynamic.int)(
+    data,
+  ))
+  use duration_ms <- result.try(dynamic.field("duration_ms", dynamic.int)(data))
+  use error <- result.try(dynamic.optional_field("error", dynamic.string)(data))
+  Ok(Attempt(number:, status:, exit_code:, duration_ms:, error:))
 }
 
 pub type Artifact {
@@ -105,6 +127,10 @@ fn task(data: Dynamic) -> Result(TaskResult, DecodeErrors) {
   use stdout <- result.try(dynamic.field("stdout", dynamic.string)(data))
   use stderr <- result.try(dynamic.field("stderr", dynamic.string)(data))
   use cache <- result.try(dynamic.field("cache", cache)(data))
+  use attempts <- result.try(dynamic.optional_field(
+    "attempts",
+    dynamic.list(attempt),
+  )(data))
   use outputs <- result.try(dynamic.optional_field(
     "outputs",
     dynamic.dict(dynamic.string, dynamic.string),
@@ -133,6 +159,7 @@ fn task(data: Dynamic) -> Result(TaskResult, DecodeErrors) {
         stdout:,
         stderr:,
         cache:,
+        attempts: option.unwrap(attempts, []),
         outputs: option.unwrap(outputs, dict.new()),
         artifacts: option.unwrap(artifacts, dict.new()),
         allowed_failure: option.unwrap(allowed_failure, False),
@@ -182,5 +209,9 @@ pub fn parse(text: String) -> Result(RunResult, Nil) {
 }
 
 pub fn succeeded(report: RunResult) -> Bool {
-  list.all(report.tasks, fn(task) { task.status == TaskSucceeded })
+  case report.outcome {
+    Some(Succeeded) -> True
+    Some(_) -> False
+    _ -> list.all(report.tasks, fn(task) { task.status == TaskSucceeded })
+  }
 }

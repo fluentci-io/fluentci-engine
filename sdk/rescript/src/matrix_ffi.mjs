@@ -65,3 +65,8 @@ export const resultArtifact = (report, id, name, ok, error) => result(ok, error,
   if (!value || typeof value.path !== "string" || typeof value.sha256 !== "string" || typeof value.size !== "number") throw Error(`missing artifact ${id}.${name}`);
   return frozen({ ...value });
 });
+export const resultAttempts = (report, id, ok, error) => result(ok, error, () => {
+  const task = report.tasks.find(task => task.id === id);
+  if (!task) throw Error(`missing task ${id}`);
+  return frozen((task.attempts ?? []).map(attempt => frozen({ ...attempt })));
+});

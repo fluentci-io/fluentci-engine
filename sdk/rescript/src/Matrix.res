@@ -45,3 +45,7 @@ type artifactResult = {path: string, size: float, sha256: string}
 @module("./matrix_ffi.mjs") external resultArtifactImpl: (runResult, string, string, artifactResult => result<artifactResult, string>, string => result<artifactResult, string>) => result<artifactResult, string> = "resultArtifact"
 let resultOutput = (report, id, name) => resultOutputImpl(report, id, name, value => Ok(value), error => Error(error))
 let resultArtifact = (report, id, name) => resultArtifactImpl(report, id, name, value => Ok(value), error => Error(error))
+
+type attempt = {number: int, status: string, exit_code: Nullable.t<int>, duration_ms: float, error: Nullable.t<string>}
+@module("./matrix_ffi.mjs") external resultAttemptsImpl: (runResult, string, array<attempt> => result<array<attempt>, string>, string => result<array<attempt>, string>) => result<array<attempt>, string> = "resultAttempts"
+let resultAttempts = (report, id) => resultAttemptsImpl(report, id, value => Ok(value), error => Error(error))
