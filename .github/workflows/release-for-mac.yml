@@ -37,7 +37,13 @@ jobs:
           gh release view "$RELEASE_VERSION" >/dev/null
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
       - name: Install native build and upload dependencies
-        run: brew install protobuf awscli
+        run: |
+          set -euo pipefail
+          brew install protobuf
+          if ! command -v aws >/dev/null 2>&1; then
+            brew install awscli
+          fi
+          aws --version
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
         with:
           toolchain: '1.99.1'
