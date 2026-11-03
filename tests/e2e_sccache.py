@@ -14,7 +14,7 @@ PLUGIN = ROOT / "examples/sccache/dist/plugin.wasm"
 
 
 def counters(stats, name):
-    return sum(stats[name]["counts"].values())
+    return sum(stats["stats"][name]["counts"].values())
 
 
 class CompilerCache(unittest.TestCase):
