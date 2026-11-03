@@ -6,7 +6,7 @@ use std::{
 use users::get_current_username;
 
 use crate::{exec, Extension};
-use anyhow::{anyhow, Error};
+use anyhow::Error;
 use fluentci_types::{nix::NixArgs, Output};
 
 #[derive(Default, Clone)]
@@ -66,8 +66,9 @@ impl Extension for Nix {
             .wait()?;
 
         if !status.success() {
-            return Err(anyhow!(
-                "Nix flake initialization failed ({status}); command was not executed"
+            return Err(crate::worker::command_failure(
+                &status,
+                "Nix flake initialization failed; command was not executed",
             ));
         }
         let cmd = format!(

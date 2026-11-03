@@ -22,7 +22,10 @@ fn checked(command: &mut Command, phase: &str) -> Result<(), Error> {
         .status()
         .with_context(|| format!("{phase} could not start"))?;
     if !status.success() {
-        return Err(anyhow!("{phase} failed ({status}); setup stopped"));
+        return Err(crate::worker::command_failure(
+            &status,
+            format!("{phase} failed; setup stopped"),
+        ));
     }
     Ok(())
 }

@@ -153,9 +153,17 @@ async fn main() -> std::process::ExitCode {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("Error: {error:?}");
-            let code = error
+            let exit_code = error
                 .downcast_ref::<fluentci_executor::diagnostics::ExecutionFailure>()
-                .and_then(|failure| u8::try_from(failure.exit_code).ok())
+                .map(|failure| failure.exit_code)
+                .or_else(|| {
+                    error
+                        .downcast_ref::<fluentci_ext::worker::CommandFailure>()
+                        .map(|failure| failure.exit_code)
+                })
+                .unwrap_or(1);
+            let code = u8::try_from(exit_code)
+                .ok()
                 .filter(|code| *code != 0)
                 .unwrap_or(1);
             std::process::ExitCode::from(code)

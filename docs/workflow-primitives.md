@@ -105,6 +105,7 @@ these same diagnostics.
 
 `execute`, local/remote `watch`, session commands and failed Wasm exports forward
 the selected native process code instead of replacing every failure with `1`.
+Provider-worker and bootstrap wrappers retain the original subprocess code too.
 Successful handling of a returned failed report does not force a Wasm export to
 fail. On a failed export, the CLI includes the latest failed native execution's
 code and diagnostic alongside the plugin error. Allowed failures remain visible

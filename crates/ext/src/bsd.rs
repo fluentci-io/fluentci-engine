@@ -82,7 +82,10 @@ impl BsdPackages {
         self.setup()?;
         let status = self.install_command(&packages).status()?;
         if !status.success() {
-            bail!("{:?} package installation failed: {status}", self.manager);
+            return Err(crate::worker::command_failure(
+                &status,
+                format!("{:?} package installation failed", self.manager),
+            ));
         }
         Ok(status)
     }

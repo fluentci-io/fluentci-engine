@@ -184,7 +184,7 @@ impl Request {
                 )?
             };
             if !status.success() {
-                bail!("provider command failed ({status})");
+                return Err(command_failure(&status, "provider command failed"));
             }
             if let Some(path) = &command.capture {
                 let text = rx.recv().context("provider returned no captured output")?;
@@ -194,6 +194,45 @@ impl Request {
         Ok(())
     }
 }
+/// Typed subprocess failure so wrappers preserve the original status.
+#[derive(Debug)]
+pub struct CommandFailure {
+    pub exit_code: i32,
+    pub message: String,
+}
+impl std::fmt::Display for CommandFailure {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(&self.message)
+    }
+}
+impl std::error::Error for CommandFailure {}
+pub fn command_failure(status: &std::process::ExitStatus, phase: impl Into<String>) -> Error {
+    #[cfg(unix)]
+    use std::os::unix::process::ExitStatusExt;
+    let exit_code = status.code().unwrap_or_else(|| {
+        #[cfg(unix)]
+        {
+            if let Some(signal) = status.signal() {
+                return 128 + signal;
+            }
+        }
+        1
+    });
+    CommandFailure {
+        exit_code,
+        message: format!("{} (exit code {exit_code}; {status})", phase.into()),
+    }
+    .into()
+}
+pub fn output_failure(output: &std::process::Output, phase: impl Into<String>) -> Error {
+    let stderr =
+        String::from_utf8_lossy(&output.stderr[output.stderr.len().saturating_sub(4096)..]);
+    command_failure(
+        &output.status,
+        format!("{}: {}", phase.into(), stderr.trim()),
+    )
+}
+
 pub fn run(path: &Path) -> Result<(), Error> {
     let request: Request = serde_json::from_slice(&fs::read(path)?)?;
     request.execute()

@@ -15,7 +15,7 @@ fn verify(command: &mut Command) -> Result<(), Error> {
         "Flox is unavailable; install the native package from https://flox.dev/download/ and put flox on PATH",
     )?;
     if !output.status.success() {
-        return Err(anyhow!("Flox version check failed ({}); repair the native Flox installation before executing pipelines", output.status));
+        return Err(crate::worker::output_failure(&output, "Flox version check failed; repair the native Flox installation before executing pipelines"));
     }
     Ok(())
 }
@@ -34,9 +34,9 @@ fn ensure_flox(
             provision()?;
             verify(&mut command())
         }
-        Ok(output) => Err(anyhow!(
-            "Flox version check failed ({}); repair the existing installation",
-            output.status
+        Ok(output) => Err(crate::worker::output_failure(
+            &output,
+            "Flox version check failed; repair the existing installation",
         )),
         Err(error) => Err(error).context("could not check Flox installation"),
     }
@@ -50,8 +50,9 @@ fn checked_status(command: &mut Command, phase: &str) -> Result<(), Error> {
         .status()
         .with_context(|| format!("Flox {phase} could not start"))?;
     if !status.success() {
-        return Err(anyhow!(
-            "Flox {phase} failed ({status}); command was not executed"
+        return Err(crate::worker::command_failure(
+            &status,
+            format!("Flox {phase} failed; command was not executed"),
         ));
     }
     Ok(())
@@ -105,8 +106,9 @@ fn initialize(command: &mut Command, work_dir: &str) -> Result<(), Error> {
         .status()
         .context("could not initialize Flox environment")?;
     if !status.success() {
-        return Err(anyhow!(
-            "Flox initialization failed ({status}); command was not executed"
+        return Err(crate::worker::command_failure(
+            &status,
+            "Flox initialization failed; command was not executed",
         ));
     }
     Ok(())

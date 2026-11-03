@@ -73,7 +73,10 @@ impl MacPorts {
             .stderr(Stdio::inherit())
             .status()?;
         if !status.success() {
-            bail!("port install failed: {status}; check MacPorts prefix permissions");
+            return Err(crate::worker::command_failure(
+                &status,
+                "port install failed; check MacPorts prefix permissions",
+            ));
         }
         Ok(status)
     }

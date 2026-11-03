@@ -43,7 +43,10 @@ impl Homebrew {
             .stderr(Stdio::inherit())
             .status()?;
         if !status.success() {
-            bail!("brew install failed: {status}");
+            return Err(crate::worker::command_failure(
+                &status,
+                "brew install failed",
+            ));
         }
         Ok(status)
     }

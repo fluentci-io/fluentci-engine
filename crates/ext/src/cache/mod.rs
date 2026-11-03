@@ -210,9 +210,10 @@ impl Extension for Cache {
             let cmd = format!("tar xzvf {}", crate::bootstrap::quote(&cache_file));
             let status = exec(&cmd, tx, Output::Stdout, true, &work_dir)?;
             if !status.success() {
-                return Err(Error::msg(format!(
-                    "cache archive command failed ({status})"
-                )));
+                return Err(crate::worker::command_failure(
+                    &status,
+                    "cache archive command failed",
+                ));
             }
             let label = format!("[{}]", "withCache");
             println!("{} Cached restored", label.cyan());
@@ -270,9 +271,10 @@ impl Extension for Cache {
 
                 let status = exec(&cmd, tx, Output::Stdout, true, &work_dir)?;
                 if !status.success() {
-                    return Err(Error::msg(format!(
-                        "cache archive command failed ({status})"
-                    )));
+                    return Err(crate::worker::command_failure(
+                        &status,
+                        "cache archive command failed",
+                    ));
                 }
 
                 let key = self.key.clone();

@@ -163,7 +163,10 @@ impl NixGuard {
             ));
         }
         if !status.success() {
-            return Err(anyhow!("{operation} failed ({status}); pipeline stopped"));
+            return Err(crate::worker::command_failure(
+                &status,
+                format!("{operation} failed; pipeline stopped"),
+            ));
         }
         Ok(status)
     }
@@ -254,7 +257,10 @@ fn install_archive(archive: &std::path::Path, destination: &std::path::Path) -> 
         .arg("envhub")
         .status()?;
     if !status.success() {
-        return Err(anyhow!("Envhub archive extraction failed ({status})"));
+        return Err(crate::worker::command_failure(
+            &status,
+            "Envhub archive extraction failed",
+        ));
     }
     let executable = extracted.path().join("envhub");
     if !std::fs::symlink_metadata(&executable)?

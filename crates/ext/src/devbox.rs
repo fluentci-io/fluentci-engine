@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{exec, nix::Nix, Extension};
-use anyhow::{anyhow, Error};
+use anyhow::Error;
 use fluentci_types::Output;
 
 #[derive(Default)]
@@ -53,8 +53,9 @@ impl Extension for Devbox {
             .wait()?;
 
         if !status.success() {
-            return Err(anyhow!(
-                "Devbox initialization failed ({status}); command was not executed"
+            return Err(crate::worker::command_failure(
+                &status,
+                "Devbox initialization failed; command was not executed",
             ));
         }
         let cmd = format!("devbox run {}", cmd);

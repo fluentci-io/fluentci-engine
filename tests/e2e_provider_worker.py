@@ -56,10 +56,12 @@ class ProviderWorker(unittest.TestCase):
     def test_failure_stops_service_chain(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            commands = [self.command(root, "runner", "exit 7"),
+            commands = [self.command(root, "runner", "printf PROVIDER-PROCESS-ERROR >&2; exit 7"),
                         self.command(root, "runner", "touch unexpected")]
             result = self.invoke(root, commands)
-            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(result.returncode, 7, result.stderr)
+            self.assertIn("exit code 7", result.stderr)
+            self.assertIn("PROVIDER-PROCESS-ERROR", result.stderr)
             self.assertFalse((root / "unexpected").exists())
 
     def test_request_version_and_unknown_fields_fail_before_execution(self):
