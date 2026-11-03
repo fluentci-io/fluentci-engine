@@ -1,0 +1,16 @@
+package:
+  name: demo-plugin
+  dependencies:
+    - aff
+    - console
+    - effect
+    - either
+    - fluentci
+    - prelude
+workspace:
+  packageSet:
+    registry: 81.11.0
+  extraPackages:
+    fluentci:
+      git: https://github.com/fluentci-io/purescript-fluentci.git
+      ref: 945ea666945f94ecd80797859f2c651cf56d1bc5

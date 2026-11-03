@@ -1,6 +1,5 @@
 // @ts-nocheck
 
-import { Hermit } from "./client.gen.ts";
 
 declare type I64 = {
   offset: I64;
@@ -14,7 +13,7 @@ declare const Host: {
     devbox: () => I64;
     devenv: () => I64;
     flox: () => I64;
-    nix: () => I64;
+    nix: (ptr: I64) => I64;
     pkgx: () => I64;
     pixi: () => I64;
     pipeline: (ptr: I64) => I64;
@@ -28,8 +27,8 @@ declare const Host: {
     zip: (ptr: I64) => I64;
     with_exec: (ptr: I64) => void;
     with_workdir: (ptr: I64) => void;
-    with_cache: (ptr: I64) => I64;
-    with_file: (ptr: I64) => I64;
+    with_cache: (ptr: I64) => void;
+    with_file: (ptr: I64) => void;
     stdout: () => I64;
     stderr: () => I64;
     set_runner: (ptr: I64) => void;
@@ -85,8 +84,8 @@ export const zip: (ptr: I64) => I64 = fn.zip;
 export const trust: (ptr: I64) => void = fn.trust;
 export const with_exec: (ptr: I64) => void = fn.with_exec;
 export const with_workdir: (ptr: I64) => void = fn.with_workdir;
-export const with_cache: (ptr: I64) => I64 = fn.with_cache;
-export const with_file: (ptr: I64) => I64 = fn.with_file;
+export const with_cache: (ptr: I64) => void = fn.with_cache;
+export const with_file: (ptr: I64) => void = fn.with_file;
 export const stdout: () => I64 = fn.stdout;
 export const stderr: () => I64 = fn.stderr;
 export const set_runner: (ptr: I64) => void = fn.set_runner;
@@ -281,7 +280,7 @@ export class Client extends BaseClient {
    */
   nix = (args?: NixArgs): Nix => {
     const mem = Memory.fromJsonObject(args || { impure: false });
-    const offset = nix(mem);
+    const offset = nix(mem.offset);
     const response = Memory.find(offset).readJsonObject();
     return new Nix({
       id: response.id,
@@ -1094,7 +1093,7 @@ export class Directory extends BaseClient {
    */
   nix = (args?: NixArgs): Nix => {
     const mem = Memory.fromJsonObject(args || { impure: false });
-    const offset = nix(mem);
+    const offset = nix(mem.offset);
     const response = Memory.find(offset).readJsonObject();
     return new Nix({
       id: response.id,
@@ -2028,7 +2027,7 @@ export class Pipeline extends BaseClient {
    */
   nix = (args?: NixArgs): Nix => {
     const mem = Memory.fromJsonObject(args || { impure: false });
-    const offset = nix(mem);
+    const offset = nix(mem.offset);
     const response = Memory.find(offset).readJsonObject();
     return new Nix({
       id: response.id,

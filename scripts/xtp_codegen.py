@@ -44,6 +44,29 @@ def generated():
             lines.append(f"    fn {name}({argument}){result};")
         lines.extend(['}', ''])
         yield ROOT / f"crates/pdk/src/generated/{module}_imports.rs", '\n'.join(lines)
+    # Python's compiler discovers imports in the entry AST. The SDK build command
+    # inlines these guest declarations and preserves void ABI signatures.
+    python = ['# Generated from schema/host.json. Guest declarations, not a host runtime.', 'import extism', '']
+    typing = []
+    for name, function in schema['imports'].items():
+        argument = 'value: str' if 'input' in function else ''
+        result = ' -> str' if 'output' in function else ''
+        python.extend([f'@extism.import_fn("extism:host/user", "{name}")',
+                       f'def {name}({argument}){result}:',
+                       '    raise RuntimeError("Compile this plugin with fluentci-plugin; these are guest imports")', ''])
+        typing.append(f'def {name}({argument}) -> {"str" if "output" in function else "None"}: ...')
+    yield ROOT / 'sdk/python/src/fluentci/_imports.py', '\n'.join(python)
+    yield ROOT / 'sdk/python/src/fluentci/_imports.pyi', '\n'.join(typing) + '\n'
+    javascript = ['// Generated from schema/host.json. Guest import signatures.',
+                  'declare module "main" { export function greet(): I32; }',
+                  'declare module "extism:host" { interface user {']
+    for name, function in schema['imports'].items():
+        argument = 'value: I64' if 'input' in function else ''
+        result = 'I64' if 'output' in function else 'void'
+        javascript.append(f'  {name}({argument}): {result};')
+    javascript.extend(['} }', ''])
+    for language in ['gleam', 'purescript', 'rescript', 'typescript']:
+        yield ROOT / f'sdk/{language}/demo-plugin/imports.d.ts', '\n'.join(javascript)
     for name, exports in plugins.items():
         if name != 'xtp-smoke':
             source = (ROOT / f'examples/{name}/src/lib.rs').read_text()

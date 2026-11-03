@@ -1,0 +1,16 @@
+{
+  "name": "fluentci-rescript-plugin-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "rescript-fluentci": "file:..",
+    "@rescript/runtime": "12.3.1"
+  },
+  "devDependencies": {
+    "rescript": "12.3.1",
+    "esbuild": "0.25.3"
+  }
+}

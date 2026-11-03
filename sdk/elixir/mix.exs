@@ -7,7 +7,7 @@ defmodule FluentCI.MixProject do
       version: "0.1.0",
       elixir: ">= 1.18.0",
       deps: [],
-      description: "Immutable host execution plans for FluentCI"
+      description: "Plugin DSL and immutable execution plans for FluentCI"
     ]
   end
 
