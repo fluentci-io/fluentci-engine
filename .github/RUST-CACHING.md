@@ -68,3 +68,8 @@ as installation before compiling tests. A missing catalog entry after ordinary
 HTTPS sync triggers one forced signed snapshot refresh and index regeneration;
 a failed recheck stops setup. The selected native/Rust backend is then queried
 explicitly, so catalog failures are reported before a Rust test build.
+
+Linux release containers use `rust:1.99.1-trixie` (Debian Trixie). Package index
+refresh, installation, and cross-target OpenSSL downloads run in one execution
+layer. Cross-target sysroots use Trixie's `libssl3t64` runtime and matching headers.
+The release binaries consequently target Trixie's libc baseline.

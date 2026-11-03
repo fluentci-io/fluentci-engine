@@ -180,9 +180,7 @@ export const build = async (src = "."): Promise<string> => {
   const ctr = dag
     .pipeline(Job.build)
     .container()
-    // Retain the Bullseye libc baseline; explicitly select the release compiler.
-    .from("rust:1.76-bullseye")
-    .withExec(["rustup", "toolchain", "install", "1.99.1", "--profile", "minimal"])
+    .from("rust:1.99.1-trixie")
     .withEnvVariable("RUSTUP_TOOLCHAIN", "1.99.1")
     .withExec([
       "wget",
@@ -203,52 +201,21 @@ export const build = async (src = "."): Promise<string> => {
     .withEnvVariable("SCCACHE_DIR", "/root/.cache/sccache")
     .withEnvVariable("SCCACHE_CACHE_SIZE", "1G")
     .withEnvVariable("CARGO_INCREMENTAL", "0")
-    .withExec(["dpkg", "--add-architecture", "armhf"])
-    .withExec(["dpkg", "--add-architecture", "arm64"])
-    .withExec(["apt-get", "update"])
-    .withExec([
-      "apt-get",
-      "install",
-      "-y",
-      "build-essential",
-      "protobuf-compiler",
-    ])
-    .withExec([
-      "apt-get",
-      "install",
-      "-y",
-      "-qq",
-      "gcc-arm-linux-gnueabihf",
-      "libc6-armhf-cross",
-      "libc6-dev-armhf-cross",
-      "gcc-aarch64-linux-gnu",
-      "libc6-arm64-cross",
-      "libc6-dev-arm64-cross",
-      "libc6-armel-cross",
-      "libc6-dev-armel-cross",
-      "binutils-arm-linux-gnueabi",
-      "gcc-arm-linux-gnueabi",
-      "libncurses5-dev",
-      "bison",
-      "flex",
-      "libssl-dev",
-      "bc",
-      "pkg-config",
-      "libudev-dev",
-    ])
-    .withExec(["mkdir", "-p", "/build/sysroot"])
-    .withExec([
-      "apt-get",
-      "download",
-      "libssl-dev:armhf",
-      "libssl1.1:armhf",
-      "libssl-dev:arm64",
-      "libssl1.1:arm64",
-    ])
+    // Refresh indexes and install from the same execution layer.
     .withExec([
       "sh",
       "-ec",
-      'for package in libssl*.deb; do dpkg -x "$package" /build/sysroot/; done',
+      `dpkg --add-architecture armhf
+      dpkg --add-architecture arm64
+      apt-get -o APT::Update::Error-Mode=any update
+      apt-get install -y --no-install-recommends \
+        build-essential protobuf-compiler \
+        gcc-arm-linux-gnueabihf libc6-armhf-cross libc6-dev-armhf-cross \
+        gcc-aarch64-linux-gnu libc6-arm64-cross libc6-dev-arm64-cross \
+        libncurses-dev bison flex libssl-dev bc pkg-config libudev-dev
+      mkdir -p /build/sysroot
+      apt-get download libssl-dev:armhf libssl3t64:armhf libssl-dev:arm64 libssl3t64:arm64
+      for package in libssl*.deb; do dpkg -x "$package" /build/sysroot/; done`,
     ])
     .withDirectory("/app", context, { exclude })
     .withWorkdir("/app")
