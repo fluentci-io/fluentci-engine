@@ -300,13 +300,18 @@ defmodule FluentCI.LocalTest do
   end
 
   test "pipeline failure returns a typed report rather than a transport failure", %{opts: opts} do
-    task = H.task("fail", "/bin/sh", ".") |> H.args(["-c", "exit 7"])
+    task =
+      H.task("fail", "/bin/sh", ".")
+      |> H.args(["-c", "printf 'elixir process error' >&2; exit 7"])
+
     handle = start(H.plan([task]), opts)
 
-    assert {:ok, %Local.Report{exit_status: 1, result: %Result{outcome: :failed, tasks: [task]}}} =
+    assert {:ok, %Local.Report{exit_status: 7, result: %Result{outcome: :failed, tasks: [task]}}} =
              Local.await(handle)
 
     assert task.exit_code == 7
+    assert task.error =~ "exit code 7"
+    assert task.error =~ "elixir process error"
   end
 
   test "invalid plans and configuration have no run-directory side effects", %{
