@@ -17,6 +17,7 @@ enum Mode {
     Json,
 }
 struct Row {
+    number: usize,
     status: Status,
     cache: String,
     wait_reason: Option<String>,
@@ -26,8 +27,9 @@ struct Row {
 }
 
 impl Row {
-    fn pending() -> Self {
+    fn pending(number: usize) -> Self {
         Self {
+            number,
             status: Status::Pending,
             cache: "disabled".into(),
             wait_reason: None,
@@ -91,7 +93,11 @@ impl Progress {
         }
         Ok(Self {
             mode,
-            rows: ids.iter().map(|id| (id.clone(), Row::pending())).collect(),
+            rows: ids
+                .iter()
+                .enumerate()
+                .map(|(i, id)| (id.clone(), Row::pending(i + 1)))
+                .collect(),
             task_count: ids.len(),
             remote_status: None,
             order: ids,
@@ -253,7 +259,8 @@ impl Progress {
                 duration_ms,
             } => {
                 if !self.rows.contains_key(&id) {
-                    self.rows.insert(id.clone(), Row::pending());
+                    self.rows
+                        .insert(id.clone(), Row::pending(self.order.len() + 1));
                     self.order.push(id.clone());
                 }
                 if let Some(row) = self.rows.get_mut(&id) {
@@ -299,8 +306,12 @@ impl Progress {
                     }
                     io::stdout().flush().map_err(|e| e.to_string())?;
                 } else {
+                    let prefix = self
+                        .rows
+                        .get(&id)
+                        .map_or_else(|| id.clone(), |row| format!("#{} {id}", row.number));
                     for line in text.lines() {
-                        self.push_log(format!("{id}:{stream} {line}"));
+                        self.push_log(format!(" => {prefix}:{stream} {line}"));
                     }
                 }
             }
@@ -360,11 +371,35 @@ impl Progress {
             .filter(|r| r.status == Status::Succeeded)
             .count();
         let hits = self.rows.values().filter(|r| r.cache == "hit").count();
+        let failed = self
+            .rows
+            .values()
+            .filter(|row| matches!(row.status, Status::Failed | Status::TimedOut))
+            .count();
+        let cancelled = self
+            .rows
+            .values()
+            .filter(|row| row.status == Status::Cancelled)
+            .count();
+        let phase = match self.finished {
+            Some(true) => "Finished",
+            Some(false) => "Failed",
+            None => match self.remote_status.as_deref() {
+                Some("queued") => "Queued",
+                Some("cancelled") => "Cancelled",
+                Some("interrupted") => "Interrupted",
+                Some("failed") => "Failed",
+                _ => "Running",
+            },
+        };
         let mut lines = vec![format!(
-            "FluentCI  {complete}/{} succeeded  {hits} cached  {:.1}s",
+            "[+] FluentCI {phase} {:.1}s  {complete}/{} succeeded  {hits} cached",
+            elapsed as f64 / 1000.0,
             self.task_count.max(self.rows.len()),
-            elapsed as f64 / 1000.0
         )];
+        if failed > 0 || cancelled > 0 {
+            lines[0].push_str(&format!("  {failed} failed  {cancelled} cancelled"));
+        }
         if let Some(status) = &self.remote_status {
             lines[0].push_str(&format!(" [{status}]"));
         }
@@ -390,13 +425,18 @@ impl Progress {
                 row.duration_ms
             };
             lines.push(format!(
-                " {icon} {:<24} {:<10?} {:>6.1}s {}",
+                " => {icon} [#{:<2}] {:<24} {:<10?} {:>6.1}s {}",
+                row.number,
                 one_line(id).chars().take(24).collect::<String>(),
                 row.status,
                 duration as f64 / 1000.0,
                 one_line(row.error.as_deref().unwrap_or_else(|| {
                     if row.cache == "hit" {
                         "CACHED"
+                    } else if row.cache == "preparing" {
+                        "CACHE LOOKUP"
+                    } else if row.cache == "storing" {
+                        "CACHE SAVE"
                     } else {
                         row.wait_reason.as_deref().unwrap_or("")
                     }

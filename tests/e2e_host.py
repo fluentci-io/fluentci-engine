@@ -509,9 +509,10 @@ class HostExecution(unittest.TestCase):
         import termios
         run = self.root / "run"
         run.mkdir()
-        events = [dict(type="run_started", sequence=0, elapsed_ms=0, tasks=1),
+        events = [dict(type="run_started", sequence=0, elapsed_ms=0, tasks=2),
                   dict(type="task_state", sequence=1, elapsed_ms=12345, id="saved-visible", status="failed", cache="disabled", reason="", error="saved failure reason", duration_ms=5000),
-                  dict(type="run_finished", sequence=2, elapsed_ms=12345, success=False)]
+                  dict(type="task_state", sequence=2, elapsed_ms=12345, id="cached-visible", status="succeeded", cache="hit", reason="", error=None, duration_ms=0),
+                  dict(type="run_finished", sequence=3, elapsed_ms=12345, success=False)]
         (run / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events))
         master, slave = pty.openpty()
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 20, 100, 0, 0))
@@ -535,13 +536,60 @@ class HostExecution(unittest.TestCase):
                 elif proc.poll() is not None:
                     break
             self.assertNotEqual(proc.wait(timeout=2), 0)
-            for expected in [b"0/1 succeeded", b"12.3s", b"saved-visible", b"saved failure reason", b"\x1b[?25h"]:
+            for expected in [b"1/2 succeeded", b"1 cached", b"CACHED", b"[#2", b"12.3s", b"saved-visible", b"saved failure reason", b"\x1b[?25h"]:
                 self.assertIn(expected, output)
         finally:
             os.close(master)
             if proc.poll() is None:
                 proc.kill()
                 proc.wait()
+
+    def test_auto_progress_uses_plain_output_for_pipes_and_dumb_terminals(self):
+        path = self.plan([self.task("plain-auto", "printf visible")])
+        for i, term in enumerate(["xterm-256color", "dumb"]):
+            result = subprocess.run(self.command(path, f"pipe-{i}", progress="auto"),
+                                    capture_output=True, env={**os.environ, "TERM": term}, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn(b"visible", result.stdout)
+            self.assertNotIn(b"\x1b", result.stdout)
+            self.assertNotIn(b"[+] FluentCI", result.stdout)
+
+    @unittest.skipUnless(os.name == "posix", "PTY detection")
+    def test_auto_progress_uses_plain_output_for_dumb_tty(self):
+        import errno
+        import pty
+        import select
+        master, slave = pty.openpty()
+        path = self.plan([self.task("dumb-tty", "printf visible")])
+        proc = subprocess.Popen(self.command(path, progress="auto"), stdout=slave, stderr=subprocess.PIPE,
+                                env={**os.environ, "TERM": "dumb"})
+        os.close(slave)
+        try:
+            output = bytearray()
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                if select.select([master], [], [], 0.1)[0]:
+                    try:
+                        data = os.read(master, 4096)
+                    except OSError as error:
+                        if error.errno == errno.EIO:
+                            break
+                        raise
+                    if not data:
+                        break
+                    output.extend(data)
+                elif proc.poll() is not None:
+                    break
+            _, error = proc.communicate(timeout=2)
+            self.assertEqual(proc.returncode, 0, error)
+            self.assertIn(b"visible", output)
+            self.assertNotIn(b"\x1b", output)
+            self.assertNotIn(b"[+] FluentCI", output)
+        finally:
+            os.close(master)
+            if proc.poll() is None:
+                proc.kill()
+                proc.communicate()
 
     def test_tui_renders_live_tasks_and_restores_cursor(self):
         import errno
@@ -555,7 +603,7 @@ class HostExecution(unittest.TestCase):
         service = self.task("db", "while :; do /bin/sleep 0.02; done")
         service["service"] = dict(readiness=dict(program="/bin/sh", args=["-c", "printf probe-visible; exit 0"]), shutdown_timeout_ms=100)
         path = self.plan([service, self.task("visible", "printf '\\033[2Junsafe'; /bin/sleep 0.2; echo done", ["db"])])
-        proc = subprocess.Popen(self.command(path, progress="tui"), stdout=slave, stderr=slave,
+        proc = subprocess.Popen(self.command(path, progress="auto"), stdout=slave, stderr=slave,
                                 env={**os.environ, "TERM": "xterm-256color"})
         os.close(slave)
         output = bytearray()
@@ -575,7 +623,10 @@ class HostExecution(unittest.TestCase):
                 elif proc.poll() is not None:
                     break
             self.assertEqual(proc.wait(timeout=2), 0, output.decode(errors="replace"))
-            self.assertIn(b"FluentCI", output)
+            self.assertIn(b"[+] FluentCI", output)
+            self.assertIn(b"[#1", output)
+            self.assertIn(b"[#2", output)
+            self.assertIn(b" => ", output)
             self.assertIn(b"visible", output)
             self.assertIn(b"Recent output:", output)
             self.assertIn(b"unsafe", output)

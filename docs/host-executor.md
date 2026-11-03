@@ -347,6 +347,14 @@ already exist; follow mode can wait for its journal to appear during setup.
 Ctrl-C detaches this viewer, and an optional positive `--timeout-ms` limits its
 observation time. Neither action asks the engine to cancel the pipeline.
 
+The interactive display uses numbered Buildx-style step rows, a running/final
+summary, elapsed time, cache hit/lookup/save labels, and a bounded log tail with
+matching step numbers. Failed and active steps stay visible when the terminal is
+too small for the whole plan. Numbers remain attached to the step as rows move.
+`--progress auto` uses this display only when stdout is a TTY and `TERM` is not
+`dumb`; pipes, redirected files, and dumb terminals use plain output without
+cursor-control escapes. Explicit `--progress json` remains machine-readable.
+
 Plain/JSON output starts at sequence zero on each invocation. The TUI reconstructs
 task rows from journal events and uses recorded elapsed time, freezing it when a
 run finishes. While following, elapsed time advances from the last observed event;
