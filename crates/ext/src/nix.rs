@@ -6,12 +6,12 @@ use std::{
 use users::get_current_username;
 
 use crate::{exec, Extension};
-use anyhow::Error;
-use fluentci_types::{Output, nix::NixArgs};
+use anyhow::{anyhow, Error};
+use fluentci_types::{nix::NixArgs, Output};
 
 #[derive(Default, Clone)]
 pub struct Nix {
-    pub args: NixArgs
+    pub args: NixArgs,
 }
 
 impl Nix {
@@ -50,16 +50,24 @@ impl Extension for Nix {
 
         let args = self.build_args();
 
-        Command::new("bash")
+        let status = Command::new("bash")
             .arg("-c")
-            .arg(&format!("[ -f flake.nix ] || nix flake init {}", args))
+            .arg("[ -f flake.nix ] || nix --extra-experimental-features 'nix-command flakes' flake init")
             .current_dir(work_dir)
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .spawn()?
             .wait()?;
 
-        let cmd = format!("nix develop {} -c {}", args, cmd);
+        if !status.success() {
+            return Err(anyhow!(
+                "Nix flake initialization failed ({status}); command was not executed"
+            ));
+        }
+        let cmd = format!(
+            "nix --extra-experimental-features 'nix-command flakes' develop {} -c {}",
+            args, cmd
+        );
         exec(&cmd, tx, out, last_cmd, work_dir)
     }
 
@@ -71,7 +79,7 @@ impl Extension for Nix {
 
         env::set_var("USER", user);
         env::set_var("SHELL", "/bin/bash");
-        
+
         let home = match env::var("HOME") {
             Ok(home) => home,
             Err(_) => "/root".to_string(),
@@ -104,14 +112,14 @@ impl Extension for Nix {
         let mut child = Command::new("bash")
             .arg("-c")
             .arg(format!("type nix > /dev/null || curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install {}", linux))
-            
+
             .spawn()?;
         child.wait()?;
 
         let mut child = Command::new("bash")
             .arg("-c")
             .arg(format!("type nix > /dev/null || curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install {} --no-confirm", linux))
-            
+
             .spawn()?;
         child.wait()?;
         Ok(())
@@ -120,8 +128,46 @@ impl Extension for Nix {
     fn format_command(&self, cmd: &str) -> String {
         let args = self.build_args();
         format!(
-            "[ -f flake.nix ] || nix flake init {} ; nix develop {} -c {}",
-            args, args, cmd
+            "([ -f flake.nix ] || nix --extra-experimental-features 'nix-command flakes' flake init) && nix --extra-experimental-features 'nix-command flakes' develop {} -c {}",
+            args, cmd
         )
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    #[test]
+    fn formatted_commands_enable_features_and_stop_after_failed_initialization() {
+        for fail_init in [false, true] {
+            let root = tempfile::tempdir().unwrap();
+            let mut nix = Nix::default();
+            nix.impure();
+            let command = nix.format_command("true");
+            let stub = format!(
+                r#"nix() {{
+                [ "$1" = --extra-experimental-features ] || return 81
+                [ "$2" = 'nix-command flakes' ] || return 82
+                shift 2
+                if [ "$1" = flake ]; then
+                    [ "$2" = init ] || return 83
+                    [ '{}' = false ] || return 9
+                    printf initialized > flake.nix
+                else
+                    [ "$1" = develop ] || return 84
+                    [ "$2" = --impure ] || return 85
+                    printf developed > activated
+                fi
+            }}; {}"#,
+                fail_init, command
+            );
+            let status = Command::new("/bin/sh")
+                .args(["-c", &stub])
+                .current_dir(root.path())
+                .status()
+                .unwrap();
+            assert_eq!(status.success(), !fail_init);
+            assert_eq!(root.path().join("activated").exists(), !fail_init);
+        }
     }
 }
