@@ -2468,7 +2468,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-common"
-version = "0.2.9"
+version = "0.2.10"
 dependencies = [
  "anyhow",
  "dirs",
@@ -2483,7 +2483,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-core"
-version = "0.3.8"
+version = "0.3.9"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2546,7 +2546,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-ext"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2555,6 +2555,7 @@ dependencies = [
  "cloud-storage",
  "dirs",
  "fluentci-logging",
+ "fluentci-superconsole",
  "fluentci-types",
  "futures",
  "md5",
@@ -2563,7 +2564,6 @@ dependencies = [
  "regex",
  "sha2 0.10.8",
  "sha256",
- "superconsole",
  "tempfile",
  "tokio",
  "users",
@@ -2596,7 +2596,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-graphql"
-version = "0.3.9"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2615,7 +2615,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-logging"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "reqwest 0.12.5",
@@ -2626,7 +2626,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-pdk"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "extism-pdk",
  "fluentci-types",
@@ -2635,7 +2635,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-secrets"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2659,7 +2659,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-server"
-version = "0.3.9"
+version = "0.3.10"
 dependencies = [
  "actix-cors",
  "actix-web",
@@ -2685,7 +2685,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-shared"
-version = "0.2.9"
+version = "0.2.10"
 dependencies = [
  "anyhow",
  "extism",
@@ -2701,8 +2701,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "fluentci-superconsole"
+version = "0.3.0"
+dependencies = [
+ "anstyle-parse",
+ "anyhow",
+ "bytes",
+ "crossbeam-channel",
+ "crossterm",
+ "derive_more 2.1.1",
+ "futures",
+ "itertools 0.15.0",
+ "nix 0.31.3",
+ "pin-project",
+ "take_mut",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tracing",
+ "unicode-segmentation",
+ "unicode-width",
+]
+
+[[package]]
 name = "fluentci-types"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "serde",
  "serde_yaml",
@@ -5730,30 +5754,6 @@ name = "subtle"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
-
-[[package]]
-name = "superconsole"
-version = "0.3.0"
-dependencies = [
- "anstyle-parse",
- "anyhow",
- "bytes",
- "crossbeam-channel",
- "crossterm",
- "derive_more 2.1.1",
- "futures",
- "itertools 0.15.0",
- "nix 0.31.3",
- "pin-project",
- "take_mut",
- "thiserror 2.0.21",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "tracing",
- "unicode-segmentation",
- "unicode-width",
-]
 
 [[package]]
 name = "syn"

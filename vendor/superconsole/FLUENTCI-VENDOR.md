@@ -18,7 +18,9 @@ Local changes are recorded in `fluentci.patch`:
    rendering support. SuperConsole does not read Crossterm keyboard events, so
    the renderer needs no event poller or signal-hook-mio dependency.
 3. Remove the nested workspace declaration so the crate joins FluentCI's workspace.
-4. Add a Unix RawReader regression test using a socket pair to verify binary
+4. Publish the patched fork as `fluentci-superconsole` while retaining the
+   `superconsole` library name, so crates.io consumers receive the same BSD fixes.
+5. Add a Unix RawReader regression test using a socket pair to verify binary
    data and EOF. CI runs this and the upstream library tests on Linux, both macOS
    architectures, FreeBSD, NetBSD, and OpenBSD with `--release --locked`.
 

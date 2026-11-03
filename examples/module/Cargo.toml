@@ -11,5 +11,5 @@ crate-type = ["cdylib"]
 [dependencies]
 anyhow = "1.0.81"
 extism-pdk = { workspace = true }
-fluentci-pdk = {path = "../../crates/pdk", version = "0.2.3"}
-fluentci-types = {path = "../../crates/types", version = "0.1.8"}
+fluentci-pdk = {path = "../../crates/pdk", version = "0.2.4"}
+fluentci-types = {path = "../../crates/types", version = "0.1.9"}

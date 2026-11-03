@@ -60,7 +60,7 @@ jobs:
           cargo test --release --locked -p fluentci-ext --lib bsd
           cargo test --release --locked -p fluentci-ext --lib console
           cargo test --release --locked -p fluentci-ext --lib envhub
-          cargo test --release --locked -p superconsole --lib
+          cargo test --release --locked -p fluentci-superconsole --lib
       - name: Native Homebrew package plan (supported hosts only)
         if: matrix.os != 'macos-15-intel'
         shell: bash
@@ -291,7 +291,7 @@ jobs:
             cargo test --release --locked -p fluentci-executor
             cargo test --release --locked -p fluentci-ext --lib bsd
             cargo test --release --locked -p fluentci-ext --lib console
-            cargo test --release --locked -p superconsole --lib
+            cargo test --release --locked -p fluentci-superconsole --lib
             cargo test --release --locked -p fluentci-ext --test native_packages native_bsd_package_install -- --ignored --exact
             cargo test --release --locked -p fluentci-executor --test packages native_package_plan_install -- --ignored --exact
 
@@ -342,7 +342,7 @@ jobs:
             cargo test --release --locked -p fluentci-executor
             cargo test --release --locked -p fluentci-ext --lib bsd
             cargo test --release --locked -p fluentci-ext --lib console
-            cargo test --release --locked -p superconsole --lib
+            cargo test --release --locked -p fluentci-superconsole --lib
             cargo test --release --locked -p fluentci-ext --test native_packages native_bsd_package_install -- --ignored --exact
             cargo test --release --locked -p fluentci-executor --test packages native_package_plan_install -- --ignored --exact
 
@@ -380,7 +380,7 @@ jobs:
             cargo test --release --locked -p fluentci-executor
             cargo test --release --locked -p fluentci-ext --lib bsd
             cargo test --release --locked -p fluentci-ext --lib console
-            cargo test --release --locked -p superconsole --lib
+            cargo test --release --locked -p fluentci-superconsole --lib
             cargo test --release --locked -p fluentci-ext --test native_packages native_bsd_package_install -- --ignored --exact
             cargo test --release --locked -p fluentci-executor --test packages native_package_plan_install -- --ignored --exact
 

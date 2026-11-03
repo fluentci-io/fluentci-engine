@@ -18,10 +18,10 @@ serde_json = "1.0"
 crossterm = { workspace = true }
 anyhow = "1.0.81"
 clap = "3.2.20"
-fluentci-core = {path = "../core", version = "0.3.8"}
-fluentci-ext = {path = "../ext", version = "0.2.7"}
-fluentci-server = {path = "../server", version = "0.3.9"}
-fluentci-shared = {path = "../shared", version = "0.2.8"}
+fluentci-core = {path = "../core", version = "0.3.9"}
+fluentci-ext = {path = "../ext", version = "0.2.8"}
+fluentci-server = {path = "../server", version = "0.3.10"}
+fluentci-shared = {path = "../shared", version = "0.2.10"}
 get-port = "4.0.0"
 md5 = "0.7.0"
 regex = "1.10.3"
