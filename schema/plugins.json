@@ -322,5 +322,26 @@
         "contentType": "text/plain; charset=utf-8"
       }
     }
+  },
+  "uv": {
+    "setup": {
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "run": {
+      "input": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
   }
 }
