@@ -8,9 +8,15 @@ defmodule FluentCI.Plugin.Codegen do
   def source(exports) when is_list(exports) and exports != [] do
     functions = Enum.map_join(exports, "\n", &export/1)
 
+    execution_import =
+      if Enum.any?(exports, fn {_, value} -> match?(%FluentCI.Plugin.Execution{}, value) end),
+        do: "#[host_fn] extern \"ExtismHost\" { fn execute_plan(input: String) -> String; }",
+        else: ""
+
     """
     use extism_pdk::*;
     use fluentci_pdk::dag;
+    #{execution_import}
     fn quote(value: &str) -> String { format!("'{}'", value.replace('\\\'', "'\\\\''")) }
     #{functions}
     """
@@ -32,6 +38,20 @@ defmodule FluentCI.Plugin.Codegen do
     initial = "let pipeline = dag().pipeline(&#{value(pipeline.name)})?;"
     steps = Enum.map_join(pipeline.steps, "\n", &step/1)
     "#{initial}\n#{steps}\nOk(pipeline.#{pipeline.capture}()?)"
+  end
+
+  defp expression(%FluentCI.Plugin.Execution{plan: plan, run_dir: directory}) do
+    encoded =
+      case FluentCI.Host.compile(plan) do
+        {:ok, value} -> value
+        {:error, error} -> raise ArgumentError, "invalid execution plan: #{inspect(error)}"
+      end
+
+    """
+    let plan: serde_json::Value = serde_json::from_str(&#{value(encoded)})?;
+    let request = serde_json::json!({"plan": plan, "run_dir": #{value(directory)}});
+    unsafe { execute_plan(request.to_string()) }
+    """
   end
 
   defp expression(%Input{}), do: "Ok(input)"

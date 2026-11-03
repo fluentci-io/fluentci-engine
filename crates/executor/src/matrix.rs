@@ -85,7 +85,7 @@ pub fn matrix<T>(
     }
     let mut keys = HashSet::new();
     for case in &cases {
-        if case.key.is_empty() || case.key.contains('\0') || !keys.insert(&case.key) {
+        if case.key.is_empty() || case.key.contains('\0') || !keys.insert(case.key.clone()) {
             return Err("matrix cases must have unique, nonempty keys without NUL".into());
         }
     }

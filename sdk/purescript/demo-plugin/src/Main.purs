@@ -6,6 +6,8 @@ import Effect (Effect)
 import Effect.Exception (throw)
 import FluentCI.Plugin as P
 import FluentCI.Host.Plan as Plan
+import FluentCI.Matrix as M
+import Data.Tuple (Tuple(..))
 
 unwrap :: forall a. P.Result a -> Effect a
 unwrap result = case result of
@@ -90,3 +92,30 @@ actionPlan = do
   case Plan.compile plan of
     Left error -> throw (show error)
     Right encoded -> send encoded
+
+
+matrix :: Effect Unit
+matrix = do
+  directory <- request
+  let prepare = Plan.task "prepare" "/usr/bin/python3" "."
+        # Plan.withArgs ["-c", "from pathlib import Path; Path('seed.txt').write_text('seed')"]
+  cases <- case M.product (M.axis "node" ["22", "24"]) (M.axis "suite" ["unit", "integration"]) of
+    Left error -> throw (show error)
+    Right value -> pure value
+  let selected = cases
+        # M.exclude (\pair -> pair == Tuple "22" "integration")
+        # M.include [M.named "experimental" (Tuple "26" "unit")]
+  jobs <- case M.matrix "test" selected (\(Tuple node suite) ->
+    Plan.task "ignored" "/usr/bin/python3" "."
+      # Plan.withArgs ["job.py", node, suite]
+      # Plan.withCache { inputs: ["seed.txt", "mode.txt", "job.py"], outputs: ["out-" <> node <> "-" <> suite], toolchain: "matrix-v1" }
+      # M.after [prepare]) of
+    Left error -> throw (show error)
+    Right value -> pure value
+  let
+    join = Plan.task "join" "/usr/bin/python3" "."
+      # Plan.withArgs ["-c", "from pathlib import Path; Path('joined').write_text('done')"]
+      # M.after [prepare] # M.after jobs
+    plan = M.parallel 2 ([prepare] <> jobs <> [join]) # Plan.withFailFast false
+  _ <- P.runPlan directory plan >>= unwrap
+  send "matrix complete"

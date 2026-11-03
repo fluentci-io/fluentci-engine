@@ -27,7 +27,8 @@ pub fn call(module: &str, command: &str) -> Result<(), Error> {
 
     let (tx, rx) = mpsc::channel();
     let graph = Graph::new(tx, Arc::new(Box::new(Runner::default())));
-    let _signals = fluentci_core::signals::CancellationSignals::new(graph.cancellation.clone())?;
+    let cancellation = graph.cancellation.clone();
+    let _signals = fluentci_core::signals::CancellationSignals::new(cancellation.clone())?;
     let user_data = UserData::new(State {
         graph: Arc::new(Mutex::new(graph)),
         rx: Arc::new(Mutex::new(rx)),
@@ -57,7 +58,11 @@ pub fn call(module: &str, command: &str) -> Result<(), Error> {
         .map(str::to_owned)
         .with_context(|| format!("Wasm export {func:?} failed"));
     fluentci_core::shutdown_tracer();
-    println!("{}", response?);
+    let response = response?;
+    if cancellation.is_cancelled() {
+        return Err(anyhow::anyhow!("plugin execution was cancelled"));
+    }
+    println!("{}", response);
     Ok(())
 }
 

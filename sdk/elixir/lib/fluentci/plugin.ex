@@ -12,6 +12,12 @@ defmodule FluentCI.Plugin.Pipeline do
   @type t :: %__MODULE__{name: value(), steps: list(), capture: :stdout | :stderr}
 end
 
+defmodule FluentCI.Plugin.Execution do
+  @moduledoc "A complete independent host plan executed as one guest effect."
+  @enforce_keys [:plan, :run_dir]
+  defstruct [:plan, :run_dir]
+end
+
 defmodule FluentCI.Plugin do
   @moduledoc """
   Plugin-authoring DSL. Declarations are immutable data; they perform no engine IO.
@@ -54,6 +60,11 @@ defmodule FluentCI.Plugin do
 
   @spec input() :: Input.t()
   def input, do: %Input{}
+
+  @doc "Execute an independent host plan; matrix members run under the shared scheduler."
+  def run_plan(%FluentCI.Host.Plan{} = plan, run_dir),
+    do: %FluentCI.Plugin.Execution{plan: plan, run_dir: value!(run_dir)}
+
   @spec pipeline(value()) :: Pipeline.t()
   def pipeline(name), do: %Pipeline{name: value!(name)}
   @spec exec(Pipeline.t(), [value()]) :: Pipeline.t()

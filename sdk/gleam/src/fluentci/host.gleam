@@ -99,6 +99,19 @@ pub fn task(id: String, program: String, cwd: String) -> Task {
   )
 }
 
+/// Rename a value without changing its command/dependencies.
+pub fn with_id(task: Task, id: String) -> Task {
+  Task(..task, id:)
+}
+
+/// Join existing dependencies with the complete parent group.
+pub fn after_jobs(task: Task, parents: List(Task)) -> Task {
+  Task(
+    ..task,
+    needs: list.unique(list.append(task.needs, list.map(parents, task_id))),
+  )
+}
+
 pub fn task_id(task: Task) -> String {
   task.id
 }

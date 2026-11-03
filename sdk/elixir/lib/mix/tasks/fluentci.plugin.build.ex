@@ -41,6 +41,7 @@ defmodule Mix.Tasks.Fluentci.Plugin.Build do
     crate-type = ["cdylib"]
     [dependencies]
     extism-pdk = "=1.4.1"
+    serde_json = "1.0"
     #{dependency}
     [workspace]
     """

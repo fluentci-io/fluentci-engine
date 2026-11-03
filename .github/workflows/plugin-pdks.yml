@@ -47,7 +47,7 @@ jobs:
       - name: Check canonical ABI and immutable guest primitives
         run: |
           python3 scripts/xtp_codegen.py --check
-          node --test tests/guest_pdks.test.mjs
+          node --test tests/guest_pdks.test.mjs tests/matrix.test.mjs
       - name: Typecheck, test, and compile Python guest
         working-directory: sdk/python
         run: |
@@ -57,7 +57,7 @@ jobs:
           uv run fluentci-plugin demo/plugin.py -o dist/plugin.wasm
       - name: Test Elixir DSL and compile its Wasm guest
         run: |
-          (cd sdk/elixir && mix format --check-formatted && mix test --warnings-as-errors test/plugin_test.exs)
+          (cd sdk/elixir && mix format --check-formatted && mix test --warnings-as-errors test/plugin_test.exs test/matrix_test.exs)
           cd sdk/elixir/demo-plugin
           mix deps.get
           mix fluentci.plugin.build DemoPlugin --pdk-path ../../../crates/pdk --output dist/plugin.wasm
@@ -81,6 +81,7 @@ jobs:
         run: |
           cargo build --release --locked -p fluentci-engine
           python3 tests/e2e_guest_pdks.py -v
+          python3 tests/e2e_matrix.py -v
       - name: Preserve compiled guests and generated entry source
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

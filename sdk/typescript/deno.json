@@ -4,11 +4,12 @@
   "exports": {
     ".": "./src/client.gen.ts",
     "./plugin": "./src/plugin.ts",
-    "./dagger": "./src/dagger/mod.ts"
+    "./dagger": "./src/dagger/mod.ts",
+    "./matrix": "./src/matrix.ts"
   },
   "tasks": {
     "dev": "deno run --watch main.ts",
-    "check": "deno check src/client.gen.ts src/plugin.ts src/dagger/mod.ts demo/main.ts"
+    "check": "deno check src/client.gen.ts src/plugin.ts src/matrix.ts src/dagger/mod.ts demo/main.ts"
   },
   "publish": {
     "exclude": [

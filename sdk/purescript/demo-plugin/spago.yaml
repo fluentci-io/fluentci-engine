@@ -7,10 +7,11 @@ package:
     - either
     - fluentci
     - prelude
+    - tuples
 workspace:
   packageSet:
     registry: 81.11.0
   extraPackages:
     fluentci:
       git: https://github.com/fluentci-io/purescript-fluentci.git
-      ref: 7f37d04b0b377231e737f32457d0654de79b03d6
+      ref: d44113ee102ecd19e0274cd09d16272e53d675ea
