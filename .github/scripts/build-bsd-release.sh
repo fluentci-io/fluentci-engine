@@ -1,0 +1,96 @@
+#!/bin/sh
+set -eu
+: "${RELEASE_TAG:?RELEASE_TAG is required}"
+: "${RELEASE_TARGET:?RELEASE_TARGET is required}"
+case "$RELEASE_TAG" in ''|*[!A-Za-z0-9._+-]*) echo 'Unsafe release tag' >&2; exit 1 ;; esac
+case "$(uname -s):$RELEASE_TARGET" in
+    FreeBSD:x86_64-unknown-freebsd) native_curl=/usr/local/bin/curl ;;
+    NetBSD:x86_64-unknown-netbsd) native_curl=/usr/pkg/bin/curl ;;
+    OpenBSD:x86_64-unknown-openbsd) native_curl=/usr/local/bin/curl ;;
+    *) echo 'Release target does not match the native guest' >&2; exit 1 ;;
+esac
+export PATH=/usr/local/bin:/usr/local/sbin:/usr/pkg/bin:/usr/pkg/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+repository=$PWD
+output="$repository/dist/bsd/$RELEASE_TARGET"
+mkdir -p "$output"
+rm -f "$output/status" "$output/SKIPPED.txt"
+. .github/scripts/bsd-rust-cache.sh
+export CARGO_BUILD_JOBS=2
+rust_version=$(sed -n 's/^channel = "\([^"]*\)"/\1/p' rust-toolchain.toml)
+test -n "$rust_version"
+
+if [ "$(uname -s)" = OpenBSD ]; then
+    # OpenBSD is tier 3: official Rust binary toolchains are not distributed.
+    # Keep the requested compiler pin; do not silently publish with an older compiler.
+    installed_version=$(rustc --version | awk '{print $2}')
+    if [ "$installed_version" != "$rust_version" ]; then
+        printf 'OpenBSD %s provides Rust %s; this release requires Rust %s. No asset was built.\n' \
+            "$(uname -r)" "$installed_version" "$rust_version" > "$output/SKIPPED.txt"
+        printf 'skipped\n' > "$output/status"
+        cat "$output/SKIPPED.txt"
+        exit 0
+    fi
+else
+    # FreeBSD and NetBSD have official Rust host-tool distributions.
+    prefix="$repository/.ci-cache/bsd-rust/toolchains/$rust_version-$RELEASE_TARGET"
+    if [ ! -x "$prefix/bin/rustc" ] || [ "$("$prefix/bin/rustc" --version | awk '{print $2}')" != "$rust_version" ]; then
+        downloads="$repository/.ci-cache/bsd-rust/downloads"
+        mkdir -p "$downloads"
+        name="rust-$rust_version-$RELEASE_TARGET"
+        archive="$downloads/$name.tar.xz"
+        url="https://static.rust-lang.org/dist/$name.tar.xz"
+        "$native_curl" --fail --location --proto '=https' --proto-redir '=https' --retry 3 --max-time 600 \
+            --output "$archive.sha256" "$url.sha256"
+        expected=$(awk 'NR == 1 {print $1}' "$archive.sha256")
+        if [ ! -f "$archive" ] || [ "$(sha256 -q "$archive")" != "$expected" ]; then
+            "$native_curl" --fail --location --proto '=https' --proto-redir '=https' --retry 3 --max-time 600 \
+                --output "$archive.part" "$url"
+            test "$(sha256 -q "$archive.part")" = "$expected"
+            mv "$archive.part" "$archive"
+        fi
+        extracted=$(mktemp -d)
+        # xz is provided by the base OS or the native package manager.
+        xz -dc "$archive" | tar -xf - -C "$extracted"
+        "$extracted/$name/install.sh" --prefix="$prefix" \
+            --components="rustc,cargo,rust-std-$RELEASE_TARGET" --disable-ldconfig
+        rm -rf "$extracted"
+    fi
+    export PATH="$prefix/bin:$PATH"
+fi
+
+test "$(rustc --version | awk '{print $2}')" = "$rust_version"
+host=$(rustc -vV | sed -n 's/^host: //p')
+test "$host" = "$RELEASE_TARGET"
+git config --global --add safe.directory "$repository"
+cargo build --release --locked -p fluentci-engine
+binary="$CARGO_TARGET_DIR/release/fluentci-engine"
+strip -s "$binary"
+"$binary" --version
+"$binary" --help > /dev/null
+sh .github/scripts/smoke-bsd-release.sh "$binary" "$repository/.release-smoke"
+
+stage=$(mktemp -d)
+cp "$binary" "$stage/fluentci-engine"
+cp LICENSE "$stage/LICENSE"
+cp .github/BSD-RELEASES.md "$stage/README.md"
+mkdir -p "$stage/licenses/superconsole" "$stage/licenses/wasmtime"
+cp vendor/superconsole/LICENSE-* "$stage/licenses/superconsole/"
+cp vendor/wasmtime/LICENSE "$stage/licenses/wasmtime/LICENSE"
+{
+    printf 'Target: %s\nRelease tag: %s\nSource revision: %s\n' "$RELEASE_TARGET" "$RELEASE_TAG" "$(git rev-parse HEAD)"
+    "$stage/fluentci-engine" --version
+    uname -a
+    rustc -vV
+    cargo --version
+    printf '\nDynamic dependencies (required on the destination host):\n'
+    ldd "$stage/fluentci-engine"
+} > "$stage/BUILD-INFO.txt"
+if grep -i 'not found' "$stage/BUILD-INFO.txt"; then
+    echo 'Unresolved dynamic dependency; refusing to package' >&2
+    exit 1
+fi
+asset="fluentci-engine_${RELEASE_TAG}_${RELEASE_TARGET}.tar.gz"
+tar -czf "$output/$asset" -C "$stage" fluentci-engine BUILD-INFO.txt README.md LICENSE licenses
+printf '%s  %s\n' "$(sha256 -q "$output/$asset")" "$asset" > "$output/$asset.sha256"
+rm -rf "$stage"
+printf 'built\n' > "$output/status"

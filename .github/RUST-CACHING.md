@@ -52,3 +52,9 @@ BSD artifact-cache keys. The native workflow also watches `vendor/superconsole/`
 so dependency patches trigger the same OS matrix as engine changes. See
 [the vendoring record](../vendor/superconsole/FLUENTCI-VENDOR.md) for the pinned
 revision and reproducible patch.
+
+BSD release jobs additionally cache the exact official FreeBSD/NetBSD Rust host
+toolchains. They build and smoke-test the full CLI before packaging. The native
+OpenBSD compiler must match the project pin or its release is explicitly skipped.
+All vendored Rust sources and manifests participate in source cache keys, including
+the pinned Wasmtime backport used for NetBSD. See [BSD releases](BSD-RELEASES.md).

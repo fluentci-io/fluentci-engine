@@ -1,0 +1,211 @@
+name: BSD releases
+
+on:
+  release:
+    types: [created]
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-bsd.yml'
+      - '.github/scripts/*bsd-release*'
+      - '.github/scripts/create-bsd-smoke-fixtures.py'
+      - 'vendor/wasmtime/**'
+  pull_request:
+    paths:
+      - '.github/workflows/release-bsd.yml'
+      - '.github/scripts/*bsd-release*'
+      - '.github/scripts/create-bsd-smoke-fixtures.py'
+      - 'crates/**'
+      - 'Cargo.*'
+      - 'vendor/**'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (empty builds the selected branch without publishing)'
+        type: string
+        default: ''
+      publish:
+        description: 'Upload verified assets to the existing release for tag'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bsd-release-${{ github.event.release.tag_name || inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag || format('ci-{0}', github.sha) }}
+
+jobs:
+  wasm-fixtures:
+    name: Build portable Wasm smoke fixtures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
+      - name: Require an explicit existing release tag when publishing
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        env:
+          EXISTING_RELEASE_TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          test -n "$EXISTING_RELEASE_TAG"
+          gh release view "$EXISTING_RELEASE_TAG" >/dev/null
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: '1.99.1'
+          targets: wasm32-unknown-unknown
+      - uses: ./.github/actions/rust-cache
+        with:
+          key: bsd-release-wasm-fixtures
+      - name: Verify artifact-validation safeguards using mock archives
+        run: python3 .github/scripts/test-bsd-release-verification.py -v
+      - name: Build XTP plugin and generate trap fixtures
+        run: |
+          cargo build --release --locked --target wasm32-unknown-unknown -p xtp-smoke
+          python3 .github/scripts/create-bsd-smoke-fixtures.py .release-smoke
+          cp target/wasm32-unknown-unknown/release/xtp_smoke.wasm .release-smoke/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: bsd-smoke-fixtures
+          path: .release-smoke/*.wasm
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  build:
+    name: Native ${{ matrix.os }} x86_64
+    needs: wasm-fixtures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: freebsd
+            release: '14.3'
+            target: x86_64-unknown-freebsd
+          - os: netbsd
+            release: '10.1'
+            target: x86_64-unknown-netbsd
+          - os: openbsd
+            release: '7.8'
+            target: x86_64-unknown-openbsd
+    env:
+      RELEASE_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: bsd-smoke-fixtures
+          path: .release-smoke
+      - name: Restore native compiler, Cargo, and sccache caches
+        uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
+        with:
+          path: .ci-cache/bsd-rust
+          key: bsd-release-v1-${{ matrix.os }}-${{ matrix.release }}-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.github/scripts/*bsd-release*') }}-${{ hashFiles('crates/**/*.rs', 'vendor/**/*.rs', 'vendor/**/Cargo.toml') }}
+          restore-keys: |
+            bsd-release-v1-${{ matrix.os }}-${{ matrix.release }}-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.github/scripts/*bsd-release*') }}-
+            bsd-release-v1-${{ matrix.os }}-${{ matrix.release }}-${{ matrix.target }}-
+      - name: Build and smoke-test on FreeBSD
+        if: matrix.os == 'freebsd'
+        uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc
+        with:
+          release: ${{ matrix.release }}
+          arch: x86_64
+          mem: 8192
+          cpu: 2
+          copyback: true
+          envs: 'RELEASE_TAG RELEASE_TARGET'
+          prepare: sh .github/scripts/prepare-bsd-release.sh
+          run: sh .github/scripts/build-bsd-release.sh
+      - name: Build and smoke-test on NetBSD
+        if: matrix.os == 'netbsd'
+        uses: vmactions/netbsd-vm@c8a0d7ddb84619a7a8cc4e652efa7950b3fd9f92
+        with:
+          release: ${{ matrix.release }}
+          arch: x86_64
+          mem: 8192
+          cpu: 2
+          copyback: true
+          envs: 'RELEASE_TAG RELEASE_TARGET'
+          prepare: sh .github/scripts/prepare-bsd-release.sh
+          run: sh .github/scripts/build-bsd-release.sh
+      - name: Build and smoke-test on OpenBSD when its native compiler matches
+        if: matrix.os == 'openbsd'
+        uses: vmactions/openbsd-vm@f1ca8bc8ecc5b6ef7218e5b914836e067e1546d3
+        with:
+          release: ${{ matrix.release }}
+          arch: x86_64
+          mem: 8192
+          cpu: 2
+          copyback: true
+          envs: 'RELEASE_TAG RELEASE_TARGET'
+          prepare: sh .github/scripts/prepare-bsd-release.sh
+          run: sh .github/scripts/build-bsd-release.sh
+      - name: Verify copied-back release assets or explain unsupported toolchain
+        id: assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="dist/bsd/$RELEASE_TARGET"
+          case "$(cat "$output/status")" in
+            built)
+              python3 .github/scripts/verify-bsd-release.py "$output" "$RELEASE_TAG" "$RELEASE_TARGET"
+              echo 'built=true' >> "$GITHUB_OUTPUT"
+              echo "Built and smoke-tested $RELEASE_TARGET ($RELEASE_TAG)." >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            skipped)
+              test "$RELEASE_TARGET" = x86_64-unknown-openbsd
+              echo 'built=false' >> "$GITHUB_OUTPUT"
+              cat "$output/SKIPPED.txt" >> "$GITHUB_STEP_SUMMARY"
+              echo '::notice::OpenBSD release skipped: native Rust does not match the pinned toolchain.'
+              ;;
+            *) echo 'Missing or invalid build status' >&2; exit 1 ;;
+          esac
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: steps.assets.outputs.built == 'true'
+        with:
+          name: bsd-release-${{ matrix.target }}
+          path: |
+            dist/bsd/${{ matrix.target }}/*.tar.gz
+            dist/bsd/${{ matrix.target }}/*.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Upload verified BSD assets to GitHub Release
+    needs: build
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: bsd-release-*
+          path: assets
+          merge-multiple: true
+      - name: Upload archives and SHA-256 files to the existing release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          EXISTING_RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          set -euo pipefail
+          test -n "$EXISTING_RELEASE_TAG"
+          test "$EXISTING_RELEASE_TAG" = "$RELEASE_TAG"
+          gh release view "$RELEASE_TAG" >/dev/null
+          shopt -s nullglob
+          files=(assets/*.tar.gz assets/*.tar.gz.sha256)
+          test "${#files[@]}" -gt 0
+          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber

@@ -427,3 +427,6 @@ the [server run API documentation](docs/host-executor.md#independent-server-runs
 Rust Wasm plugins use Extism and XTP schemas for the host ABI. See the
 [plugin schema and code-generation guide](schema/README.md) for generating plugins
 and running release-mode compatibility tests.
+
+Native BSD archive targets, verification, and compiler availability are described
+in the [BSD release guide](.github/BSD-RELEASES.md).
