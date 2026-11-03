@@ -1,6 +1,7 @@
 defmodule FluentCI.EngineTest do
   use ExUnit.Case, async: true
   alias FluentCI.Host, as: H
+  alias FluentCI.Host.Result
 
   @engine System.get_env(
             "FLUENTCI_ENGINE_BIN",
@@ -42,7 +43,8 @@ defmodule FluentCI.EngineTest do
       )
 
     assert File.regular?(Path.join(run, "result.json")), output
-    {JSON.decode!(File.read!(Path.join(run, "result.json"))), run, code}
+    assert {:ok, result} = Result.decode(File.read!(Path.join(run, "result.json")))
+    {result, run, code}
   end
 
   test "release engine runs copied workspaces and restores cached outputs and exact logs", %{
@@ -74,11 +76,11 @@ defmodule FluentCI.EngineTest do
     for {name, expected} <- [{"cold", "stored"}, {"warm", "hit"}] do
       {result, run, code} = execute(plan, root, name)
       assert code == 0
-      assert result["outcome"] == "succeeded"
-      [first, second] = result["tasks"]
-      assert first["cache"]["outcome"] == expected
-      assert File.read!(first["stdout"]) == value
-      assert File.read!(second["stdout"]) == "artifact"
+      assert result.outcome == :succeeded
+      [first, second] = result.tasks
+      assert first.cache.outcome == expected
+      assert File.read!(first.stdout) == value
+      assert File.read!(second.stdout) == "artifact"
       assert File.read!(Path.join(run, "workspace/output")) == "artifact"
       refute File.exists?(Path.join(run, "workspace/unexpected"))
     end
@@ -96,9 +98,9 @@ defmodule FluentCI.EngineTest do
       H.plan([fail, child, independent]) |> H.fail_fast(false) |> execute(root, "failed")
 
     assert code != 0
-    assert result["outcome"] == "failed"
-    assert Enum.map(result["tasks"], & &1["status"]) == ["failed", "skipped", "succeeded"]
-    assert hd(result["tasks"])["exit_code"] == 7
+    assert result.outcome == :failed
+    assert Enum.map(result.tasks, & &1.status) == [:failed, :skipped, :succeeded]
+    assert hd(result.tasks).exit_code == 7
   end
 
   test "readiness and health probes gate consumers and service teardown", %{root: root} do
@@ -122,9 +124,11 @@ defmodule FluentCI.EngineTest do
 
     {result, run, code} = H.plan([db, consumer]) |> H.jobs(1) |> execute(root, "service")
     assert code == 0
-    assert result["outcome"] == "succeeded"
-    assert File.read!(Enum.at(result["tasks"], 1)["stdout"]) == "ready"
+    assert result.outcome == :succeeded
+    assert File.read!(Enum.at(result.tasks, 1).stdout) == "ready"
     assert File.read!(Path.join(root, "healthy")) == "healthy"
+    assert %Result.ProbeLogs{} = hd(result.tasks).probe_logs
+    assert File.regular?(hd(result.tasks).probe_logs.stdout)
 
     events =
       File.read!(Path.join(run, "events.jsonl"))
@@ -133,5 +137,15 @@ defmodule FluentCI.EngineTest do
 
     assert Enum.any?(events, &(&1["id"] == "db" and &1["status"] == "ready"))
     assert Enum.any?(events, &(&1["id"] == "db" and &1["status"] == "stopping"))
+  end
+
+  test "timeout reports decode without treating pipeline failure as a decoding error", %{
+    root: root
+  } do
+    task = H.task("slow", "/bin/sh", root) |> H.args(["-c", "/bin/sleep 5"]) |> H.timeout_ms(50)
+    {report, _, code} = H.plan([task]) |> execute(root, "timeout")
+    assert code != 0
+    assert %Result{outcome: :failed, tasks: [%Result.Task{status: :timed_out}]} = report
+    refute Result.succeeded?(report)
   end
 end

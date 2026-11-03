@@ -94,9 +94,41 @@ consumer = H.task("jq", "jq", "/absolute/project")
 Installation is a separate uncached step with a prefix lease. No package manager
 is installed or bootstrapped by the SDK, and compilation never installs packages.
 This milestone does not include an Elixir-managed local process runner, HTTP run
-client, cancellation handle, or typed result/event decoders. The generated JSON can
-be passed to the existing CLI or authenticated run API; those SDK APIs remain work
-for subsequent milestones.
+client, cancellation handle, or event decoder. The generated JSON can be passed to
+the existing CLI or authenticated run API; those SDK APIs remain work for subsequent
+milestones. Terminal report decoding is available independently of transport.
+
+## Terminal result decoding
+
+```elixir
+alias FluentCI.Host.Result
+
+json = File.read!("run-1/result.json") # Caller-controlled I/O boundary.
+case Result.decode(json) do
+  {:ok, %Result{outcome: :succeeded}} -> :ok
+  {:ok, %Result{} = report} -> {:pipeline_result, report}
+  {:error, %Result.Error{path: path, reason: reason}} -> {:invalid_report, path, reason}
+end
+```
+
+A failed or cancelled pipeline is a successfully decoded report, not a decoding
+error. `Result.from_map/1` accepts already parsed string-keyed JSON objects.
+`Result.succeeded?/1` checks that every task succeeded. No decoder reads log files
+or starts processes. Paths in a remote report refer to the server filesystem.
+
+Run outcomes are `:succeeded`, `:failed`, or `:cancelled`. Missing/null outcomes from
+older engines remain `nil`; task cancellation alone does not imply external run
+cancellation because fail-fast failures can cancel sibling tasks too. Task statuses
+are `:succeeded`, `:failed`, `:skipped`, `:cancelled`, and `:timed_out`.
+
+`Result.Task` retains ID, exit code, error, duration, stdout/stderr paths, cache
+information, optional probe-log paths, and resource wait diagnostics. Cache outcome
+strings remain open to new engine variants; component digests are retained in a
+string-keyed map. Duration integers preserve precision through the engine's u128
+range. Unknown fields are ignored for forward compatibility. Unknown/nonterminal
+statuses, duplicate task IDs, malformed fields, and contradictory outcomes are
+rejected with field paths. External values are never converted into atoms, and
+decoding errors contain no raw report values.
 
 ## Validation
 
@@ -113,6 +145,8 @@ mix format --check-formatted
 are explicitly skipped unless `FLUENTCI_REQUIRE_ENGINE=1` makes that a failure.
 Tests cover pure composition, dependency graphs, invalid wire values, every provider
 encoding, and actual release-engine workspace/cache, failed-dependency, and service
-execution. Package-manager encoding tests perform no installation. The workflow
+execution, plus actual timeout results. Decoder tests cover terminal variants,
+legacy reports, malformed fields, outcome consistency, duplicate IDs, and integer
+precision. Package-manager encoding tests perform no installation. The workflow
 includes these tests on Ubuntu with Elixir 1.18.4/OTP 27.3.4; local validation also
 runs on macOS ARM64. A configured CI job is not evidence of a completed remote run.

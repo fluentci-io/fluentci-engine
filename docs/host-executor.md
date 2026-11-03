@@ -785,4 +785,8 @@ resource leases, copied workspaces, caching, services with readiness/health prob
 and all native package-provider variants. Compilation is pure and returns tagged
 results; execution remains an explicit CLI/API operation. Its release-engine tests
 exercise copied-workspace cache reuse, failed dependencies, and service lifecycle.
-An Elixir-managed execution client and result/event decoders are not yet included.
+`FluentCI.Host.Result` decodes terminal reports into structs and fixed status atoms,
+including cache components, probe logs, and wait diagnostics. It rejects duplicate
+IDs, nonterminal statuses, and contradictory outcomes; legacy missing outcomes
+remain absent. An Elixir-managed execution client and event decoder are not yet
+included.
