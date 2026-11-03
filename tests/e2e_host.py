@@ -160,7 +160,7 @@ class HostExecution(unittest.TestCase):
         if destination:
             destination.mkdir(parents=True, exist_ok=True)
         for path in sorted((self.root / run).rglob("*")):
-            if path.is_symlink() or not path.is_file() or path.suffix not in {".json", ".jsonl", ".stdout", ".stderr"}:
+            if path.is_symlink() or not path.is_file() or path.suffix not in {".json", ".jsonl", ".stdout", ".stderr", ".probe_stdout", ".probe_stderr"}:
                 continue
             with path.open("rb") as source:
                 source.seek(0, os.SEEK_END)
@@ -175,7 +175,28 @@ class HostExecution(unittest.TestCase):
         return "\n".join(details)
 
     def test_service_readiness_and_cleanup_with_single_job(self):
-        daemon = "import http.server, pathlib, os; s=http.server.HTTPServer(('127.0.0.1',0),http.server.SimpleHTTPRequestHandler); pathlib.Path('port').write_text(str(s.server_port)); pathlib.Path('pid').write_text(str(os.getpid())); print('service-ready', flush=True); s.serve_forever()"
+        daemon = """
+import faulthandler
+faulthandler.dump_traceback_later(10)
+import http.server, socketserver, pathlib, os, socket
+def reject_reverse_dns(*args):
+    raise AssertionError('loopback fixture must not perform hostname lookups')
+socket.getfqdn = reject_reverse_dns
+class LoopbackServer(http.server.HTTPServer):
+    def server_bind(self):
+        # HTTPServer.server_bind calls socket.getfqdn(), which may stall on
+        # runner DNS. This fixture needs only a numeric loopback address.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name = 'localhost'
+        self.server_port = self.server_address[1]
+print('service-binding', flush=True)
+s = LoopbackServer(('127.0.0.1', 0), http.server.SimpleHTTPRequestHandler)
+pathlib.Path('port').write_text(str(s.server_port))
+pathlib.Path('pid').write_text(str(os.getpid()))
+faulthandler.cancel_dump_traceback_later()
+print('service-ready', flush=True)
+s.serve_forever()
+"""
         # Direct loopback HTTP avoids macOS system-proxy discovery in urllib.
         # This tests lifecycle scheduling, not cold Python import performance.
         probe = "import http.client,pathlib; c=http.client.HTTPConnection('127.0.0.1',int(pathlib.Path('port').read_text()),timeout=2); c.request('GET','/health'); r=c.getresponse(); assert r.status==200 and r.read()==b'healthy'; c.close()"
