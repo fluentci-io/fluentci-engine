@@ -50,7 +50,7 @@ defmodule FluentCI.Plugin.Codegen do
     """
     let plan: serde_json::Value = serde_json::from_str(&#{value(encoded)})?;
     let request = serde_json::json!({"plan": plan, "run_dir": #{value(directory)}});
-    unsafe { execute_plan(request.to_string()) }
+    Ok(unsafe { execute_plan(request.to_string()) }?)
     """
   end
 
