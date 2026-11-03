@@ -17,6 +17,9 @@ pub struct CachePolicy {
     pub outputs: Vec<PathBuf>,
     /// Caller-provided identity for the complete toolchain/runtime, not just the launcher.
     pub toolchain: String,
+    /// Absolute regular files whose bytes and permissions identify external tools.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub toolchain_files: Vec<PathBuf>,
     /// Caller guarantees outputs and logs do not depend on the physical cwd.
     #[serde(default, skip_serializing_if = "is_false")]
     pub relocatable: bool,
@@ -234,6 +237,12 @@ pub fn validate_storage(task: &Task, storage: &Path) -> Result<(), String> {
             ));
         }
     }
+    for declared in &policy.toolchain_files {
+        let path = resolved_location(declared)?;
+        if storage.starts_with(&path) || path.starts_with(&storage) {
+            return Err("cache/run storage overlaps a toolchain file".into());
+        }
+    }
     Ok(())
 }
 
@@ -247,6 +256,16 @@ pub(crate) fn validate_workspace(
     for (index, task) in tasks.iter().enumerate() {
         if let Some(policy) = &task.cache {
             let cwd = fs::canonicalize(&task.cwd).map_err(|e| e.to_string())?;
+            for declared in &policy.toolchain_files {
+                let path = resolved_location(declared)?;
+                for output in &policy.outputs {
+                    let output = resolved_location(&cwd.join(output))?;
+                    if path.starts_with(&output) || output.starts_with(&path) {
+                        return Err("toolchain files overlap task outputs".into());
+                    }
+                }
+                paths.entry(path).or_default().push((index, false));
+            }
             for (declared, write) in [(&policy.inputs, false), (&policy.outputs, true)] {
                 for relative in declared {
                     // Do not follow artifact symlinks into a different workspace.
@@ -311,6 +330,16 @@ impl CachePolicy {
     pub fn validate(&self) -> Result<(), String> {
         if self.toolchain.is_empty() {
             return Err("cache policy requires a toolchain identity".into());
+        }
+        for path in &self.toolchain_files {
+            if !path.is_absolute()
+                || path.file_name().is_none()
+                || path
+                    .components()
+                    .any(|part| matches!(part, Component::ParentDir))
+            {
+                return Err("toolchain files must be absolute file paths without '..'".into());
+            }
         }
         if self.outputs.is_empty() {
             return Err("cache policy requires declared outputs".into());
@@ -560,6 +589,18 @@ fn hash_entries(
     Ok(())
 }
 
+fn toolchain_files_digest(paths: &[PathBuf], cancel: &Cancellation) -> Result<String, String> {
+    let mut identities = BTreeMap::new();
+    for path in paths.iter().collect::<std::collections::BTreeSet<_>>() {
+        check_cancel(cancel)?;
+        let mut file = open_regular_file(path, true)
+            .map_err(|e| format!("toolchain file {}: {e}", path.display()))?;
+        let permissions = mode(&file.metadata().map_err(|e| e.to_string())?);
+        identities.insert(path, (stream_digest(&mut file, cancel)?, permissions));
+    }
+    encoded_digest(&identities)
+}
+
 /// Returns None when another process owns the same action. The scheduler can
 /// retry without blocking unrelated tasks or losing cancellation responsiveness.
 pub fn prepare(
@@ -621,6 +662,12 @@ pub(crate) fn prepare_cancellable(
     );
     components.insert("environment".into(), encoded_digest(&task.env)?);
     components.insert("toolchain".into(), digest(policy.toolchain.as_bytes()));
+    if !policy.toolchain_files.is_empty() {
+        components.insert(
+            "toolchain_files".into(),
+            toolchain_files_digest(&policy.toolchain_files, cancel)?,
+        );
+    }
     components.insert("outputs".into(), encoded_digest(&policy.outputs)?);
     components.insert(
         "working_directory".into(),
@@ -771,6 +818,12 @@ impl Prepared {
             != self.components["inputs"]
         {
             return Err("declared inputs changed during execution; action was not cached".into());
+        }
+        if !policy.toolchain_files.is_empty()
+            && toolchain_files_digest(&policy.toolchain_files, &self.cancel)?
+                != self.components["toolchain_files"]
+        {
+            return Err("toolchain files changed during execution; action was not cached".into());
         }
         let entries = snapshot(&task.cwd, &policy.outputs, &self.cancel)?;
         // CAS blobs are immutable by digest. Verify/publish each unique blob

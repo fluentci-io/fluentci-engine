@@ -237,6 +237,41 @@ interpreters, compilers, or external services must be represented by declared
 inputs/toolchain identity; this is an explicit cacheability contract, not a
 hermetic sandbox. Side-effecting deployment and publishing tasks should not opt in.
 
+For tools outside the task workspace, optionally add absolute regular file paths:
+
+```json
+"cache": {
+  "inputs": ["src"],
+  "outputs": ["dist"],
+  "toolchain": "compiler-and-runtime-contract-v1",
+  "toolchain_files": ["/opt/toolchain/bin/compiler", "/opt/toolchain/lib/runtime.so"]
+}
+```
+
+`toolchain_files` hashes each declared path, its target bytes, and permission bits.
+Symlinks to regular files are supported; directories, FIFOs, and missing files
+fail the task. Duplicate paths and list ordering do not change the identity.
+These files are read under the task's resource leases during cache preparation
+and checked again before publication. A changed file fails the task and prevents
+publishing its action. Declared writers must be dependency-ordered with these
+readers; files cannot overlap the same task's outputs or run/cache storage.
+An empty or omitted list preserves the previous cache-key format. `cache-diff`
+reports changes under the `toolchain_files` component without revealing file
+contents. Absolute paths remain part of identity even with relocatable workspaces.
+
+Declare every relevant compiler, interpreter, library, or authoritative manifest;
+this is not automatic transitive dependency discovery or an installed-package
+snapshot. A manifest identifies only its own bytes, not files it describes.
+Keep files stable throughout execution: these checks are not a sandbox or a
+proof against concurrent change-and-revert mutations. Package-prefix leases
+coordinate cooperating installers, not external package-manager processes.
+
+SDK builders expose the same opt-in field: Elixir `Host.cache(...,
+toolchain_files: paths)`, Gleam `host.cache(...) |> host.with_toolchain_files(paths)`,
+and PureScript `task # withCache policy # withToolchainFiles paths`. Construction
+remains pure; filesystem validation happens in the engine. PureScript's builder
+must follow cache attachment; a task without a cache policy is unchanged.
+
 Blobs are content-addressed with SHA-256. Writes are staged and atomically
 published. Each publication verifies/stores a unique blob once even when several
 outputs or logs share its digest. This deduplication is local to that publication;
@@ -712,7 +747,8 @@ Install tasks are never action-cached and cannot also be command/service tasks.
 A consumer depending on an uncached installation receives a run-specific dependency
 key, so it does not claim a cross-run cache hit based on mutable package state.
 For cached consumers, provision a pinned toolchain separately, declare its identity
-in `cache.toolchain`, and use `package_environment` without an installation step in
+in `cache.toolchain`, declare relevant binaries/libraries in `cache.toolchain_files`,
+and use `package_environment` without an installation step in
 the cached dependency graph. Complete automatic package-state snapshots and verified
 toolchain identities remain follow-through work.
 
