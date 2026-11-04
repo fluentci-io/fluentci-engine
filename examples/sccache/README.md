@@ -42,6 +42,7 @@ npm ci
 npm run build
 npm test
 cd ../..
+mkdir -p runs
 fluentci-engine call -m examples/sccache/dist/plugin.wasm build \
   '["fixtures/sccache-demo", "runs/rust-first"]'
 ```

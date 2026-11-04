@@ -688,7 +688,7 @@
     "extra_packages": {
       "fluentci": {
         "git": "https://github.com/fluentci-io/purescript-fluentci.git",
-        "ref": "aa7540b55cc1d42873c8eb7d378d53f96da8e2eb"
+        "ref": "82da1d0f551b05ecae0ce2d5ebe26e23d61f4a10"
       }
     }
   },
@@ -921,7 +921,7 @@
     "fluentci": {
       "type": "git",
       "url": "https://github.com/fluentci-io/purescript-fluentci.git",
-      "rev": "aa7540b55cc1d42873c8eb7d378d53f96da8e2eb",
+      "rev": "82da1d0f551b05ecae0ce2d5ebe26e23d61f4a10",
       "dependencies": [
         "aff",
         "argonaut-codecs",
