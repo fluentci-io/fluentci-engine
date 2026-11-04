@@ -57,7 +57,7 @@ jobs:
           uv run fluentci-plugin demo/plugin.py -o dist/plugin.wasm
       - name: Test Elixir DSL and compile its Wasm guest
         run: |
-          (cd sdk/elixir && mix format --check-formatted && mix test --warnings-as-errors test/plugin_test.exs test/matrix_test.exs)
+          (cd sdk/elixir && mix format --check-formatted && mix test --warnings-as-errors test/plugin_test.exs test/matrix_test.exs test/host_test.exs)
           cd sdk/elixir/demo-plugin
           mix deps.get
           mix fluentci.plugin.build DemoPlugin --pdk-path ../../../crates/pdk --output dist/plugin.wasm

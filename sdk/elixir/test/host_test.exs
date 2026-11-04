@@ -94,7 +94,7 @@ defmodule FluentCI.HostTest do
           H.plan([H.env(task, %{"BAD=KEY" => "private-secret"})]),
           H.plan([H.env(task, %{"KEY" => <<255>>})]),
           H.plan([H.args(task, [<<0>>])]),
-          H.plan([H.cache(task, [], [], "toolchain")]),
+          H.plan([H.cache(task, [], [nil], "toolchain")]),
           H.plan([H.cache(task, [], ["out"], "t", typo: true)]),
           H.plan([H.service(task, H.probe("/bin/true"), failure_threshold: 0)]),
           H.plan([H.install("bad", H.provider(:unknown), ["jq"], ".")]),
@@ -106,6 +106,21 @@ defmodule FluentCI.HostTest do
       assert is_list(path)
       refute inspect(path) =~ "private-secret"
     end
+  end
+
+  test "log-only processes and native file queries can cache without file outputs" do
+    tasks = [
+      H.task("logs", "/bin/true", ".") |> H.cache([], [], "toolchain"),
+      FluentCI.Files.read_text("query", "input.txt", 1024)
+      |> H.cache(["input.txt"], [], "native-files")
+    ]
+
+    assert {:ok, json} = H.compile(H.plan(tasks))
+    [process, query] = JSON.decode!(json)["tasks"]
+    assert process["cache"]["outputs"] == []
+    assert query["cache"]["outputs"] == []
+    assert query["cache"]["inputs"] == ["input.txt"]
+    assert query["file_operation"]["op"] == "read_text"
   end
 
   test "service and workspace configuration roundtrip" do
