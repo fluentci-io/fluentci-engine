@@ -14,6 +14,23 @@ _If you love FluentCI, please ★ star this repository to show your support 💚
 
 FluentCI Engine is a programmable CI/CD engine (used by [FluentCI](https://github.com/fluentci-io/fluentci)) that is designed to be simple, flexible, and easy to use. It is supposed to run on the host machine without containerization or virtualization, and it is designed to be used with [Nix](https://nixos.org), [Pkgx](https://pkgx.sh), [Devbox](https://www.jetpack.io/devbox/), [Flox](https://flox.dev), [Devenv](https://devenv.sh), [Hermit](https://github.com/cashapp/hermit), [EnvHub](https://github.com/tsirysndr/envhub), [Pixi](https://pixi.sh/) and [Mise](https://mise.jdx.dev/).
 
+## Table of contents
+
+- [Features](#-features)
+- [Host execution plans](#host-execution-plans)
+- [Parallel matrix jobs (unreleased)](#parallel-matrix-jobs-unreleased)
+- [Quick Start](#-quick-start)
+- [Downloads](#-downloads)
+- [Documentation](#-documentation)
+- [Plugins](#-plugins)
+  - [Rust Plugin Example](#-rust-plugin-example)
+  - [Available Plugins](#-available-plugins)
+  - [Builtin functions](#-builtin-functions)
+- [GitHub Actions](#-github-actions)
+- [Caching](#-caching)
+- [OpenTelemetry Tracing](#-opentelemetry-tracing)
+- [Logging](#-logging)
+
 ![Made with VHS](https://vhs.charm.sh/vhs-o1fkvlKvsyAPUbKUXTyyS.gif)
 
 > [!NOTE]
