@@ -1,65 +1,78 @@
-name: release
+name: Linux releases
 on:
   release:
     types: [created]
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing release tag to rebuild and upload Linux assets for'
+        description: Existing release tag to rebuild and upload Linux assets for
         required: true
         type: string
-
 permissions:
   contents: write
-
 jobs:
+  modules:
+    name: Compile portable PureScript release module
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - uses: fluentci-io/setup-fluentci@next
+        with:
+          version: '2026.11.04'
+      - uses: ./.github/actions/fluentci-modules
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-release-module
+          path: .fluentci/release/dist/plugin.wasm
+          if-no-files-found: error
+          include-hidden-files: true
   build:
-    runs-on: ubuntu-22.04
+    needs: modules
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - aarch64-unknown-linux-gnu
-          - x86_64-unknown-linux-gnu
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+    env:
+      TARGET: ${{ matrix.target }}
+      RELEASE_VERSION: ${{ github.event.release.tag_name || inputs.tag }}
+      RELEASE_MODULE: .fluentci/release/dist/plugin.wasm
+      CARGO_BUILD_JOBS: '2'
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Verify cache snapshot export using temporary data
-        run: python3 .github/scripts/test-rust-cache-snapshot.py -v
-      - name: Cache container Rust compiler results and Cargo downloads
-        uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
+      - uses: actions/checkout@v4
         with:
-          path: .ci-cache/linux-release
-          key: container-rust-v1-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.fluentci/src/jobs.ts', '.fluentci/src/helpers.ts', '.github/scripts/snapshot-rust-cache.sh') }}-${{ hashFiles('crates/**/*.rs', 'vendor/**/*.rs', 'vendor/**/Cargo.toml') }}
-          restore-keys: |
-            container-rust-v1-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', '.fluentci/src/jobs.ts', '.fluentci/src/helpers.ts', '.github/scripts/snapshot-rust-cache.sh') }}-
-            container-rust-v1-${{ matrix.target }}-
-      - name: Prepare compiler-cache transfer directory
-        run: mkdir -p .ci-cache/linux-release
-      - uses: fluentci-io/setup-fluentci@v5
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - uses: fluentci-io/setup-fluentci@next
         with:
-          engine-version: 0.5.0
+          version: '2026.11.04'
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-release-module
+          path: .fluentci/release/dist
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: '1.99.1'
+          targets: ${{ matrix.target }}
+      - uses: ./.github/actions/rust-cache
+        with:
+          key: release-${{ matrix.target }}
+      - name: Install native build dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config protobuf-compiler
       - name: Select existing release
         env:
-          RELEASE_VERSION: ${{ github.event.release.tag_name || inputs.tag }}
           GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release view "$RELEASE_VERSION" >/dev/null
-          echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
-      - name: Build
-        run: |
-          fluentci run . build
-          ls -ltr
+        run: gh release view "$RELEASE_VERSION" >/dev/null
+      - name: Build release with PureScript
+        run: fluentci --check-update=false run --wasm "$RELEASE_MODULE" build
+      - name: Package release with PureScript
+        run: fluentci --check-update=false run --wasm "$RELEASE_MODULE" package
+      - name: Upload release with PureScript
         env:
-          TAG: ${{ env.RELEASE_VERSION }}
-          TARGET: ${{ matrix.target }}
-          FLUENTCI_RUST_CACHE_DIR: .ci-cache/linux-release
-          DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}
-      - name: Upload release assets
-        env:
-          RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
-          TARGET: ${{ matrix.target }}
           GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload "$RELEASE_VERSION" \
-            "fluentci-engine_${RELEASE_VERSION}_${TARGET}.tar.gz" \
-            "fluentci-engine_${RELEASE_VERSION}_${TARGET}.tar.gz.sha256" --clobber
+        run: fluentci --check-update=false run --wasm "$RELEASE_MODULE" upload

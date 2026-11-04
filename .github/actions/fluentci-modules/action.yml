@@ -1,0 +1,17 @@
+name: Build PureScript CI modules
+description: Install the SDK toolchain, compile modules, and verify CI recipes
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+    - name: Install PureScript and Extism prerequisites
+      shell: bash
+      run: sh .fluentci/scripts/install-sdk-tools.sh
+    - name: Compile and discover FluentCI modules
+      shell: bash
+      run: fluentci --check-update=false modules --json
+    - name: Test CI module behavior
+      shell: bash
+      run: FLUENTCI_BIN="$(command -v fluentci)" node --test .fluentci/tests/modules.test.mjs

@@ -13,6 +13,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           set-safe-directory: false
+      - uses: fluentci-io/setup-fluentci@next
+        with:
+          version: '2026.11.04'
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
         with:
@@ -46,29 +49,19 @@ jobs:
         env:
           PATH: /usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin
         run: flox --version
-      - name: Setup Fluent CI
-        uses: fluentci-io/setup-fluentci@v5
-        with:
-          wasm: true
-          engine-version: 0.5.0
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
         with:
           toolchain: '1.99.1'
           targets: wasm32-unknown-unknown
       - uses: ./.github/actions/rust-cache
         with:
-          key: legacy-ci-ubuntu-24.04
-      - name: Build release engine
-        run: cargo build --release --locked -p fluentci-engine
-      - name: Run Build and e2e tests
-        run: |
-          export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
-          ls -ltr ../target
-          install -d "$HOME/.local/bin"
-          install -m 755 ../target/release/fluentci-engine "$HOME/.local/bin/fluentci-engine"
-          "$HOME/.local/bin/fluentci-engine" --version
-          fluentci-engine run -- deno run -A ../.fluentci/e2e.ts
-        working-directory: fixtures
+          key: ci-ubuntu-24.04
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: ./.github/actions/fluentci-modules
+      - name: Run Rust and provider tests through PureScript modules
+        run: fluentci --check-update=false run main check
         env:
           FLOX_FLOXHUB_TOKEN: ${{ secrets.FLOX_HUB_TOKEN }}
           FLOX_DISABLE_METRICS: 'true'
@@ -83,6 +76,7 @@ jobs:
           BASELIME_API_KEY: ${{ secrets.BASELIME_API_KEY }}
 
   publish:
+    if: github.event_name == 'push'
     needs: tests
     runs-on: ubuntu-24.04
     permissions:
@@ -90,7 +84,10 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-      - uses: denoland/setup-deno@v1
+      - uses: fluentci-io/setup-fluentci@next
+        with:
+          version: '2026.11.04'
+      - uses: denoland/setup-deno@v2
         with:
           deno-version: v1.41
       - name: Publish package

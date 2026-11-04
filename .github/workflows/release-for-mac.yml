@@ -14,7 +14,25 @@ permissions:
   contents: write
 
 jobs:
+  modules:
+    name: Compile portable PureScript release module
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - uses: fluentci-io/setup-fluentci@next
+        with:
+          version: '2026.11.04'
+      - uses: ./.github/actions/fluentci-modules
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-release-module
+          path: .fluentci/release/dist/plugin.wasm
+          if-no-files-found: error
+          include-hidden-files: true
   release:
+    needs: modules
     name: release ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -26,9 +44,20 @@ jobs:
           - os: macos-15
             target: aarch64-apple-darwin
 
+    env:
+      RELEASE_MODULE: .fluentci/release/dist/plugin.wasm
     steps:
       - name: Checking out sources
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - uses: fluentci-io/setup-fluentci@next
+        with:
+          version: '2026.11.04'
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-release-module
+          path: .fluentci/release/dist
       - name: Select existing release
         env:
           RELEASE_VERSION: ${{ github.event.release.tag_name || inputs.tag }}
@@ -54,26 +83,16 @@ jobs:
       - name: Build cached release binary
         env:
           TARGET: ${{ matrix.target }}
-        run: |
-          cargo build --release --locked -p fluentci-engine --target "$TARGET"
-          "target/$TARGET/release/fluentci-engine" --version
+        run: fluentci --check-update=false run --wasm "$RELEASE_MODULE" build
       - name: Package final binary with macOS tools
         env:
           TARGET: ${{ matrix.target }}
-        run: |
-          set -euo pipefail
-          archive="fluentci-engine_${RELEASE_VERSION}_${TARGET}.tar.gz"
-          /usr/bin/tar -czf "$archive" -C "target/$TARGET/release" fluentci-engine
-          /usr/bin/tar -tzf "$archive" | /usr/bin/grep -x fluentci-engine
-          /usr/bin/shasum -a 256 "$archive" > "$archive.sha256"
+        run: fluentci --check-update=false run --wasm "$RELEASE_MODULE" package
       - name: Upload release assets
         env:
           TARGET: ${{ matrix.target }}
           GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload "$RELEASE_VERSION" \
-            "fluentci-engine_${RELEASE_VERSION}_${TARGET}.tar.gz" \
-            "fluentci-engine_${RELEASE_VERSION}_${TARGET}.tar.gz.sha256" --clobber
+        run: fluentci --check-update=false run --wasm "$RELEASE_MODULE" upload
       - name: Upload assets to Cloudflare R2
         env:
           TARGET: ${{ matrix.target }}
@@ -81,10 +100,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: auto
           ACCOUNT_ID: fe5b1e2ce9f94f4c0415ab94ce402012
-        run: |
-          set -euo pipefail
-          for extension in tar.gz tar.gz.sha256; do
-            file="fluentci-engine_${RELEASE_VERSION}_${TARGET}.$extension"
-            aws s3 cp "$file" "s3://assets/fluentci-engine/$RELEASE_VERSION/$file" \
-              --endpoint-url "https://$ACCOUNT_ID.r2.cloudflarestorage.com" --only-show-errors
-          done
+        run: fluentci --check-update=false run --wasm "$RELEASE_MODULE" r2

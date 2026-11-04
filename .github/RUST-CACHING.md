@@ -13,7 +13,7 @@ The dependency-cache environment hash excludes the sccache wrapper's absolute
 path, which can change between runner jobs; compiler identity and actual compiler
 flags remain in the key.
 
-The native macOS release and legacy Linux e2e workflows build directly with Cargo
+The native Linux/macOS release and PureScript CI workflows build directly with Cargo
 so these caches are used. Neither workflow deletes Cargo build artifacts before
 cache persistence. MacPorts and macports-rs use pinned, SHA-256-verified native binary packages
 instead of rebuilding the CLIs; the provider tests still use the compiler caches.
@@ -27,14 +27,10 @@ descriptor). Cargo download and compiled artifact caching remain enabled, as doe
 the release toolchain cache. No sccache package is installed in BSD guests. A failed VM run may not reach the action's copyback phase, so only cache
 data actually synchronized back can be saved.
 
-Linux release packaging still runs in its existing Dagger container. The release
-workflow restores `.ci-cache/linux-release`; the build imports it late, after OS
-provisioning layers, then exports the sccache disk cache and Cargo registry/git
-downloads after a successful build. Cache mounts are first copied into an
-unmounted snapshot directory, because Dagger cannot export mounted caches as
-Directory objects. This is separate from native-runner caches.
-`FLUENTCI_RUST_CACHE_DIR` enables this transfer; standalone callers can omit it.
-Registry mounts now use the official Rust image's `/usr/local/cargo` directory.
+Linux release jobs now use native x86_64 and arm64 runners. PureScript release
+modules invoke Cargo directly and use the same native compiler-cache composite
+as macOS. Portable Wasm release modules are compiled once on Ubuntu and passed as
+workflow artifacts. The former Dagger container cache transfer is removed.
 
 The FlakeHub/flakestry jobs publish Nix flakes rather than invoking Cargo directly
 and do not use a Rust compiler wrapper. Nix store caching is a separate concern.
@@ -46,7 +42,7 @@ wrapper so compilation can proceed. Cargo dependency caching remains enabled.
 Cache hit rates and workflow wall time must be checked in GitHub Actions after
 warm runs. Local Rust 1.99.1 release-fixture validation demonstrated a real
 sccache hit after cleaning that fixture's Cargo output; it does not measure CI
-backend throughput or native BSD/container cache transfers. Cache eviction and
+backend throughput or native BSD cache transfers. Cache eviction and
 runner image/toolchain updates can still cause cold builds. Compilation of final
 binaries and test harnesses can remain non-cacheable even with sccache.
 
