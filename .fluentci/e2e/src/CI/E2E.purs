@@ -39,8 +39,8 @@ providers = runIn "provider-smoke-tests" "fixtures"
   ]
 
 typescript :: Effect Unit
-typescript = run "typescript-sdk"
-  [ [ "target/release/fluentci-engine", "run", "--", "deno", "run", "-A", "sdk/typescript/demo/main.ts" ] ]
+typescript = runIn "typescript-sdk" "fixtures"
+  [ [ "../target/release/fluentci-engine", "run", "--", "deno", "run", "-A", "../sdk/typescript/demo/main.ts" ] ]
 
 graphql :: Effect Unit
 graphql = do

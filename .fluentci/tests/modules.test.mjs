@@ -75,10 +75,16 @@ test("the provider Wasm build and every former provider invocation are preserved
   assert.equal(commands.at(-1).args[3],"get https://fluentci.io");
 });
 
-test("the TypeScript SDK remains an engine consumer, not the pipeline runner", t => {
+test("the TypeScript SDK runs from fixtures so service and provider paths resolve", t => {
   const f=fixture(t);
   success(f.run("e2e","typescript"));
-  assert.deepEqual(f.commands()[0].args,["run","--","deno","run","-A","sdk/typescript/demo/main.ts"]);
+  const [command] = f.commands();
+  assert.equal(command.cwd, join(f.directory, "fixtures"));
+  assert.deepEqual(command.args,["run","--","deno","run","-A","../sdk/typescript/demo/main.ts"]);
+  assert.ok(existsSync(join(root, "fixtures", command.args.at(-1))));
+  for (const path of ["service-demo/server.ts", "service-demo/client.ts", "hermit-demo", "pixi-demo", "flox-demo", "mise-demo", "pkgx-demo", "nix-demo", "devbox-demo"]) {
+    assert.ok(existsSync(join(root, "fixtures", path)), `missing SDK demo fixture: ${path}`);
+  }
 });
 
 test("native release recipes build, package, checksum, and upload exact assets", t => {

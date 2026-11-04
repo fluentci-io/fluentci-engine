@@ -58,8 +58,9 @@ runs the TypeScript SDK consumer through the engine, and checks the GraphQL
 fixtures against a managed engine service. These tests install or invoke real
 package-provider tools and can require the existing provider credentials and
 network access. The CI workflow retains its native Flox setup and scoped secrets.
-The TypeScript consumer needs Deno; CI installs it explicitly rather than relying
-on the old setup action's side effects.
+The TypeScript consumer runs from `fixtures/`, where its relative service and
+provider paths resolve. It needs Deno; CI installs it explicitly rather than
+relying on the old setup action's side effects.
 
 ## Releases
 
