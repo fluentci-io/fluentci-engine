@@ -2468,7 +2468,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-common"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "anyhow",
  "dirs",
@@ -2483,7 +2483,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-core"
-version = "0.3.10"
+version = "0.3.11"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2511,7 +2511,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-engine"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2534,7 +2534,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-executor"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "hex",
  "libc",
@@ -2548,7 +2548,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-ext"
-version = "0.2.9"
+version = "0.2.10"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2600,7 +2600,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-graphql"
-version = "0.3.11"
+version = "0.3.12"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2630,7 +2630,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-pdk"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "extism-pdk",
  "fluentci-types",
@@ -2664,7 +2664,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-server"
-version = "0.3.11"
+version = "0.3.12"
 dependencies = [
  "actix-cors",
  "actix-web",
@@ -2690,7 +2690,7 @@ dependencies = [
 
 [[package]]
 name = "fluentci-shared"
-version = "0.2.11"
+version = "0.2.12"
 dependencies = [
  "anyhow",
  "extism",

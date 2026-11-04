@@ -27,8 +27,8 @@ defmodule Mix.Tasks.Fluentci.Plugin.Build do
 
     dependency =
       case options[:pdk_path] do
-        nil -> "fluentci-pdk = \"=0.2.5\""
-        path -> "fluentci-pdk = { path = #{inspect(Path.expand(path))}, version = \"0.2.5\" }"
+        nil -> "fluentci-pdk = \"=0.2.6\""
+        path -> "fluentci-pdk = { path = #{inspect(Path.expand(path))}, version = \"0.2.6\" }"
       end
 
     manifest = """
