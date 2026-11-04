@@ -9,6 +9,33 @@ literal arguments; there are no shell scripts, shell commands or custom JS FFI.
 
 On a build host with PureScript 0.15.16, Spago 1.0.5, Node and extism-js 1.7.0:
 
+If `npm run build` fails with `spawnSync extism-js ENOENT`, extism-js is not on
+your `PATH`. Install the pinned release from
+[extism/js-pdk](https://github.com/extism/js-pdk/releases/tag/v1.7.0) (pick the
+asset matching your OS and CPU: `aarch64`/`x86_64`, `macos`/`linux`):
+
+```sh
+curl -fLO https://github.com/extism/js-pdk/releases/download/v1.7.0/extism-js-aarch64-macos-v1.7.0.gz
+curl -fLO https://github.com/extism/js-pdk/releases/download/v1.7.0/extism-js-aarch64-macos-v1.7.0.gz.sha256
+echo "$(cat extism-js-aarch64-macos-v1.7.0.gz.sha256)  extism-js-aarch64-macos-v1.7.0.gz" | shasum -a 256 -c
+mkdir -p ~/.local/bin
+gunzip -c extism-js-aarch64-macos-v1.7.0.gz > ~/.local/bin/extism-js
+chmod +x ~/.local/bin/extism-js
+extism-js --version
+```
+
+Make sure `~/.local/bin` is on your `PATH`. Alternatively, the upstream
+installer puts it in `/usr/local/bin` (may prompt for sudo):
+
+```sh
+curl -O https://raw.githubusercontent.com/extism/js-pdk/main/install.sh && bash install.sh
+```
+
+extism-js also needs Binaryen's `wasm-merge` and `wasm-opt`
+(`brew install binaryen` on macOS, `apt install binaryen` on Debian/Ubuntu).
+
+Then build and test the plugin:
+
 ```sh
 cd examples/sccache
 npm ci
