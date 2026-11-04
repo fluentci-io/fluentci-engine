@@ -1,9 +1,9 @@
-# Composable workflow primitives (unreleased)
+# Composable workflow primitives
 
 These functions build immutable task values. They perform no process, filesystem,
 network or provisioning operations during construction. All execution uses the
-same versioned native plan and `execute_plan` guest boundary. Use matching source
-builds of the engine and SDKs; published 0.6.0 binaries do not support task policy.
+same versioned native plan and `execute_plan` guest boundary. Use FluentCI Engine
+0.6.1 or later and matching SDKs; engine 0.6.0 does not support task policy.
 
 PureScript example:
 

@@ -70,10 +70,10 @@ The SDK and demo use ReScript 12.3.1 with its bundled standard library.
 Use `npm run res:dev` for watch mode and `npm run res:format` to format sources.
 The checked-in npm lockfiles pin the compiler and JavaScript dependencies.
 
-## Parallel matrix jobs (unreleased)
+## Parallel matrix jobs
 
 See the [matrix guide](../../docs/matrix.md) and the `matrix` export in this SDK's
 plugin example. The API expands named typed cases into native tasks and submits
 one complete plan via `execute_plan`. It supports bounded concurrency, independent
 case caching/logs, prerequisites, joins, failure reports and owning-run cancellation.
-Use matching engine/SDK source builds; engine 0.6.0 does not contain this new import.
+Requires FluentCI Engine 0.6.1 or later and matching SDKs.

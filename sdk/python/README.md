@@ -43,13 +43,13 @@ the compiler; dependencies must be pure Python. Native extensions and arbitrary
 host OS access are unavailable inside the guest. See the plugin PDK CI workflow
 for isolated compiler setup and real engine validation.
 
-## Parallel matrix jobs (unreleased)
+## Parallel matrix jobs
 
 See the [matrix guide](../../docs/matrix.md) and the `matrix` export in this SDK's
 plugin example. The API expands named typed cases into native tasks and submits
 one complete plan via `execute_plan`. It supports bounded concurrency, independent
 case caching/logs, prerequisites, joins, failure reports and owning-run cancellation.
-Use matching engine/SDK source builds; engine 0.6.0 does not contain this new import.
+Requires FluentCI Engine 0.6.1 or later and matching SDKs.
 
 Import guest dependencies at module scope so extism-py can initialize them during
 compilation; avoid loading new filesystem-backed modules only inside an export.

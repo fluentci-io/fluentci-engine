@@ -1,7 +1,7 @@
 # Parallel matrix jobs
 
-**Unreleased API:** use a source build containing `execute_plan` and matching SDKs.
-The already-published engine 0.6.0 and Rust crates do not contain this API.
+Available in FluentCI Engine **0.6.1** and matching SDKs through `execute_plan`.
+Engine 0.6.0 does not contain this API.
 
 A matrix is a pure expansion into ordinary host tasks. The existing executor owns
 scheduling, dependencies, caching, logs, services, timeouts and cancellation.

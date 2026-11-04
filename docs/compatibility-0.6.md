@@ -1,9 +1,11 @@
-# FluentCI Engine 0.6.0 compatibility
+# FluentCI Engine 0.6 compatibility
 
 Version 0.6.0 unifies execution under the host plan executor and adds guest plugin
 build paths for Python, Elixir, Gleam, PureScript, ReScript, and TypeScript.
 Legacy APIs remain compatibility entry points. This is a minor engine release;
 Rust library crates and language SDKs retain their independent version numbers.
+Version 0.6.1 adds native matrices, workflow policies, file/env-file primitives,
+and process failure diagnostics; use matching SDKs for these additions.
 
 ## Execution and scheduling
 
@@ -69,8 +71,8 @@ installing published library crates alone does not carry that workspace override
 
 ## Release preparation
 
-The source engine, Nix package, and README download links target 0.6.0. Workflow
-bootstrap pins use the published 0.5.0 engine until 0.6.0 artifacts are available.
+The source engine, Nix package, and README download links target 0.6.1. Workflow
+bootstrap pins independently select the published 0.5.0 engine.
 Bumping source versions does not tag a release, publish crates, or establish that
 all platform CI jobs have passed. Build and smoke-test release artifacts on the
 supported platform matrix before publishing them.

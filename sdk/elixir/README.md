@@ -42,10 +42,10 @@ Exports return a pipeline, `input()`, or a string. Code outside the DSL has norm
 Elixir build-time effects. The separate [host-plan adapter](HOST_PLANS.md) remains
 available for JSON plan clients.
 
-## Parallel matrix jobs (unreleased)
+## Parallel matrix jobs
 
 See the [matrix guide](../../docs/matrix.md) and the `matrix` export in this SDK's
 plugin example. The API expands named typed cases into native tasks and submits
 one complete plan via `execute_plan`. It supports bounded concurrency, independent
 case caching/logs, prerequisites, joins, failure reports and owning-run cancellation.
-Use matching engine/SDK source builds; engine 0.6.0 does not contain this new import.
+Requires FluentCI Engine 0.6.1 or later and matching SDKs.

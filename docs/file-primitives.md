@@ -1,7 +1,7 @@
 # Native file primitives
 
-These additions are unreleased. Use matching source builds of the engine and SDK;
-released 0.6.0 engines reject `file_operation` and `env_files` task fields.
+These primitives require FluentCI Engine **0.6.1** or later and matching SDKs.
+Engine 0.6.0 rejects the `file_operation` and `env_files` task fields.
 Constructors are pure: a plan describes work; running it performs the effects.
 No shell, `cp`, `find`, `chmod`, or other external program implements these tasks.
 
@@ -39,7 +39,7 @@ PureScript (`FluentCI.Host.Files`):
 ```purescript
 let
   directory = Files.mkdir "directory" "build" true "."
-  write = Files.writeText "write" "build/version.txt" "0.6.0" false "."
+  write = Files.writeText "write" "build/version.txt" "0.6.1" false "."
     # Plan.after [directory]
     # Plan.resource "checkout"
   digest = Files.hash "digest" "build/version.txt" "."

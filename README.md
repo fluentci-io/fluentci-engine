@@ -18,7 +18,7 @@ FluentCI Engine is a programmable CI/CD engine (used by [FluentCI](https://githu
 
 - [Features](#-features)
 - [Host execution plans](#host-execution-plans)
-- [Parallel matrix jobs (unreleased)](#parallel-matrix-jobs-unreleased)
+- [Parallel matrix jobs](#parallel-matrix-jobs)
 - [Quick Start](#-quick-start)
 - [Downloads](#-downloads)
 - [Documentation](#-documentation)
@@ -65,18 +65,18 @@ versioned plan format, functional SDK direction, and current limitations.
 [Elixir host plans](sdk/elixir/HOST_PLANS.md) provide immutable `|>` builders, pure
 JSON compilation, typed results, and managed local execution with cancellation.
 
-Version **0.6.0** provides unified execution and legacy API
-compatibility. See the [0.6.0 compatibility notes](docs/compatibility-0.6.md) for
+Version **0.6.1** provides unified execution, parallel matrices, workflow primitives,
+and native file and env-file tasks. See the [0.6 compatibility notes](docs/compatibility-0.6.md) for
 migration guidance, legacy scheduling/service limits, and supported guest build paths.
 
-## Parallel matrix jobs (unreleased)
+## Parallel matrix jobs
 
 Pure matrix builders expand named cases and Cartesian products into native tasks,
 with include/exclude filters, stable IDs, prerequisites and joins. `jobs` bounds
 concurrency; each case uses normal execution, caching, logs and cancellation.
 Matching guest SDKs submit a complete independent plan through `execute_plan`.
 See [matrix jobs](docs/matrix.md) for all six language APIs and current boundaries.
-This API requires a source build after the published 0.6.0 release.
+This API requires FluentCI Engine 0.6.1 or later and matching guest SDKs.
 
 ## 🚀 Quick Start
 
@@ -98,13 +98,13 @@ cargo run --release -p fluentci-engine -- serve
 
 ## 📦 Downloads
 
-Download **FluentCI Engine v0.6.0** for your platform:
+Download **FluentCI Engine v0.6.1** for your platform:
 
-- `Mac`: arm64: [fluentci-engine_v0.6.0_aarch64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.0/fluentci-engine_v0.6.0_aarch64-apple-darwin.tar.gz) intel: [fluentci-engine_v0.6.0_x86_64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.0/fluentci-engine_v0.6.0_x86_64-apple-darwin.tar.gz)
-- `Linux`: intel: [fluentci-engine_v0.6.0_x86_64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.0/fluentci-engine_v0.6.0_x86_64-unknown-linux-gnu.tar.gz) arm64: [fluentci-engine_v0.6.0_aarch64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.0/fluentci-engine_v0.6.0_aarch64-unknown-linux-gnu.tar.gz)
-- `FreeBSD`: x86_64: [fluentci-engine_v0.6.0_x86_64-unknown-freebsd.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.0/fluentci-engine_v0.6.0_x86_64-unknown-freebsd.tar.gz)
-- `NetBSD`: x86_64: [fluentci-engine_v0.6.0_x86_64-unknown-netbsd.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.0/fluentci-engine_v0.6.0_x86_64-unknown-netbsd.tar.gz)
-- `OpenBSD`: x86_64: [fluentci-engine_v0.6.0_x86_64-unknown-openbsd.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.0/fluentci-engine_v0.6.0_x86_64-unknown-openbsd.tar.gz)
+- `Mac`: arm64: [fluentci-engine_v0.6.1_aarch64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.1/fluentci-engine_v0.6.1_aarch64-apple-darwin.tar.gz) intel: [fluentci-engine_v0.6.1_x86_64-apple-darwin.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.1/fluentci-engine_v0.6.1_x86_64-apple-darwin.tar.gz)
+- `Linux`: intel: [fluentci-engine_v0.6.1_x86_64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.1/fluentci-engine_v0.6.1_x86_64-unknown-linux-gnu.tar.gz) arm64: [fluentci-engine_v0.6.1_aarch64-unknown-linux-gnu.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.1/fluentci-engine_v0.6.1_aarch64-unknown-linux-gnu.tar.gz)
+- `FreeBSD`: x86_64: [fluentci-engine_v0.6.1_x86_64-unknown-freebsd.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.1/fluentci-engine_v0.6.1_x86_64-unknown-freebsd.tar.gz)
+- `NetBSD`: x86_64: [fluentci-engine_v0.6.1_x86_64-unknown-netbsd.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.1/fluentci-engine_v0.6.1_x86_64-unknown-netbsd.tar.gz)
+- `OpenBSD`: x86_64: [fluentci-engine_v0.6.1_x86_64-unknown-openbsd.tar.gz](https://github.com/fluentci-io/fluentci-engine/releases/download/v0.6.1/fluentci-engine_v0.6.1_x86_64-unknown-openbsd.tar.gz)
 
 ## 📚 Documentation
 
@@ -437,7 +437,7 @@ jobs:
 
 Native plans also support [composable workflow primitives](docs/workflow-primitives.md):
 retries, conditional tasks, bounded finalizers, named outputs and artifacts,
-resource leases and supervised services (matching source builds required).
+resource leases and supervised services (engine 0.6.1 or later and matching SDKs required).
 
 See [native file and env-file primitives](docs/file-primitives.md) for filesystem tasks,
 structured query results, and literal dotenv loading.
