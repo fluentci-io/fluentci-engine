@@ -1,0 +1,3 @@
+package:
+  name: fluentci-engine-ci-common
+  dependencies: [effect, either, fluentci, foldable-traversable, prelude]

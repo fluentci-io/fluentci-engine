@@ -1,0 +1,32 @@
+[package]
+name = "fluentci-engine"
+version = "0.6.1"
+
+[[steps]]
+name = "check"
+command = "fluentci run main check"
+
+[[modules]]
+name = "main"
+path = ".fluentci/main"
+sdk = "purescript"
+
+[[modules]]
+name = "rust"
+path = ".fluentci/rust"
+sdk = "purescript"
+
+[[modules]]
+name = "e2e"
+path = ".fluentci/e2e"
+sdk = "purescript"
+
+[[modules]]
+name = "release"
+path = ".fluentci/release"
+sdk = "purescript"
+
+[[modules]]
+name = "nix"
+path = ".fluentci/nix"
+sdk = "purescript"

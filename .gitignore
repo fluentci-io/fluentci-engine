@@ -7,3 +7,7 @@ sdk/rescript/node_modules
 sdk/rescript/demo/lib
 sdk/rescript/demo/node_modules
 sdk/gleam/*/build
+
+# PureScript CI artifacts and native build caches
+/.ci-cache/
+.psc-ide-port

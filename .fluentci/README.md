@@ -1,100 +1,70 @@
-# Rust Pipeline
+# PureScript CI modules
 
-[![fluentci pipeline](https://img.shields.io/badge/dynamic/json?label=pkg.fluentci.io&labelColor=%23000&color=%23460cf1&url=https%3A%2F%2Fapi.fluentci.io%2Fv1%2Fpipeline%2Frust_pipeline&query=%24.version)](https://pkg.fluentci.io/rust_pipeline)
-[![deno module](https://shield.deno.dev/x/rust_pipeline)](https://deno.land/x/rust_pipeline)
-![deno compatibility](https://shield.deno.dev/deno/^1.37)
-[![](https://jsr.io/badges/@fluentci/rust)](https://jsr.io/@fluentci/rust)
-[![](https://img.shields.io/codecov/c/gh/fluent-ci-templates/rust-pipeline)](https://codecov.io/gh/fluent-ci-templates/rust-pipeline)
+The root `fluentci.toml` declares this repository's Wasm modules. All pipeline
+orchestration uses the PureScript SDK. The former Dagger module, vendored Dagger
+SDK, TypeScript runner, Deno manifests, and nested `dagger.json` are removed.
+Product SDKs under `sdk/` are independent and remain part of the engine tests.
 
-
-A ready-to-use CI/CD Pipeline for your Rust projects.
-
-![Made with VHS](https://vhs.charm.sh/vhs-f5jk3sceXQrc55XC4fW3c.gif)
-
-## 🚀 Usage
-
-Run the following command in your Rust Project:
-
-```bash
-fluentci run rust_pipeline
+```sh
+fluentci modules
+fluentci run rust test
+fluentci run rust build
+fluentci run e2e check
+fluentci run main check
 ```
 
-Or if you want to run specific jobs:
+| Module | Functions | Purpose |
+| --- | --- | --- |
+| `main` | `check`, `test`, `build`, `e2e` | Default CI and convenient entry points |
+| `rust` | `test`, `build`, `clippy`, `format`, `llvmCov` | Native release-mode Rust tasks |
+| `e2e` | `check`, `buildWasm`, `providers`, `typescript`, `graphql` | Existing 13 provider plugins, TypeScript SDK demo, and 17 GraphQL fixtures |
+| `release` | `build`, `package`, `upload`, `r2` | Native Linux/macOS builds, checksums, GitHub and R2 uploads |
+| `nix` | `check`, `metadata`, `flakehub`, `flakestry` | Explicit Nix validation and publication |
 
-```bash
-fluentci run rust_pipeline test build
+`common` is a shared PureScript source package. Spago path dependencies compose
+modules without nested CLI calls. Every Cargo build, test, lint, and coverage
+command uses release mode and the lockfile. The native release target determines
+which runner is used; Linux releases no longer use cross linkers inside Dagger.
+
+## Toolchains and workflow bootstrap
+
+Every GitHub Actions workflow uses `fluentci-io/setup-fluentci@next` with the
+published bootstrap CLI version `2026.11.04`. The module-building jobs use the
+`.github/actions/fluentci-modules` composite: Node 24, PureScript 0.15.16, Spago
+1.0.5, Extism JS 1.7.0, and Binaryen 133. The shared script verifies archive
+checksums and probes all tools, including `wasm-merge` and `wasm-opt`. It also
+runs six module integration tests with mocked build and upload commands, checking
+release arguments, provider coverage, packaging, and failure propagation without
+publishing assets.
+
+Linux/macOS release workflows compile the release module once on Ubuntu, transfer
+its Wasm file as an artifact, then run it on the native target runner:
+
+```sh
+TARGET=aarch64-apple-darwin \
+  fluentci run --wasm .fluentci/release/dist/plugin.wasm build
 ```
 
+Native builders need no PureScript, Node, or Extism compiler. The existing BSD,
+SDK/PDK, host-executor, workflow-primitives, package-provider, and trap validation
+jobs retain their native toolchains and coverage; they also install the new CLI
+through the setup action. Nix publication remains explicitly triggered by its
+existing workflows. JSR SDK publication runs after successful push CI.
 
-if you want to use it as a template:
+## Provider end-to-end tests
 
-```bash
-fluentci init -t rust
-```
+`e2e check` builds the engine and provider Wasm plugins, exercises each provider,
+runs the TypeScript SDK consumer through the engine, and checks the GraphQL
+fixtures against a managed engine service. These tests install or invoke real
+package-provider tools and can require the existing provider credentials and
+network access. The CI workflow retains its native Flox setup and scoped secrets.
+The TypeScript consumer needs Deno; CI installs it explicitly rather than relying
+on the old setup action's side effects.
 
-This will create a `.fluentci` folder in your project.
+## Releases
 
-Now you can run the pipeline with:
-
-```bash
-fluentci run .
-```
-
-## 🧩 Dagger Module
-
-Use as a [Dagger](https://dagger.io) Module:
-
-```bash
-dagger install github.com/fluent-ci-templates/rust-pipeline@main
-```
-
-Call a function from the module:
-
-```bash
-dagger call clippy --src .
-dagger call test --src .
-dagger call llvm-cov --src .
-dagger call build --src .
-```
-
-## ✨ Jobs
-
-| Job      | Description                     |
-| -------- | ------------------------------- |
-| clippy   | Run Rust Clippy on your project |
-| build    | Build your project              |
-| test     | Run your tests                  |
-| llvm_cov | Generate llvm coverage report   |
-
-```typescript
-build(
-  src: string | Directory | undefined = ".",
-  packageName?: string,
-  target = "x86_64-unknown-linux-gnu",
-  options: string[] = []
-): Promise<Directory | string>
-
-clippy(
-  src: string | Directory | undefined = "."
-): Promise<File | string>
-
-test(
-  src: string | Directory | undefined = ".",
-  options: string[] = []
-): Promise<string>
-
-llvmCov(
-  src: string | Directory | undefined = "."
-): Promise<File | string>
-```
-
-## 👨‍💻 Programmatic usage
-
-You can also use this pipeline programmatically:
-
-```ts
-import { build, test } from "jsr:@fluentci/rust";
-
-await test();
-await build();
-```
+Set `TARGET` and `RELEASE_VERSION` before `release package` or `release upload`.
+The archive contains `fluentci-engine` at its root, with a `.sha256` sidecar.
+GitHub uploads use `GH_TOKEN`; `release r2` retains `ACCOUNT_ID` and the existing
+AWS credential environment for Cloudflare R2. Uploads are not part of `main check`.
+Native BSD packaging remains in the existing verified BSD release workflow.

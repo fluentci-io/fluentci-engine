@@ -477,3 +477,12 @@ and running release-mode compatibility tests.
 
 Native BSD archive targets, verification, and compiler availability are described
 in the [BSD release guide](.github/BSD-RELEASES.md).
+
+## Repository CI modules
+
+The root [`fluentci.toml`](fluentci.toml) declares PureScript Wasm CI modules under
+[`.fluentci`](.fluentci/README.md). Run `fluentci modules` to discover functions,
+`fluentci run rust test` for native release tests, or `fluentci run main check`
+for Rust and provider end-to-end validation. GitHub Actions installs the CLI with
+`fluentci-io/setup-fluentci@next`; release modules are compiled once on Ubuntu and
+invoked as portable Wasm on the native Linux/macOS release runners.
