@@ -16,7 +16,6 @@ mod worker;
 pub mod workflow;
 pub mod workspace;
 mod workspace_copy;
-
 use graph::DependencyGraph;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -677,16 +676,18 @@ impl Plan {
                 && task.shared_resources.is_empty()
                 && task.resource_wait_timeout_ms.is_none()
                 && task.policy.when == workflow::Condition::Success
-                && !task.policy.allow_failure
                 && task.policy.retry.is_none()
-                && !task.policy.products()
         });
         let mut frontier = incremental.then(|| graph::Frontier::new(graph));
         let mut failed = false;
         let mut stalled = false;
         loop {
             let mut touched: Vec<usize> = if frontier.is_some() {
-                running.iter().map(|running| running.index).collect()
+                running
+                    .iter()
+                    .map(|running| running.index)
+                    .chain(saving.iter().map(|saving| saving.index))
+                    .collect()
             } else {
                 vec![]
             };
@@ -1263,7 +1264,7 @@ impl Plan {
             let mut position = 0;
             loop {
                 let next = if let Some(frontier) = &mut frontier {
-                    if running.len() >= self.jobs {
+                    if running.len() + saving.len() >= self.jobs {
                         None
                     } else {
                         frontier.next()
