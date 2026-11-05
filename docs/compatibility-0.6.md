@@ -6,6 +6,10 @@ Legacy APIs remain compatibility entry points. This is a minor engine release;
 Rust library crates and language SDKs retain their independent version numbers.
 Version 0.6.1 adds native matrices, workflow policies, file/env-file primitives,
 and process failure diagnostics; use matching SDKs for these additions.
+Version 0.6.2 adds composable SSH/transfer/S3, host facts and digest tasks, typed
+compiled plans, compact dependency graphs, and incremental scheduling for output
+publication and allowed failures. See the executor benchmark report for measured
+graph-construction improvements; command execution gains are workload-dependent.
 
 ## Execution and scheduling
 
@@ -71,7 +75,7 @@ installing published library crates alone does not carry that workspace override
 
 ## Release preparation
 
-The source engine, Nix package, and README download links target 0.6.1. Workflow
+The source engine, Nix package, and README download links target 0.6.2. Workflow
 bootstrap pins independently select the published 0.5.0 engine.
 Bumping source versions does not tag a release, publish crates, or establish that
 all platform CI jobs have passed. Build and smoke-test release artifacts on the
