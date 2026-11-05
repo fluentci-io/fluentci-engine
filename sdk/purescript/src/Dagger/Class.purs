@@ -25,7 +25,7 @@ instance Id CacheVolume.CacheVolume where
 instance Id Container.Container where
   id container = Container.id container
 
-instance Id Directory.Directory where 
+instance Id Directory.Directory where
   id directory = Directory.id directory
 
 instance Id EnvVariable.EnvVariable where

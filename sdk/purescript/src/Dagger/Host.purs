@@ -10,7 +10,7 @@ import Dagger.Socket (Socket)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
-  
+
 data Host
 
 foreign import _id :: Host -> EffectFnAff String

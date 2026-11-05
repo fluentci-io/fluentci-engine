@@ -9,8 +9,8 @@ import FluentCI.Cache (Cache)
 import FluentCI.Secret (Secret)
 import FluentCI.Service (Service)
 
-type NixArgs = { impure :: Boolean } 
-  
+type NixArgs = { impure :: Boolean }
+
 data Nix
 
 foreign import _id :: Nix -> EffectFnAff String

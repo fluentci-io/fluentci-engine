@@ -7,7 +7,7 @@ import Dagger.Module (Module)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
-  
+
 data Directory
 
 foreign import _id :: Directory -> EffectFnAff String

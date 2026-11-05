@@ -4,7 +4,7 @@ import Prelude
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
-  
+
 data File
 
 foreign import _id :: File -> EffectFnAff String
@@ -45,5 +45,3 @@ sync file = fromEffectFnAff $ _sync file
 foreign import withName :: File -> String -> Effect File
 
 foreign import withTimestamps :: File -> Int-> Effect File
-
-

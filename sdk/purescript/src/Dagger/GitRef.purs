@@ -20,4 +20,3 @@ commit :: GitRef -> Aff String
 commit gitRef = fromEffectFnAff $ _commit gitRef
 
 foreign import tree :: GitRef -> Effect Directory
-

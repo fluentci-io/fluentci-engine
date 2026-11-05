@@ -269,10 +269,10 @@ instance WithEnvVariable Pkgx.Pkgx where
 instance WithEnvVariable Flox.Flox where
   withEnvVariable name value flox = Flox.withEnvVariable flox name value
 
-instance WithEnvVariable Proto.Proto where 
+instance WithEnvVariable Proto.Proto where
   withEnvVariable name value proto = Proto.withEnvVariable proto name value
 
-instance WithEnvVariable Hermit.Hermit where  
+instance WithEnvVariable Hermit.Hermit where
   withEnvVariable name value hermit = Hermit.withEnvVariable hermit name value
 
 
@@ -408,7 +408,7 @@ instance WithWorkdir Flox.Flox where
 instance WithWorkdir Proto.Proto where
   withWorkdir path proto = Proto.withWorkdir proto path
 
-instance WithWorkdir Hermit.Hermit where 
+instance WithWorkdir Hermit.Hermit where
   withWorkdir path hermit = Hermit.withWorkdir hermit path
 
 class Devbox a where
@@ -530,5 +530,3 @@ instance Envhub Directory.Directory where
 
 instance Envhub Client.Client where
   envhub client = Client.envhub client
-
-

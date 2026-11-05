@@ -9,4 +9,4 @@ data Socket
 foreign import _id :: Socket -> EffectFnAff String
 
 id :: Socket -> Aff String
-id socket = fromEffectFnAff $ _id socket 
+id socket = fromEffectFnAff $ _id socket
