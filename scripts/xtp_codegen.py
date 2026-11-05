@@ -1,5 +1,6 @@
 """Generate Rust PDK imports and per-example XTP schemas from the canonical IDL."""
 import argparse
+import copy
 import json
 import re
 import subprocess
@@ -100,7 +101,27 @@ def generated():
                 actual = set(re.findall(r'^(\w+) :: Effect Unit$', source, re.MULTILINE))
             if actual != exports.keys():
                 raise ValueError(f'Plugin exports differ from XTP: {name}: {actual ^ exports.keys()}')
+            if name == 'buildx':
+                declarations = list(javascript)
+                declarations[1] = 'declare module "main" { ' + ' '.join(f'export function {export}(): I32;' for export in exports) + ' }'
+                entry = (ROOT / 'examples/buildx/entry.mjs').read_text()
+                actual_exports = {item.strip() for group in re.findall(r'export\s*\{([^}]+)\}', entry, re.DOTALL) for item in group.split(',') if item.strip()}
+                if actual_exports != exports.keys():
+                    raise ValueError('Buildx JavaScript exports differ from the canonical schema')
+                yield ROOT / 'examples/buildx/imports.d.ts', '\n'.join(declarations)
         document = dict(schema, exports=exports)
+        if name == 'buildx':
+            # XTP normalizes fixed-property objects only as named components.
+            # In particular an inline argument named `format` is otherwise
+            # mistaken for the schema's own format annotation by its validator.
+            document = copy.deepcopy(document)
+            for export, function in document['exports'].items():
+                request = function['input']
+                component = 'Buildx' + ''.join(part.title() for part in export.split('_')) + 'Args'
+                document['components']['schemas'][component] = {
+                    key: value for key, value in request.items() if key != 'contentType'
+                }
+                function['input'] = {'$ref': '#/components/schemas/' + component, 'contentType': 'application/json'}
         yield SCHEMA / f"generated/{name}.json", json.dumps(document, indent=2) + '\n'
     # Generate one registration path shared by direct and nested Wasm calls.
     implementations = {}

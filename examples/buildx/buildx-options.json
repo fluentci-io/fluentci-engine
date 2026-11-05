@@ -1,0 +1,1641 @@
+{
+  "version": "github.com/docker/buildx v0.36.1-desktop.1 83d819cf8237b52ef45a2a9857eeb83a7b10977f",
+  "experimentalIncluded": true,
+  "commands": [
+    {
+      "path": [],
+      "usage": "Usage:  docker buildx [OPTIONS] COMMAND",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        }
+      ],
+      "children": [
+        "dap",
+        "debug",
+        "history",
+        "imagetools",
+        "policy",
+        "bake",
+        "build",
+        "create",
+        "dial-stdio",
+        "du",
+        "inspect",
+        "ls",
+        "prune",
+        "rm",
+        "stop",
+        "use",
+        "version"
+      ]
+    },
+    {
+      "path": [
+        "dap"
+      ],
+      "usage": "Usage:  docker buildx dap [OPTIONS] COMMAND",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        }
+      ],
+      "children": [
+        "build"
+      ]
+    },
+    {
+      "path": [
+        "debug"
+      ],
+      "usage": "Usage:  docker buildx debug [OPTIONS] COMMAND",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "invoke",
+          "type": "string",
+          "description": "Launch a monitor with executing specified"
+        },
+        {
+          "flag": "on",
+          "type": "string",
+          "description": "When to launch the monitor ([always, error])"
+        }
+      ],
+      "children": [
+        "build"
+      ]
+    },
+    {
+      "path": [
+        "history"
+      ],
+      "usage": "Usage:  docker buildx history [OPTIONS] COMMAND",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        }
+      ],
+      "children": [
+        "inspect",
+        "export",
+        "import",
+        "logs",
+        "ls",
+        "open",
+        "rm",
+        "trace"
+      ]
+    },
+    {
+      "path": [
+        "imagetools"
+      ],
+      "usage": "Usage:  docker buildx imagetools [OPTIONS] COMMAND",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        }
+      ],
+      "children": [
+        "create",
+        "inspect"
+      ]
+    },
+    {
+      "path": [
+        "policy"
+      ],
+      "usage": "Usage:  docker buildx policy [OPTIONS] COMMAND",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        }
+      ],
+      "children": [
+        "eval",
+        "test"
+      ]
+    },
+    {
+      "path": [
+        "bake"
+      ],
+      "usage": "Usage:  docker buildx bake [OPTIONS] [TARGET...]",
+      "options": [
+        {
+          "flag": "allow",
+          "type": "stringArray",
+          "description": "Allow build to access specified resources"
+        },
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "call",
+          "type": "string",
+          "description": "Set method for evaluating build (\"check\","
+        },
+        {
+          "flag": "check",
+          "type": "boolean",
+          "description": "Shorthand for \"--call=check\""
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "file",
+          "type": "stringArray",
+          "description": "Build definition file"
+        },
+        {
+          "flag": "list",
+          "type": "string",
+          "description": "List targets or variables"
+        },
+        {
+          "flag": "load",
+          "type": "boolean",
+          "description": "Shorthand for"
+        },
+        {
+          "flag": "metadata-file",
+          "type": "string",
+          "description": "Write build result metadata to a file"
+        },
+        {
+          "flag": "no-cache",
+          "type": "boolean",
+          "description": "Do not use cache when building the image"
+        },
+        {
+          "flag": "policy",
+          "type": "stringArray",
+          "description": "Global policy evaluation options (format:"
+        },
+        {
+          "flag": "print",
+          "type": "boolean",
+          "description": "Print the options without building"
+        },
+        {
+          "flag": "progress",
+          "type": "string",
+          "description": "Set type of progress output (\"auto\","
+        },
+        {
+          "flag": "provenance",
+          "type": "string",
+          "description": "Shorthand for \"--set=*.attest=type=provenance\""
+        },
+        {
+          "flag": "pull",
+          "type": "boolean",
+          "description": "Always attempt to pull all referenced images"
+        },
+        {
+          "flag": "push",
+          "type": "boolean",
+          "description": "Shorthand for"
+        },
+        {
+          "flag": "sbom",
+          "type": "string",
+          "description": "Shorthand for \"--set=*.attest=type=sbom\""
+        },
+        {
+          "flag": "set",
+          "type": "stringArray",
+          "description": "Override target value (e.g.,"
+        },
+        {
+          "flag": "var",
+          "type": "stringArray",
+          "description": "Set a variable value (e.g., \"name=value\")"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "build"
+      ],
+      "usage": "Usage:  docker buildx build [OPTIONS] PATH | URL | -",
+      "options": [
+        {
+          "flag": "add-host",
+          "type": "strings",
+          "description": "Add a custom host-to-IP mapping"
+        },
+        {
+          "flag": "allow",
+          "type": "stringArray",
+          "description": "Allow extra privileged entitlement"
+        },
+        {
+          "flag": "annotation",
+          "type": "stringArray",
+          "description": "Add annotation to the image"
+        },
+        {
+          "flag": "attest",
+          "type": "stringArray",
+          "description": "Attestation parameters (format:"
+        },
+        {
+          "flag": "build-arg",
+          "type": "stringArray",
+          "description": "Set build-time variables"
+        },
+        {
+          "flag": "build-context",
+          "type": "stringArray",
+          "description": "Additional build contexts (e.g.,"
+        },
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "cache-from",
+          "type": "stringArray",
+          "description": "External cache sources (e.g.,"
+        },
+        {
+          "flag": "cache-to",
+          "type": "stringArray",
+          "description": "Cache export destinations (e.g.,"
+        },
+        {
+          "flag": "call",
+          "type": "string",
+          "description": "Set method for evaluating build"
+        },
+        {
+          "flag": "cgroup-parent",
+          "type": "string",
+          "description": "Set the parent cgroup for the \"RUN\""
+        },
+        {
+          "flag": "check",
+          "type": "boolean",
+          "description": "Shorthand for \"--call=check\""
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "file",
+          "type": "string",
+          "description": "Name of the Dockerfile (default:"
+        },
+        {
+          "flag": "iidfile",
+          "type": "string",
+          "description": "Write the image ID to a file"
+        },
+        {
+          "flag": "label",
+          "type": "stringArray",
+          "description": "Set metadata for an image"
+        },
+        {
+          "flag": "load",
+          "type": "boolean",
+          "description": "Shorthand for \"--output=type=docker\""
+        },
+        {
+          "flag": "metadata-file",
+          "type": "string",
+          "description": "Write build result metadata to a file"
+        },
+        {
+          "flag": "network",
+          "type": "string",
+          "description": "Set the networking mode for the"
+        },
+        {
+          "flag": "no-cache",
+          "type": "boolean",
+          "description": "Do not use cache when building the image"
+        },
+        {
+          "flag": "no-cache-filter",
+          "type": "stringArray",
+          "description": "Do not cache specified stages"
+        },
+        {
+          "flag": "output",
+          "type": "stringArray",
+          "description": "Output destination (format:"
+        },
+        {
+          "flag": "platform",
+          "type": "stringArray",
+          "description": "Set target platform for build"
+        },
+        {
+          "flag": "policy",
+          "type": "stringArray",
+          "description": "Policy configuration (format:"
+        },
+        {
+          "flag": "progress",
+          "type": "string",
+          "description": "Set type of progress output"
+        },
+        {
+          "flag": "provenance",
+          "type": "string",
+          "description": "Shorthand for \"--attest=type=provenance\""
+        },
+        {
+          "flag": "pull",
+          "type": "boolean",
+          "description": "Always attempt to pull all"
+        },
+        {
+          "flag": "push",
+          "type": "boolean",
+          "description": "Shorthand for"
+        },
+        {
+          "flag": "quiet",
+          "type": "boolean",
+          "description": "Suppress the build output and print"
+        },
+        {
+          "flag": "resource",
+          "type": "stringArray",
+          "description": "Resource limits for build"
+        },
+        {
+          "flag": "sbom",
+          "type": "string",
+          "description": "Shorthand for \"--attest=type=sbom\""
+        },
+        {
+          "flag": "secret",
+          "type": "stringArray",
+          "description": "Secret to expose to the build"
+        },
+        {
+          "flag": "shm-size",
+          "type": "bytes",
+          "description": "Shared memory size for build containers"
+        },
+        {
+          "flag": "ssh",
+          "type": "stringArray",
+          "description": "SSH agent socket or keys to expose"
+        },
+        {
+          "flag": "tag",
+          "type": "stringArray",
+          "description": "Image identifier (format:"
+        },
+        {
+          "flag": "target",
+          "type": "string",
+          "description": "Set the target build stage to build"
+        },
+        {
+          "flag": "ulimit",
+          "type": "ulimit",
+          "description": "Ulimit options (default [])"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "create"
+      ],
+      "usage": "Usage:  docker buildx create [OPTIONS] [CONTEXT|ENDPOINT]",
+      "options": [
+        {
+          "flag": "append",
+          "type": "boolean",
+          "description": "Append a node to builder instead of"
+        },
+        {
+          "flag": "bootstrap",
+          "type": "boolean",
+          "description": "Boot builder after creation"
+        },
+        {
+          "flag": "buildkitd-config",
+          "type": "string",
+          "description": "BuildKit daemon config file"
+        },
+        {
+          "flag": "buildkitd-flags",
+          "type": "string",
+          "description": "BuildKit daemon flags"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "driver",
+          "type": "string",
+          "description": "Driver to use (available: \"cloud\","
+        },
+        {
+          "flag": "driver-opt",
+          "type": "stringArray",
+          "description": "Options for the driver"
+        },
+        {
+          "flag": "leave",
+          "type": "boolean",
+          "description": "Remove a node from builder instead of"
+        },
+        {
+          "flag": "name",
+          "type": "string",
+          "description": "Builder instance name"
+        },
+        {
+          "flag": "node",
+          "type": "string",
+          "description": "Create/modify node with given name"
+        },
+        {
+          "flag": "platform",
+          "type": "stringArray",
+          "description": "Fixed platforms for current node"
+        },
+        {
+          "flag": "timeout",
+          "type": "duration",
+          "description": "Override the default timeout for"
+        },
+        {
+          "flag": "use",
+          "type": "boolean",
+          "description": "Set the current builder instance"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "dial-stdio"
+      ],
+      "usage": "Usage:  docker buildx dial-stdio",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "platform",
+          "type": "string",
+          "description": "Target platform: this is used for node selection"
+        },
+        {
+          "flag": "progress",
+          "type": "string",
+          "description": "Set type of progress output (\"auto\", \"plain\","
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "du"
+      ],
+      "usage": "Usage:  docker buildx du",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "filter",
+          "type": "filter",
+          "description": "Provide filter values"
+        },
+        {
+          "flag": "format",
+          "type": "string",
+          "description": "Format the output"
+        },
+        {
+          "flag": "timeout",
+          "type": "duration",
+          "description": "Override the default timeout for loading"
+        },
+        {
+          "flag": "verbose",
+          "type": "boolean",
+          "description": "Shorthand for \"--format=pretty\""
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "inspect"
+      ],
+      "usage": "Usage:  docker buildx inspect [NAME]",
+      "options": [
+        {
+          "flag": "bootstrap",
+          "type": "boolean",
+          "description": "Ensure builder has booted before inspecting"
+        },
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "timeout",
+          "type": "duration",
+          "description": "Override the default timeout for loading"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "ls"
+      ],
+      "usage": "Usage:  docker buildx ls",
+      "options": [
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "format",
+          "type": "string",
+          "description": "Format the output (default \"table\")"
+        },
+        {
+          "flag": "no-trunc",
+          "type": "boolean",
+          "description": "Don't truncate output"
+        },
+        {
+          "flag": "timeout",
+          "type": "duration",
+          "description": "Override the default timeout for loading"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "prune"
+      ],
+      "usage": "Usage:  docker buildx prune",
+      "options": [
+        {
+          "flag": "all",
+          "type": "boolean",
+          "description": "Include internal/frontend images"
+        },
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "filter",
+          "type": "filter",
+          "description": "Provide filter values"
+        },
+        {
+          "flag": "force",
+          "type": "boolean",
+          "description": "Do not prompt for confirmation"
+        },
+        {
+          "flag": "max-used-space",
+          "type": "bytes",
+          "description": "Maximum amount of disk space allowed to"
+        },
+        {
+          "flag": "min-free-space",
+          "type": "bytes",
+          "description": "Target amount of free disk space after pruning"
+        },
+        {
+          "flag": "reserved-space",
+          "type": "bytes",
+          "description": "Amount of disk space always allowed to"
+        },
+        {
+          "flag": "timeout",
+          "type": "duration",
+          "description": "Override the default timeout for loading"
+        },
+        {
+          "flag": "verbose",
+          "type": "boolean",
+          "description": "Provide a more verbose output"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "rm"
+      ],
+      "usage": "Usage:  docker buildx rm [OPTIONS] [NAME...]",
+      "options": [
+        {
+          "flag": "all-inactive",
+          "type": "boolean",
+          "description": "Remove all inactive builders"
+        },
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "force",
+          "type": "boolean",
+          "description": "Do not prompt for confirmation"
+        },
+        {
+          "flag": "keep-daemon",
+          "type": "boolean",
+          "description": "Keep the BuildKit daemon running"
+        },
+        {
+          "flag": "keep-state",
+          "type": "boolean",
+          "description": "Keep BuildKit state"
+        },
+        {
+          "flag": "timeout",
+          "type": "duration",
+          "description": "Override the default timeout for loading"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "stop"
+      ],
+      "usage": "Usage:  docker buildx stop [NAME]",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "use"
+      ],
+      "usage": "Usage:  docker buildx use [OPTIONS] NAME",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "default",
+          "type": "boolean",
+          "description": "Set builder as default for current context"
+        },
+        {
+          "flag": "global",
+          "type": "boolean",
+          "description": "Builder persists context changes"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "version"
+      ],
+      "usage": "Usage:  docker buildx version",
+      "options": [
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "dap",
+        "build"
+      ],
+      "usage": "Usage:  docker buildx dap build [OPTIONS] PATH | URL | -",
+      "options": [
+        {
+          "flag": "add-host",
+          "type": "strings",
+          "description": "Add a custom host-to-IP mapping"
+        },
+        {
+          "flag": "allow",
+          "type": "stringArray",
+          "description": "Allow extra privileged entitlement"
+        },
+        {
+          "flag": "annotation",
+          "type": "stringArray",
+          "description": "Add annotation to the image"
+        },
+        {
+          "flag": "attest",
+          "type": "stringArray",
+          "description": "Attestation parameters (format:"
+        },
+        {
+          "flag": "build-arg",
+          "type": "stringArray",
+          "description": "Set build-time variables"
+        },
+        {
+          "flag": "build-context",
+          "type": "stringArray",
+          "description": "Additional build contexts (e.g.,"
+        },
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "cache-from",
+          "type": "stringArray",
+          "description": "External cache sources (e.g.,"
+        },
+        {
+          "flag": "cache-to",
+          "type": "stringArray",
+          "description": "Cache export destinations (e.g.,"
+        },
+        {
+          "flag": "call",
+          "type": "string",
+          "description": "Set method for evaluating build"
+        },
+        {
+          "flag": "cgroup-parent",
+          "type": "string",
+          "description": "Set the parent cgroup for the \"RUN\""
+        },
+        {
+          "flag": "check",
+          "type": "boolean",
+          "description": "Shorthand for \"--call=check\""
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "file",
+          "type": "string",
+          "description": "Name of the Dockerfile (default:"
+        },
+        {
+          "flag": "iidfile",
+          "type": "string",
+          "description": "Write the image ID to a file"
+        },
+        {
+          "flag": "label",
+          "type": "stringArray",
+          "description": "Set metadata for an image"
+        },
+        {
+          "flag": "load",
+          "type": "boolean",
+          "description": "Shorthand for \"--output=type=docker\""
+        },
+        {
+          "flag": "metadata-file",
+          "type": "string",
+          "description": "Write build result metadata to a file"
+        },
+        {
+          "flag": "network",
+          "type": "string",
+          "description": "Set the networking mode for the"
+        },
+        {
+          "flag": "no-cache",
+          "type": "boolean",
+          "description": "Do not use cache when building the image"
+        },
+        {
+          "flag": "no-cache-filter",
+          "type": "stringArray",
+          "description": "Do not cache specified stages"
+        },
+        {
+          "flag": "output",
+          "type": "stringArray",
+          "description": "Output destination (format:"
+        },
+        {
+          "flag": "platform",
+          "type": "stringArray",
+          "description": "Set target platform for build"
+        },
+        {
+          "flag": "policy",
+          "type": "stringArray",
+          "description": "Policy configuration (format:"
+        },
+        {
+          "flag": "progress",
+          "type": "string",
+          "description": "Set type of progress output"
+        },
+        {
+          "flag": "provenance",
+          "type": "string",
+          "description": "Shorthand for \"--attest=type=provenance\""
+        },
+        {
+          "flag": "pull",
+          "type": "boolean",
+          "description": "Always attempt to pull all"
+        },
+        {
+          "flag": "push",
+          "type": "boolean",
+          "description": "Shorthand for"
+        },
+        {
+          "flag": "quiet",
+          "type": "boolean",
+          "description": "Suppress the build output and print"
+        },
+        {
+          "flag": "resource",
+          "type": "stringArray",
+          "description": "Resource limits for build"
+        },
+        {
+          "flag": "sbom",
+          "type": "string",
+          "description": "Shorthand for \"--attest=type=sbom\""
+        },
+        {
+          "flag": "secret",
+          "type": "stringArray",
+          "description": "Secret to expose to the build"
+        },
+        {
+          "flag": "shm-size",
+          "type": "bytes",
+          "description": "Shared memory size for build containers"
+        },
+        {
+          "flag": "ssh",
+          "type": "stringArray",
+          "description": "SSH agent socket or keys to expose"
+        },
+        {
+          "flag": "tag",
+          "type": "stringArray",
+          "description": "Image identifier (format:"
+        },
+        {
+          "flag": "target",
+          "type": "string",
+          "description": "Set the target build stage to build"
+        },
+        {
+          "flag": "ulimit",
+          "type": "ulimit",
+          "description": "Ulimit options (default [])"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "debug",
+        "build"
+      ],
+      "usage": "Usage:  docker buildx debug build [OPTIONS] PATH | URL | -",
+      "options": [
+        {
+          "flag": "add-host",
+          "type": "strings",
+          "description": "Add a custom host-to-IP mapping"
+        },
+        {
+          "flag": "allow",
+          "type": "stringArray",
+          "description": "Allow extra privileged entitlement"
+        },
+        {
+          "flag": "annotation",
+          "type": "stringArray",
+          "description": "Add annotation to the image"
+        },
+        {
+          "flag": "attest",
+          "type": "stringArray",
+          "description": "Attestation parameters (format:"
+        },
+        {
+          "flag": "build-arg",
+          "type": "stringArray",
+          "description": "Set build-time variables"
+        },
+        {
+          "flag": "build-context",
+          "type": "stringArray",
+          "description": "Additional build contexts (e.g.,"
+        },
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "cache-from",
+          "type": "stringArray",
+          "description": "External cache sources (e.g.,"
+        },
+        {
+          "flag": "cache-to",
+          "type": "stringArray",
+          "description": "Cache export destinations (e.g.,"
+        },
+        {
+          "flag": "call",
+          "type": "string",
+          "description": "Set method for evaluating build"
+        },
+        {
+          "flag": "cgroup-parent",
+          "type": "string",
+          "description": "Set the parent cgroup for the \"RUN\""
+        },
+        {
+          "flag": "check",
+          "type": "boolean",
+          "description": "Shorthand for \"--call=check\""
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "file",
+          "type": "string",
+          "description": "Name of the Dockerfile (default:"
+        },
+        {
+          "flag": "iidfile",
+          "type": "string",
+          "description": "Write the image ID to a file"
+        },
+        {
+          "flag": "label",
+          "type": "stringArray",
+          "description": "Set metadata for an image"
+        },
+        {
+          "flag": "load",
+          "type": "boolean",
+          "description": "Shorthand for \"--output=type=docker\""
+        },
+        {
+          "flag": "metadata-file",
+          "type": "string",
+          "description": "Write build result metadata to a file"
+        },
+        {
+          "flag": "network",
+          "type": "string",
+          "description": "Set the networking mode for the"
+        },
+        {
+          "flag": "no-cache",
+          "type": "boolean",
+          "description": "Do not use cache when building the image"
+        },
+        {
+          "flag": "no-cache-filter",
+          "type": "stringArray",
+          "description": "Do not cache specified stages"
+        },
+        {
+          "flag": "output",
+          "type": "stringArray",
+          "description": "Output destination (format:"
+        },
+        {
+          "flag": "platform",
+          "type": "stringArray",
+          "description": "Set target platform for build"
+        },
+        {
+          "flag": "policy",
+          "type": "stringArray",
+          "description": "Policy configuration (format:"
+        },
+        {
+          "flag": "progress",
+          "type": "string",
+          "description": "Set type of progress output"
+        },
+        {
+          "flag": "provenance",
+          "type": "string",
+          "description": "Shorthand for \"--attest=type=provenance\""
+        },
+        {
+          "flag": "pull",
+          "type": "boolean",
+          "description": "Always attempt to pull all"
+        },
+        {
+          "flag": "push",
+          "type": "boolean",
+          "description": "Shorthand for"
+        },
+        {
+          "flag": "quiet",
+          "type": "boolean",
+          "description": "Suppress the build output and print"
+        },
+        {
+          "flag": "resource",
+          "type": "stringArray",
+          "description": "Resource limits for build"
+        },
+        {
+          "flag": "sbom",
+          "type": "string",
+          "description": "Shorthand for \"--attest=type=sbom\""
+        },
+        {
+          "flag": "secret",
+          "type": "stringArray",
+          "description": "Secret to expose to the build"
+        },
+        {
+          "flag": "shm-size",
+          "type": "bytes",
+          "description": "Shared memory size for build containers"
+        },
+        {
+          "flag": "ssh",
+          "type": "stringArray",
+          "description": "SSH agent socket or keys to expose"
+        },
+        {
+          "flag": "tag",
+          "type": "stringArray",
+          "description": "Image identifier (format:"
+        },
+        {
+          "flag": "target",
+          "type": "string",
+          "description": "Set the target build stage to build"
+        },
+        {
+          "flag": "ulimit",
+          "type": "ulimit",
+          "description": "Ulimit options (default [])"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "history",
+        "inspect"
+      ],
+      "usage": "Usage:  docker buildx history inspect [OPTIONS] COMMAND",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "format",
+          "type": "string",
+          "description": "Format the output (default \"pretty\")"
+        }
+      ],
+      "children": [
+        "attachment"
+      ]
+    },
+    {
+      "path": [
+        "history",
+        "export"
+      ],
+      "usage": "Usage:  docker buildx history export [OPTIONS] [REF...]",
+      "options": [
+        {
+          "flag": "all",
+          "type": "boolean",
+          "description": "Export all build records for the builder"
+        },
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "finalize",
+          "type": "boolean",
+          "description": "Ensure build records are finalized before exporting"
+        },
+        {
+          "flag": "output",
+          "type": "string",
+          "description": "Output file path"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "history",
+        "import"
+      ],
+      "usage": "Usage:  docker buildx history import [OPTIONS] -",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "file",
+          "type": "stringArray",
+          "description": "Import from a file path"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "history",
+        "logs"
+      ],
+      "usage": "Usage:  docker buildx history logs [OPTIONS] [REF]",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "progress",
+          "type": "string",
+          "description": "Set type of progress output (plain, rawjson,"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "history",
+        "ls"
+      ],
+      "usage": "Usage:  docker buildx history ls [OPTIONS]",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "filter",
+          "type": "stringArray",
+          "description": "Provide filter values (e.g., \"status=error\")"
+        },
+        {
+          "flag": "format",
+          "type": "string",
+          "description": "Format the output (default \"table\")"
+        },
+        {
+          "flag": "local",
+          "type": "boolean",
+          "description": "List records for current repository only"
+        },
+        {
+          "flag": "no-trunc",
+          "type": "boolean",
+          "description": "Don't truncate output"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "history",
+        "open"
+      ],
+      "usage": "Usage:  docker buildx history open [OPTIONS] [REF]",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "history",
+        "rm"
+      ],
+      "usage": "Usage:  docker buildx history rm [OPTIONS] [REF...]",
+      "options": [
+        {
+          "flag": "all",
+          "type": "boolean",
+          "description": "Remove all build records"
+        },
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "history",
+        "trace"
+      ],
+      "usage": "Usage:  docker buildx history trace [OPTIONS] [REF]",
+      "options": [
+        {
+          "flag": "addr",
+          "type": "string",
+          "description": "Address to bind the UI server (default \"127.0.0.1:0\")"
+        },
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "compare",
+          "type": "string",
+          "description": "Compare with another build record"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "imagetools",
+        "create"
+      ],
+      "usage": "Usage:  docker buildx imagetools create [OPTIONS] [SOURCE...]",
+      "options": [
+        {
+          "flag": "annotation",
+          "type": "stringArray",
+          "description": "Add annotation to the image"
+        },
+        {
+          "flag": "append",
+          "type": "boolean",
+          "description": "Append to existing manifest"
+        },
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "dry-run",
+          "type": "boolean",
+          "description": "Show final image instead of pushing"
+        },
+        {
+          "flag": "file",
+          "type": "stringArray",
+          "description": "Read source descriptor from file"
+        },
+        {
+          "flag": "metadata-file",
+          "type": "string",
+          "description": "Write create result metadata to a file"
+        },
+        {
+          "flag": "platform",
+          "type": "stringArray",
+          "description": "Filter specified platforms of target image"
+        },
+        {
+          "flag": "prefer-index",
+          "type": "boolean",
+          "description": "When only a single source is specified,"
+        },
+        {
+          "flag": "progress",
+          "type": "string",
+          "description": "Set type of progress output (\"auto\","
+        },
+        {
+          "flag": "tag",
+          "type": "stringArray",
+          "description": "Set reference for new image"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "imagetools",
+        "inspect"
+      ],
+      "usage": "Usage:  docker buildx imagetools inspect [OPTIONS] NAME",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "format",
+          "type": "string",
+          "description": "Format the output using the given Go template"
+        },
+        {
+          "flag": "raw",
+          "type": "boolean",
+          "description": "Show original, unformatted JSON manifest"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "policy",
+        "eval"
+      ],
+      "usage": "Usage:  docker buildx policy eval [OPTIONS] source",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "fields",
+          "type": "strings",
+          "description": "Fields to evaluate"
+        },
+        {
+          "flag": "file",
+          "type": "string",
+          "description": "Policy filename to evaluate (default \"Dockerfile\")"
+        },
+        {
+          "flag": "platform",
+          "type": "string",
+          "description": "Target platform for policy evaluation"
+        },
+        {
+          "flag": "print",
+          "type": "boolean",
+          "description": "Print policy output"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "policy",
+        "test"
+      ],
+      "usage": "Usage:  docker buildx policy test <path>",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "filename",
+          "type": "string",
+          "description": "Name of the Dockerfile to validate (default"
+        },
+        {
+          "flag": "run",
+          "type": "string",
+          "description": "Run only tests with name containing this substring"
+        }
+      ],
+      "children": []
+    },
+    {
+      "path": [
+        "history",
+        "inspect",
+        "attachment"
+      ],
+      "usage": "Usage:  docker buildx history inspect attachment [OPTIONS] [REF [DIGEST]]",
+      "options": [
+        {
+          "flag": "builder",
+          "type": "string",
+          "description": "Override the configured builder instance"
+        },
+        {
+          "flag": "debug",
+          "type": "boolean",
+          "description": "Enable debug logging"
+        },
+        {
+          "flag": "platform",
+          "type": "string",
+          "description": "Platform of attachment"
+        },
+        {
+          "flag": "type",
+          "type": "string",
+          "description": "Type of attachment"
+        }
+      ],
+      "children": []
+    }
+  ]
+}

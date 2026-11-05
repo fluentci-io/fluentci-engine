@@ -358,5 +358,2859 @@
         "contentType": "text/plain; charset=utf-8"
       }
     }
+  },
+  "buildx": {
+    "buildx": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Subcommand positional arguments; prefer the corresponding named export.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "dap": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Subcommand positional arguments; prefer the corresponding named export.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "debug": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Subcommand positional arguments; prefer the corresponding named export.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "invoke": {
+            "type": "string",
+            "description": "--invoke: Launch a monitor with executing specified"
+          },
+          "on": {
+            "type": "string",
+            "description": "--on: When to launch the monitor ([always, error])"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "history": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Subcommand positional arguments; prefer the corresponding named export.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "imagetools": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Subcommand positional arguments; prefer the corresponding named export.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "policy": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Subcommand positional arguments; prefer the corresponding named export.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "bake": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bake targets.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "allow": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--allow: Allow build to access specified resources"
+          },
+          "call": {
+            "type": "string",
+            "description": "--call: Set method for evaluating build (\"check\","
+          },
+          "check": {
+            "type": "boolean",
+            "description": "--check: Shorthand for \"--call=check\""
+          },
+          "file": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--file: Build definition file"
+          },
+          "list": {
+            "type": "string",
+            "description": "--list: List targets or variables"
+          },
+          "load": {
+            "type": "boolean",
+            "description": "--load: Shorthand for"
+          },
+          "metadataFile": {
+            "type": "string",
+            "description": "--metadata-file: Write build result metadata to a file"
+          },
+          "noCache": {
+            "type": "boolean",
+            "description": "--no-cache: Do not use cache when building the image"
+          },
+          "policy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--policy: Global policy evaluation options (format:"
+          },
+          "print": {
+            "type": "boolean",
+            "description": "--print: Print the options without building"
+          },
+          "progress": {
+            "type": "string",
+            "description": "--progress: Set type of progress output (\"auto\","
+          },
+          "provenance": {
+            "type": "string",
+            "description": "--provenance: Shorthand for \"--set=*.attest=type=provenance\""
+          },
+          "pull": {
+            "type": "boolean",
+            "description": "--pull: Always attempt to pull all referenced images"
+          },
+          "push": {
+            "type": "boolean",
+            "description": "--push: Shorthand for"
+          },
+          "sbom": {
+            "type": "string",
+            "description": "--sbom: Shorthand for \"--set=*.attest=type=sbom\""
+          },
+          "set": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--set: Override target value (e.g.,"
+          },
+          "var": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--var: Set a variable value (e.g., \"name=value\")"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "build": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "context": {
+            "type": "string",
+            "description": "Build context: path, URL or '-' (stdin is not forwarded by the guest).",
+            "default": "."
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "addHost": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--add-host: Add a custom host-to-IP mapping"
+          },
+          "allow": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--allow: Allow extra privileged entitlement"
+          },
+          "annotation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--annotation: Add annotation to the image"
+          },
+          "attest": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--attest: Attestation parameters (format:"
+          },
+          "buildArg": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--build-arg: Set build-time variables"
+          },
+          "buildContext": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--build-context: Additional build contexts (e.g.,"
+          },
+          "cacheFrom": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--cache-from: External cache sources (e.g.,"
+          },
+          "cacheTo": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--cache-to: Cache export destinations (e.g.,"
+          },
+          "call": {
+            "type": "string",
+            "description": "--call: Set method for evaluating build"
+          },
+          "cgroupParent": {
+            "type": "string",
+            "description": "--cgroup-parent: Set the parent cgroup for the \"RUN\""
+          },
+          "check": {
+            "type": "boolean",
+            "description": "--check: Shorthand for \"--call=check\""
+          },
+          "file": {
+            "type": "string",
+            "description": "--file: Name of the Dockerfile (default:"
+          },
+          "iidfile": {
+            "type": "string",
+            "description": "--iidfile: Write the image ID to a file"
+          },
+          "label": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--label: Set metadata for an image"
+          },
+          "load": {
+            "type": "boolean",
+            "description": "--load: Shorthand for \"--output=type=docker\""
+          },
+          "metadataFile": {
+            "type": "string",
+            "description": "--metadata-file: Write build result metadata to a file"
+          },
+          "network": {
+            "type": "string",
+            "description": "--network: Set the networking mode for the"
+          },
+          "noCache": {
+            "type": "boolean",
+            "description": "--no-cache: Do not use cache when building the image"
+          },
+          "noCacheFilter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--no-cache-filter: Do not cache specified stages"
+          },
+          "output": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--output: Output destination (format:"
+          },
+          "platform": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--platform: Set target platform for build"
+          },
+          "policy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--policy: Policy configuration (format:"
+          },
+          "progress": {
+            "type": "string",
+            "description": "--progress: Set type of progress output"
+          },
+          "provenance": {
+            "type": "string",
+            "description": "--provenance: Shorthand for \"--attest=type=provenance\""
+          },
+          "pull": {
+            "type": "boolean",
+            "description": "--pull: Always attempt to pull all"
+          },
+          "push": {
+            "type": "boolean",
+            "description": "--push: Shorthand for"
+          },
+          "quiet": {
+            "type": "boolean",
+            "description": "--quiet: Suppress the build output and print"
+          },
+          "resource": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--resource: Resource limits for build"
+          },
+          "sbom": {
+            "type": "string",
+            "description": "--sbom: Shorthand for \"--attest=type=sbom\""
+          },
+          "secret": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--secret: Secret to expose to the build"
+          },
+          "shmSize": {
+            "type": "string",
+            "description": "--shm-size: Shared memory size for build containers"
+          },
+          "ssh": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--ssh: SSH agent socket or keys to expose"
+          },
+          "tag": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--tag: Image identifier (format:"
+          },
+          "target": {
+            "type": "string",
+            "description": "--target: Set the target build stage to build"
+          },
+          "ulimit": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--ulimit: Ulimit options (default [])"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "create": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "endpoint": {
+            "type": "string",
+            "description": "Builder context or endpoint."
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "append": {
+            "type": "boolean",
+            "description": "--append: Append a node to builder instead of"
+          },
+          "bootstrap": {
+            "type": "boolean",
+            "description": "--bootstrap: Boot builder after creation"
+          },
+          "buildkitdConfig": {
+            "type": "string",
+            "description": "--buildkitd-config: BuildKit daemon config file"
+          },
+          "buildkitdFlags": {
+            "type": "string",
+            "description": "--buildkitd-flags: BuildKit daemon flags"
+          },
+          "driver": {
+            "type": "string",
+            "description": "--driver: Driver to use (available: \"cloud\","
+          },
+          "driverOpt": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--driver-opt: Options for the driver"
+          },
+          "leave": {
+            "type": "boolean",
+            "description": "--leave: Remove a node from builder instead of"
+          },
+          "name": {
+            "type": "string",
+            "description": "--name: Builder instance name"
+          },
+          "node": {
+            "type": "string",
+            "description": "--node: Create/modify node with given name"
+          },
+          "platform": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--platform: Fixed platforms for current node"
+          },
+          "timeout": {
+            "type": "string",
+            "description": "--timeout: Override the default timeout for"
+          },
+          "use": {
+            "type": "boolean",
+            "description": "--use: Set the current builder instance"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "dial_stdio": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "platform": {
+            "type": "string",
+            "description": "--platform: Target platform: this is used for node selection"
+          },
+          "progress": {
+            "type": "string",
+            "description": "--progress: Set type of progress output (\"auto\", \"plain\","
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "du": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "filter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--filter: Provide filter values"
+          },
+          "format": {
+            "type": "string",
+            "description": "--format: Format the output"
+          },
+          "timeout": {
+            "type": "string",
+            "description": "--timeout: Override the default timeout for loading"
+          },
+          "verbose": {
+            "type": "boolean",
+            "description": "--verbose: Shorthand for \"--format=pretty\""
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "inspect": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "name": {
+            "type": "string",
+            "description": "Builder instance name."
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "bootstrap": {
+            "type": "boolean",
+            "description": "--bootstrap: Ensure builder has booted before inspecting"
+          },
+          "timeout": {
+            "type": "string",
+            "description": "--timeout: Override the default timeout for loading"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "ls": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "format": {
+            "type": "string",
+            "description": "--format: Format the output (default \"table\")"
+          },
+          "noTrunc": {
+            "type": "boolean",
+            "description": "--no-trunc: Don't truncate output"
+          },
+          "timeout": {
+            "type": "string",
+            "description": "--timeout: Override the default timeout for loading"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "prune": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "all": {
+            "type": "boolean",
+            "description": "--all: Include internal/frontend images"
+          },
+          "filter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--filter: Provide filter values"
+          },
+          "force": {
+            "type": "boolean",
+            "description": "--force: Do not prompt for confirmation"
+          },
+          "maxUsedSpace": {
+            "type": "string",
+            "description": "--max-used-space: Maximum amount of disk space allowed to"
+          },
+          "minFreeSpace": {
+            "type": "string",
+            "description": "--min-free-space: Target amount of free disk space after pruning"
+          },
+          "reservedSpace": {
+            "type": "string",
+            "description": "--reserved-space: Amount of disk space always allowed to"
+          },
+          "timeout": {
+            "type": "string",
+            "description": "--timeout: Override the default timeout for loading"
+          },
+          "verbose": {
+            "type": "boolean",
+            "description": "--verbose: Provide a more verbose output"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "rm": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Builder instance names.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "allInactive": {
+            "type": "boolean",
+            "description": "--all-inactive: Remove all inactive builders"
+          },
+          "force": {
+            "type": "boolean",
+            "description": "--force: Do not prompt for confirmation"
+          },
+          "keepDaemon": {
+            "type": "boolean",
+            "description": "--keep-daemon: Keep the BuildKit daemon running"
+          },
+          "keepState": {
+            "type": "boolean",
+            "description": "--keep-state: Keep BuildKit state"
+          },
+          "timeout": {
+            "type": "string",
+            "description": "--timeout: Override the default timeout for loading"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "stop": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "name": {
+            "type": "string",
+            "description": "Builder instance name."
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "use": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "name": {
+            "type": "string",
+            "description": "Required builder/image name.",
+            "default": ""
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "default": {
+            "type": "boolean",
+            "description": "--default: Set builder as default for current context"
+          },
+          "global": {
+            "type": "boolean",
+            "description": "--global: Builder persists context changes"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "version": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "dap_build": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "context": {
+            "type": "string",
+            "description": "Build context: path, URL or '-' (stdin is not forwarded by the guest).",
+            "default": "."
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "addHost": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--add-host: Add a custom host-to-IP mapping"
+          },
+          "allow": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--allow: Allow extra privileged entitlement"
+          },
+          "annotation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--annotation: Add annotation to the image"
+          },
+          "attest": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--attest: Attestation parameters (format:"
+          },
+          "buildArg": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--build-arg: Set build-time variables"
+          },
+          "buildContext": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--build-context: Additional build contexts (e.g.,"
+          },
+          "cacheFrom": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--cache-from: External cache sources (e.g.,"
+          },
+          "cacheTo": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--cache-to: Cache export destinations (e.g.,"
+          },
+          "call": {
+            "type": "string",
+            "description": "--call: Set method for evaluating build"
+          },
+          "cgroupParent": {
+            "type": "string",
+            "description": "--cgroup-parent: Set the parent cgroup for the \"RUN\""
+          },
+          "check": {
+            "type": "boolean",
+            "description": "--check: Shorthand for \"--call=check\""
+          },
+          "file": {
+            "type": "string",
+            "description": "--file: Name of the Dockerfile (default:"
+          },
+          "iidfile": {
+            "type": "string",
+            "description": "--iidfile: Write the image ID to a file"
+          },
+          "label": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--label: Set metadata for an image"
+          },
+          "load": {
+            "type": "boolean",
+            "description": "--load: Shorthand for \"--output=type=docker\""
+          },
+          "metadataFile": {
+            "type": "string",
+            "description": "--metadata-file: Write build result metadata to a file"
+          },
+          "network": {
+            "type": "string",
+            "description": "--network: Set the networking mode for the"
+          },
+          "noCache": {
+            "type": "boolean",
+            "description": "--no-cache: Do not use cache when building the image"
+          },
+          "noCacheFilter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--no-cache-filter: Do not cache specified stages"
+          },
+          "output": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--output: Output destination (format:"
+          },
+          "platform": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--platform: Set target platform for build"
+          },
+          "policy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--policy: Policy configuration (format:"
+          },
+          "progress": {
+            "type": "string",
+            "description": "--progress: Set type of progress output"
+          },
+          "provenance": {
+            "type": "string",
+            "description": "--provenance: Shorthand for \"--attest=type=provenance\""
+          },
+          "pull": {
+            "type": "boolean",
+            "description": "--pull: Always attempt to pull all"
+          },
+          "push": {
+            "type": "boolean",
+            "description": "--push: Shorthand for"
+          },
+          "quiet": {
+            "type": "boolean",
+            "description": "--quiet: Suppress the build output and print"
+          },
+          "resource": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--resource: Resource limits for build"
+          },
+          "sbom": {
+            "type": "string",
+            "description": "--sbom: Shorthand for \"--attest=type=sbom\""
+          },
+          "secret": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--secret: Secret to expose to the build"
+          },
+          "shmSize": {
+            "type": "string",
+            "description": "--shm-size: Shared memory size for build containers"
+          },
+          "ssh": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--ssh: SSH agent socket or keys to expose"
+          },
+          "tag": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--tag: Image identifier (format:"
+          },
+          "target": {
+            "type": "string",
+            "description": "--target: Set the target build stage to build"
+          },
+          "ulimit": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--ulimit: Ulimit options (default [])"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "debug_build": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "context": {
+            "type": "string",
+            "description": "Build context: path, URL or '-' (stdin is not forwarded by the guest).",
+            "default": "."
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "invoke": {
+            "type": "string",
+            "description": "--invoke: Launch a monitor with executing specified"
+          },
+          "on": {
+            "type": "string",
+            "description": "--on: When to launch the monitor ([always, error])"
+          },
+          "addHost": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--add-host: Add a custom host-to-IP mapping"
+          },
+          "allow": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--allow: Allow extra privileged entitlement"
+          },
+          "annotation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--annotation: Add annotation to the image"
+          },
+          "attest": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--attest: Attestation parameters (format:"
+          },
+          "buildArg": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--build-arg: Set build-time variables"
+          },
+          "buildContext": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--build-context: Additional build contexts (e.g.,"
+          },
+          "cacheFrom": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--cache-from: External cache sources (e.g.,"
+          },
+          "cacheTo": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--cache-to: Cache export destinations (e.g.,"
+          },
+          "call": {
+            "type": "string",
+            "description": "--call: Set method for evaluating build"
+          },
+          "cgroupParent": {
+            "type": "string",
+            "description": "--cgroup-parent: Set the parent cgroup for the \"RUN\""
+          },
+          "check": {
+            "type": "boolean",
+            "description": "--check: Shorthand for \"--call=check\""
+          },
+          "file": {
+            "type": "string",
+            "description": "--file: Name of the Dockerfile (default:"
+          },
+          "iidfile": {
+            "type": "string",
+            "description": "--iidfile: Write the image ID to a file"
+          },
+          "label": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--label: Set metadata for an image"
+          },
+          "load": {
+            "type": "boolean",
+            "description": "--load: Shorthand for \"--output=type=docker\""
+          },
+          "metadataFile": {
+            "type": "string",
+            "description": "--metadata-file: Write build result metadata to a file"
+          },
+          "network": {
+            "type": "string",
+            "description": "--network: Set the networking mode for the"
+          },
+          "noCache": {
+            "type": "boolean",
+            "description": "--no-cache: Do not use cache when building the image"
+          },
+          "noCacheFilter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--no-cache-filter: Do not cache specified stages"
+          },
+          "output": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--output: Output destination (format:"
+          },
+          "platform": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--platform: Set target platform for build"
+          },
+          "policy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--policy: Policy configuration (format:"
+          },
+          "progress": {
+            "type": "string",
+            "description": "--progress: Set type of progress output"
+          },
+          "provenance": {
+            "type": "string",
+            "description": "--provenance: Shorthand for \"--attest=type=provenance\""
+          },
+          "pull": {
+            "type": "boolean",
+            "description": "--pull: Always attempt to pull all"
+          },
+          "push": {
+            "type": "boolean",
+            "description": "--push: Shorthand for"
+          },
+          "quiet": {
+            "type": "boolean",
+            "description": "--quiet: Suppress the build output and print"
+          },
+          "resource": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--resource: Resource limits for build"
+          },
+          "sbom": {
+            "type": "string",
+            "description": "--sbom: Shorthand for \"--attest=type=sbom\""
+          },
+          "secret": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--secret: Secret to expose to the build"
+          },
+          "shmSize": {
+            "type": "string",
+            "description": "--shm-size: Shared memory size for build containers"
+          },
+          "ssh": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--ssh: SSH agent socket or keys to expose"
+          },
+          "tag": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--tag: Image identifier (format:"
+          },
+          "target": {
+            "type": "string",
+            "description": "--target: Set the target build stage to build"
+          },
+          "ulimit": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--ulimit: Ulimit options (default [])"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "history_inspect": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Subcommand positional arguments; prefer the corresponding named export.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "format": {
+            "type": "string",
+            "description": "--format: Format the output (default \"pretty\")"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "history_export": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Build record references.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "all": {
+            "type": "boolean",
+            "description": "--all: Export all build records for the builder"
+          },
+          "finalize": {
+            "type": "boolean",
+            "description": "--finalize: Ensure build records are finalized before exporting"
+          },
+          "output": {
+            "type": "string",
+            "description": "--output: Output file path"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "history_import": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Import positional arguments; use the file option instead of interactive stdin.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "file": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--file: Import from a file path"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "history_logs": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "ref": {
+            "type": "string",
+            "description": "Build record reference."
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "progress": {
+            "type": "string",
+            "description": "--progress: Set type of progress output (plain, rawjson,"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "history_ls": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "filter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--filter: Provide filter values (e.g., \"status=error\")"
+          },
+          "format": {
+            "type": "string",
+            "description": "--format: Format the output (default \"table\")"
+          },
+          "local": {
+            "type": "boolean",
+            "description": "--local: List records for current repository only"
+          },
+          "noTrunc": {
+            "type": "boolean",
+            "description": "--no-trunc: Don't truncate output"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "history_open": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "ref": {
+            "type": "string",
+            "description": "Build record reference."
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "history_rm": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Build record references.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "all": {
+            "type": "boolean",
+            "description": "--all: Remove all build records"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "history_trace": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "ref": {
+            "type": "string",
+            "description": "Build record reference."
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "addr": {
+            "type": "string",
+            "description": "--addr: Address to bind the UI server (default \"127.0.0.1:0\")"
+          },
+          "compare": {
+            "type": "string",
+            "description": "--compare: Compare with another build record"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "imagetools_create": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Image source references.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "annotation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--annotation: Add annotation to the image"
+          },
+          "append": {
+            "type": "boolean",
+            "description": "--append: Append to existing manifest"
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "--dry-run: Show final image instead of pushing"
+          },
+          "file": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--file: Read source descriptor from file"
+          },
+          "metadataFile": {
+            "type": "string",
+            "description": "--metadata-file: Write create result metadata to a file"
+          },
+          "platform": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--platform: Filter specified platforms of target image"
+          },
+          "preferIndex": {
+            "type": "boolean",
+            "description": "--prefer-index: When only a single source is specified,"
+          },
+          "progress": {
+            "type": "string",
+            "description": "--progress: Set type of progress output (\"auto\","
+          },
+          "tag": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--tag: Set reference for new image"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "imagetools_inspect": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "name": {
+            "type": "string",
+            "description": "Required builder/image name.",
+            "default": ""
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "format": {
+            "type": "string",
+            "description": "--format: Format the output using the given Go template"
+          },
+          "raw": {
+            "type": "boolean",
+            "description": "--raw: Show original, unformatted JSON manifest"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "policy_eval": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "source": {
+            "type": "string",
+            "description": "Required policy evaluation source.",
+            "default": ""
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "--fields: Fields to evaluate"
+          },
+          "file": {
+            "type": "string",
+            "description": "--file: Policy filename to evaluate (default \"Dockerfile\")"
+          },
+          "platform": {
+            "type": "string",
+            "description": "--platform: Target platform for policy evaluation"
+          },
+          "print": {
+            "type": "boolean",
+            "description": "--print: Print policy output"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "policy_test": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "path": {
+            "type": "string",
+            "description": "Policy test directory.",
+            "default": "."
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "filename": {
+            "type": "string",
+            "description": "--filename: Name of the Dockerfile to validate (default"
+          },
+          "run": {
+            "type": "string",
+            "description": "--run: Run only tests with name containing this substring"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    },
+    "history_inspect_attachment": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "default": "."
+          },
+          "runDir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "docker": {
+            "type": "string",
+            "default": "docker"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "default": 900000
+          },
+          "experimental": {
+            "type": "boolean",
+            "default": false
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional REF and DIGEST positional arguments.",
+            "default": []
+          },
+          "builder": {
+            "type": "string",
+            "description": "--builder: Override the configured builder instance"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "--debug: Enable debug logging"
+          },
+          "format": {
+            "type": "string",
+            "description": "--format: Format the output (default \"pretty\")"
+          },
+          "platform": {
+            "type": "string",
+            "description": "--platform: Platform of attachment"
+          },
+          "type_": {
+            "type": "string",
+            "description": "--type: Type of attachment"
+          },
+          "help": {
+            "type": "boolean",
+            "description": "--help: Show this command's help."
+          }
+        },
+        "required": [
+          "runDir"
+        ],
+        "additionalProperties": false,
+        "contentType": "application/json"
+      },
+      "output": {
+        "type": "string",
+        "contentType": "text/plain; charset=utf-8"
+      }
+    }
   }
 }

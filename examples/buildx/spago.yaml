@@ -1,0 +1,21 @@
+package:
+  name: buildx-example
+  dependencies:
+    - argonaut-codecs
+    - argonaut-core
+    - arrays
+    - effect
+    - either
+    - exceptions
+    - fluentci
+    - foreign-object
+    - maybe
+    - prelude
+    - strings
+workspace:
+  packageSet:
+    registry: 81.11.0
+  extraPackages:
+    fluentci:
+      git: https://github.com/fluentci-io/purescript-fluentci.git
+      ref: 82da1d0f551b05ecae0ce2d5ebe26e23d61f4a10

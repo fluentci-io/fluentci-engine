@@ -1,0 +1,10 @@
+{
+  "name": "fluentci-buildx-plugin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "python3 generate.py --check && node build.mjs",
+    "test": "node --test test.mjs"
+  },
+  "devDependencies": { "esbuild": "0.25.3" }
+}

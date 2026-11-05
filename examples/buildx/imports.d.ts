@@ -1,0 +1,57 @@
+// Generated from schema/host.json. Guest import signatures.
+declare module "main" { export function buildx(): I32; export function dap(): I32; export function debug(): I32; export function history(): I32; export function imagetools(): I32; export function policy(): I32; export function bake(): I32; export function build(): I32; export function create(): I32; export function dial_stdio(): I32; export function du(): I32; export function inspect(): I32; export function ls(): I32; export function prune(): I32; export function rm(): I32; export function stop(): I32; export function use(): I32; export function version(): I32; export function dap_build(): I32; export function debug_build(): I32; export function history_inspect(): I32; export function history_export(): I32; export function history_import(): I32; export function history_logs(): I32; export function history_ls(): I32; export function history_open(): I32; export function history_rm(): I32; export function history_trace(): I32; export function imagetools_create(): I32; export function imagetools_inspect(): I32; export function policy_eval(): I32; export function policy_test(): I32; export function history_inspect_attachment(): I32; }
+declare module "extism:host" { interface user {
+  add_secretmanager(value: I64): I64;
+  as_service(value: I64): I64;
+  branch(value: I64): void;
+  cache(value: I64): I64;
+  call(value: I64): I64;
+  chmod(value: I64): I64;
+  commit(): I64;
+  devbox(): I64;
+  devenv(): I64;
+  directory(value: I64): I64;
+  entries(value: I64): I64;
+  envhub(): I64;
+  execute_plan(value: I64): I64;
+  file(value: I64): I64;
+  flox(): I64;
+  get_arch(): I64;
+  get_env(value: I64): I64;
+  get_os(): I64;
+  get_secret(value: I64): I64;
+  get_secret_plaintext(value: I64): I64;
+  git(value: I64): I64;
+  has_env(value: I64): I64;
+  hermit(): I64;
+  http(value: I64): I64;
+  install(): void;
+  md5(value: I64): I64;
+  mise(): I64;
+  nix(value: I64): I64;
+  pipeline(value: I64): I64;
+  pixi(): I64;
+  pkgx(): I64;
+  proto(): I64;
+  remove_env(value: I64): void;
+  set_envs(value: I64): void;
+  set_runner(value: I64): void;
+  set_secret(value: I64): I64;
+  sha256(value: I64): I64;
+  stderr(): I64;
+  stdout(): I64;
+  tar_czvf(value: I64): I64;
+  tar_xzvf(value: I64): I64;
+  tree(): I64;
+  trust(): void;
+  unzip(value: I64): I64;
+  wait_on(value: I64): void;
+  with_cache(value: I64): void;
+  with_exec(value: I64): void;
+  with_file(value: I64): void;
+  with_packages(value: I64): void;
+  with_secret_variable(value: I64): void;
+  with_service(value: I64): void;
+  with_workdir(value: I64): void;
+  zip(value: I64): I64;
+} }

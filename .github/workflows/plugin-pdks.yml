@@ -3,9 +3,9 @@ name: Plugin PDKs
 on:
   push:
     branches: [main]
-    paths: ['examples/hash-clojurescript/**', 'examples/sccache/**', 'tests/e2e_sccache.py', 'sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'scripts/clojurescript_codegen.py', 'fixtures/matrix-demo/**', 'tests/e2e_matrix.py', 'tests/e2e_workflow.py', 'tests/e2e_guest_pdks.py', 'tests/e2e_files.py', 'tests/files.test.mjs', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
+    paths: ['examples/buildx/**', 'tests/e2e_buildx.py', 'examples/hash-clojurescript/**', 'examples/sccache/**', 'tests/e2e_sccache.py', 'sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'scripts/clojurescript_codegen.py', 'fixtures/matrix-demo/**', 'tests/e2e_matrix.py', 'tests/e2e_workflow.py', 'tests/e2e_guest_pdks.py', 'tests/e2e_files.py', 'tests/files.test.mjs', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
   pull_request:
-    paths: ['examples/hash-clojurescript/**', 'examples/sccache/**', 'tests/e2e_sccache.py', 'sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'scripts/clojurescript_codegen.py', 'fixtures/matrix-demo/**', 'tests/e2e_matrix.py', 'tests/e2e_workflow.py', 'tests/e2e_guest_pdks.py', 'tests/e2e_files.py', 'tests/files.test.mjs', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
+    paths: ['examples/buildx/**', 'tests/e2e_buildx.py', 'examples/hash-clojurescript/**', 'examples/sccache/**', 'tests/e2e_sccache.py', 'sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'scripts/clojurescript_codegen.py', 'fixtures/matrix-demo/**', 'tests/e2e_matrix.py', 'tests/e2e_workflow.py', 'tests/e2e_guest_pdks.py', 'tests/e2e_files.py', 'tests/files.test.mjs', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
   workflow_dispatch:
 
 permissions:
@@ -96,6 +96,9 @@ jobs:
       - name: Compile and test the PureScript sccache example
         working-directory: examples/sccache
         run: npm ci && npm run build && npm test
+      - name: Compile and test the PureScript Buildx module
+        working-directory: examples/buildx
+        run: npm ci && npm run build && npm test
       - name: Compile the ClojureScript hash plugin
         working-directory: examples/hash-clojurescript
         run: mise trust && npm ci && mise exec -- npm run build
@@ -113,6 +116,7 @@ jobs:
           python3 tests/e2e_workflow.py -v
           python3 tests/e2e_files.py -v
           python3 tests/e2e_sccache.py -v
+          FLUENTCI_BUILDX_REAL=1 python3 tests/e2e_buildx.py -v
       - name: Preserve compiled guests and generated entry source
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -122,6 +126,7 @@ jobs:
             sdk/*/demo-plugin/dist/
             sdk/python/dist/
             examples/sccache/dist/
+            examples/buildx/dist/
             examples/hash-clojurescript/dist/
           if-no-files-found: ignore
           retention-days: 7
