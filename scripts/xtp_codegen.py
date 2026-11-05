@@ -65,10 +65,13 @@ def generated():
         result = 'I64' if 'output' in function else 'void'
         javascript.append(f'  {name}({argument}): {result};')
     javascript.extend(['} }', ''])
-    for language in ['gleam', 'purescript', 'rescript', 'typescript']:
+    for language in ['gleam', 'purescript', 'rescript', 'typescript', 'clojurescript']:
         declarations = list(javascript)
         if language == 'purescript':
             exports = ['greet', 'echo', 'failure', 'invalid', 'service', 'cancel', 'nested', 'hash_file', 'copy_file', 'secret_env', 'action_plan', 'matrix', 'workflow', 'files']
+            declarations[1] = 'declare module "main" { ' + ' '.join(f'export function {name}(): I32;' for name in exports) + ' }'
+        if language == 'clojurescript':
+            exports = ['greet', 'echo', 'failure', 'nested', 'hash_file', 'copy_file']
             declarations[1] = 'declare module "main" { ' + ' '.join(f'export function {name}(): I32;' for name in exports) + ' }'
         entry = (ROOT / f'sdk/{language}/demo-plugin/{"entry.ts" if language == "typescript" else "entry.mjs"}').read_text()
         if language in ['purescript', 'rescript']:
@@ -79,6 +82,12 @@ def generated():
         if actual_exports != declared_exports:
             raise ValueError(f'Guest export declarations differ from entry point: {language}: {actual_exports ^ declared_exports}')
         yield ROOT / f'sdk/{language}/demo-plugin/imports.d.ts', '\n'.join(declarations)
+    declarations = list(javascript)
+    declarations[1] = 'declare module "main" { export function md5(): I32; export function sha256(): I32; }'
+    entry = (ROOT / 'examples/hash-clojurescript/entry.mjs').read_text()
+    if set(re.findall(r'export function (\w+)\(', entry)) != {'md5', 'sha256'}:
+        raise ValueError('ClojureScript hash exports differ from the Rust hash plugin')
+    yield ROOT / 'examples/hash-clojurescript/imports.d.ts', '\n'.join(declarations)
     for name, exports in plugins.items():
         if name != 'xtp-smoke':
             rust = ROOT / f'examples/{name}/src/lib.rs'

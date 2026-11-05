@@ -1,0 +1,5 @@
+{:target :none
+ :optimizations :simple
+ :output-to "build/plugin.cjs"
+ :output-dir "build/plugin"
+ :language-out :ecmascript-2020}

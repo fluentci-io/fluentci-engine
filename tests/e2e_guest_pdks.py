@@ -1,4 +1,4 @@
-"""Build artifacts from six SDKs must invoke the actual FluentCI PDK through Wasm."""
+"""Build artifacts from seven SDKs must invoke the actual FluentCI PDK through Wasm."""
 import os
 import hashlib
 import json
@@ -16,7 +16,7 @@ BINARY = Path(os.environ.get("FLUENTCI_ENGINE_BIN", ROOT / "target/release/fluen
 
 class GuestPDKs(unittest.TestCase):
     def test_each_language_calls_native_processes_through_engine_pdk(self):
-        for language in ["python", "elixir", "gleam", "rescript", "purescript", "typescript"]:
+        for language in ["python", "elixir", "gleam", "rescript", "purescript", "typescript", "clojurescript"]:
             with self.subTest(language=language), tempfile.TemporaryDirectory(prefix="fluentci guest ") as directory:
                 artifact = ROOT / "sdk" / language
                 if language != "python":
@@ -36,13 +36,13 @@ class GuestPDKs(unittest.TestCase):
 
 
 
-class PureScriptGuestContracts(unittest.TestCase):
+class GuestContractHelpers:
     def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory(prefix="fluentci PS guest ")
+        self.temporary = tempfile.TemporaryDirectory(prefix=f"fluentci {self.language} guest ")
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
         self.plugin = self.root / "plugin.wasm"
-        shutil.copy2(ROOT / "sdk/purescript/demo-plugin/dist/plugin.wasm", self.plugin)
+        shutil.copy2(ROOT / "sdk" / self.language / "demo-plugin/dist/plugin.wasm", self.plugin)
 
     def call(self, function, value="", *, success=True):
         result = subprocess.run([str(BINARY), "call", "-m", str(self.plugin), function, value],
@@ -64,13 +64,6 @@ class PureScriptGuestContracts(unittest.TestCase):
             time.sleep(0.05)
         self.fail(f"supervised process {pid} survived guest completion/cancellation")
 
-    def test_failures_reach_the_plugin_error_boundary(self):
-        result = self.call("failure", success=False)
-        self.assertEqual(result.returncode, 7, result.stderr)
-        self.assertIn("exit code 7", result.stderr)
-        invalid = self.call("invalid", success=False)
-        self.assertIn("Invalid argument (exec)", invalid.stderr)
-
     def test_file_hash_and_copy_preserve_paths_with_spaces_and_quotes(self):
         path = self.root / "source 'quotes' 世界.txt"
         path.write_text("file contents 世界")
@@ -83,6 +76,17 @@ class PureScriptGuestContracts(unittest.TestCase):
         value = "nested 世界; 'quotes' and  spaces"
         result = self.call("nested", value)
         self.assertEqual(result.stdout.rstrip("\r\n"), value)
+
+
+class PureScriptGuestContracts(GuestContractHelpers, unittest.TestCase):
+    language = "purescript"
+
+    def test_failures_reach_the_plugin_error_boundary(self):
+        result = self.call("failure", success=False)
+        self.assertEqual(result.returncode, 7, result.stderr)
+        self.assertIn("exit code 7", result.stderr)
+        invalid = self.call("invalid", success=False)
+        self.assertIn("Invalid argument (exec)", invalid.stderr)
 
     def test_secret_injection_does_not_print_the_value(self):
         secret = "fixture-secret-世界-123"
@@ -132,6 +136,42 @@ class PureScriptGuestContracts(unittest.TestCase):
             self.assertEqual(report["tasks"][0]["cache"]["outcome"], expected)
             self.assertEqual((self.root / "output.txt").read_text(), "changed" if index == 2 else "first")
             self.assertEqual((self.root / "executions").read_text(), "runrun" if index == 2 else "run")
+
+
+class ClojureScriptGuestContracts(GuestContractHelpers, unittest.TestCase):
+    language = "clojurescript"
+
+    def test_failures_reach_the_plugin_error_boundary(self):
+        result = self.call("failure", success=False)
+        self.assertEqual(result.returncode, 7, result.stderr)
+        self.assertIn("exit code 7", result.stderr)
+
+    def test_greet_preserves_literal_arguments(self):
+        value = "héllo 世界; $(touch injected) 'quotes' and  two spaces"
+        result = self.call("greet", value)
+        self.assertEqual(result.stdout.rstrip("\r\n").splitlines()[-1], value)
+        self.assertFalse((self.root / "injected").exists())
+
+
+class ClojureScriptHashPlugin(unittest.TestCase):
+    def test_ported_hash_plugin_matches_native_digests(self):
+        plugin = ROOT / "examples/hash-clojurescript/dist/plugin.wasm"
+        self.assertTrue(plugin.is_file(), f"missing compiled hash plugin: {plugin}")
+        with tempfile.TemporaryDirectory(prefix="fluentci hash ") as directory:
+            path = Path(directory) / "source 'quotes' 世界.bin"
+            for content in [b"", b"\x00\xffbinary\n", "héllo 世界".encode()]:
+                path.write_bytes(content)
+                for function in ["md5", "sha256"]:
+                    with self.subTest(function=function, content=content):
+                        result = subprocess.run(
+                            [str(BINARY), "call", "-m", str(plugin), function, str(path)],
+                            cwd=directory, capture_output=True, text=True, timeout=45)
+                        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                        self.assertEqual(result.stdout.strip(), hashlib.new(function, content).hexdigest())
+            result = subprocess.run(
+                [str(BINARY), "call", "-m", str(plugin), "sha256", str(path.with_name("missing"))],
+                cwd=directory, capture_output=True, text=True, timeout=45)
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

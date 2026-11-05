@@ -1,0 +1,4 @@
+{:target :nodejs
+ :optimizations :simple
+ :output-to "build/tests.cjs"
+ :output-dir "build/tests"}

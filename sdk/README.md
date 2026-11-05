@@ -10,6 +10,7 @@ native processes; plugins do not embed an Extism host runtime.
 | Elixir | supported CI DSL → Rust PDK → Wasm | [Elixir DSL](elixir/README.md) |
 | Gleam | Gleam → JavaScript → extism-js → Wasm | [Gleam PDK](gleam/README.md) |
 | PureScript | PureScript → JavaScript → extism-js → Wasm | [PureScript](purescript/demo-plugin/README.md) |
+| ClojureScript | Checked shared .cljc → JavaScript → extism-js → Wasm | [ClojureScript](clojurescript/README.md) |
 | ReScript | ReScript 12 → JavaScript → extism-js → Wasm | [ReScript PDK](rescript/README.md) |
 | TypeScript | esbuild → extism-js → Wasm | [TypeScript](typescript/demo-plugin/README.md) |
 
@@ -24,7 +25,7 @@ that guest ABI declarations match the canonical schema.
 
 ## Parallel matrices
 
-All six language examples expose native matrix execution. Case construction is
+Six language examples expose native matrix execution. Case construction is
 pure; one `execute_plan` PDK call runs the complete plan. See the
 [matrix guide](../docs/matrix.md) for products, typed include/exclude, stable IDs,
 prerequisites, joins, caching and cancellation. Requires FluentCI Engine 0.6.1 or
@@ -43,6 +44,7 @@ when changing dependency declarations.
 | Elixir | Immutable host plans, local execution, typed results/journals | Elixir 1.20.4: `mix format --check-formatted`; `FLUENTCI_REQUIRE_ENGINE=1 mix test --warnings-as-errors` |
 | Gleam | Host plans, local/HTTP execution, results/journals; legacy bindings | `gleam test --runtime nodejs`; `gleam test --runtime deno`; `cd demo && gleam build` |
 | PureScript | External pinned SDK with host plans, local/HTTP execution and legacy bindings | Spago 1.0.5/PureScript 0.15.16: `spago build` in each example; `python3 tests/e2e_purescript.py` from repository root |
+| ClojureScript | Immutable guest pipelines, caches, secrets, files and nested calls; Typed Clojure checks shared .cljc | `mise install clojure`; `mise exec -- clojure -M:check`; `mise exec -- clojure -M:test && node build/tests.cjs`; `cd demo-plugin && npm ci && mise exec -- npm run build` |
 | ReScript | Immutable guest PDK, legacy GraphQL/plugin/Dagger bindings | ReScript 12.3.1: `npm ci && npm run res:build` in SDK and demo |
 | TypeScript | Legacy GraphQL, plugin, and Dagger bindings | Deno 2: `deno task check`; plugin JavaScript bundles: `cd demo-ext && bun install --frozen-lockfile && node esbuild.js` |
 

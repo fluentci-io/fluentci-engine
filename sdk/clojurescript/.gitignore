@@ -1,0 +1,6 @@
+.cpcache/
+.clj-kondo/.cache/
+.lsp/.cache/
+build/
+demo-plugin/dist/
+demo-plugin/node_modules/
