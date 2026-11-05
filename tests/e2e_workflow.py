@@ -1,4 +1,4 @@
-"""One workflow contract through six compiled Wasm guest SDKs."""
+"""One workflow contract through seven compiled Wasm guest SDKs."""
 import hashlib
 import json
 from pathlib import Path

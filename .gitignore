@@ -11,3 +11,4 @@ sdk/gleam/*/build
 # PureScript CI artifacts and native build caches
 /.ci-cache/
 .psc-ide-port
+__pycache__/

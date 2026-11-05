@@ -3,9 +3,9 @@ name: Plugin PDKs
 on:
   push:
     branches: [main]
-    paths: ['examples/hash-clojurescript/**', 'examples/sccache/**', 'tests/e2e_sccache.py', 'sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'tests/e2e_guest_pdks.py', 'tests/e2e_files.py', 'tests/files.test.mjs', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
+    paths: ['examples/hash-clojurescript/**', 'examples/sccache/**', 'tests/e2e_sccache.py', 'sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'scripts/clojurescript_codegen.py', 'fixtures/matrix-demo/**', 'tests/e2e_matrix.py', 'tests/e2e_workflow.py', 'tests/e2e_guest_pdks.py', 'tests/e2e_files.py', 'tests/files.test.mjs', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
   pull_request:
-    paths: ['examples/hash-clojurescript/**', 'examples/sccache/**', 'tests/e2e_sccache.py', 'sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'tests/e2e_guest_pdks.py', 'tests/e2e_files.py', 'tests/files.test.mjs', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
+    paths: ['examples/hash-clojurescript/**', 'examples/sccache/**', 'tests/e2e_sccache.py', 'sdk/**', 'schema/**', 'scripts/xtp_codegen.py', 'scripts/clojurescript_codegen.py', 'fixtures/matrix-demo/**', 'tests/e2e_matrix.py', 'tests/e2e_workflow.py', 'tests/e2e_guest_pdks.py', 'tests/e2e_files.py', 'tests/files.test.mjs', 'tests/guest_pdks.test.mjs', '.github/workflows/plugin-pdks.yml', '.github/scripts/setup-plugin-pdks.sh', 'crates/**', 'Cargo.*']
   workflow_dispatch:
 
 permissions:

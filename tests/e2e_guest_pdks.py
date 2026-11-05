@@ -35,7 +35,6 @@ class GuestPDKs(unittest.TestCase):
                 self.assertFalse((Path(directory) / "injected").exists(), "exec interpreted a literal argument as shell code")
 
 
-
 class GuestContractHelpers:
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix=f"fluentci {self.language} guest ")
@@ -76,17 +75,6 @@ class GuestContractHelpers:
         value = "nested 世界; 'quotes' and  spaces"
         result = self.call("nested", value)
         self.assertEqual(result.stdout.rstrip("\r\n"), value)
-
-
-class PureScriptGuestContracts(GuestContractHelpers, unittest.TestCase):
-    language = "purescript"
-
-    def test_failures_reach_the_plugin_error_boundary(self):
-        result = self.call("failure", success=False)
-        self.assertEqual(result.returncode, 7, result.stderr)
-        self.assertIn("exit code 7", result.stderr)
-        invalid = self.call("invalid", success=False)
-        self.assertIn("Invalid argument (exec)", invalid.stderr)
 
     def test_secret_injection_does_not_print_the_value(self):
         secret = "fixture-secret-世界-123"
@@ -138,6 +126,17 @@ class PureScriptGuestContracts(GuestContractHelpers, unittest.TestCase):
             self.assertEqual((self.root / "executions").read_text(), "runrun" if index == 2 else "run")
 
 
+class PureScriptGuestContracts(GuestContractHelpers, unittest.TestCase):
+    language = "purescript"
+
+    def test_failures_reach_the_plugin_error_boundary(self):
+        result = self.call("failure", success=False)
+        self.assertEqual(result.returncode, 7, result.stderr)
+        self.assertIn("exit code 7", result.stderr)
+        invalid = self.call("invalid", success=False)
+        self.assertIn("Invalid argument (exec)", invalid.stderr)
+
+
 class ClojureScriptGuestContracts(GuestContractHelpers, unittest.TestCase):
     language = "clojurescript"
 
@@ -151,6 +150,15 @@ class ClojureScriptGuestContracts(GuestContractHelpers, unittest.TestCase):
         result = self.call("greet", value)
         self.assertEqual(result.stdout.rstrip("\r\n").splitlines()[-1], value)
         self.assertFalse((self.root / "injected").exists())
+
+    def test_native_service_uses_readiness_health_and_shared_resources(self):
+        result = self.call("native_service", str(self.root / "native-run"))
+        self.assertIn("native service complete", result.stdout)
+        report = json.loads((self.root / "native-run/result.json").read_text())
+        self.assertEqual(report["outcome"], "succeeded", report)
+        client = next(row for row in report["tasks"] if row["id"] == "client")
+        self.assertEqual(Path(client["stdout"]).read_text(), "healthy")
+        self.assert_reaped("service.pid")
 
 
 class ClojureScriptHashPlugin(unittest.TestCase):

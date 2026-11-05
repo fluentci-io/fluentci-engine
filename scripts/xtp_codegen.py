@@ -4,6 +4,7 @@ import json
 import re
 import subprocess
 from pathlib import Path
+from clojurescript_codegen import generated as clojurescript_generated
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = ROOT / "schema"
@@ -31,6 +32,7 @@ def rust_type(parameter):
     return f"Json<{payload}>"
 
 def generated():
+    yield from clojurescript_generated()
     schema = json.loads((SCHEMA / "host.json").read_text())
     modules = json.loads((SCHEMA / "pdk-modules.json").read_text())
     plugins = json.loads((SCHEMA / "plugins.json").read_text())
@@ -71,7 +73,7 @@ def generated():
             exports = ['greet', 'echo', 'failure', 'invalid', 'service', 'cancel', 'nested', 'hash_file', 'copy_file', 'secret_env', 'action_plan', 'matrix', 'workflow', 'files']
             declarations[1] = 'declare module "main" { ' + ' '.join(f'export function {name}(): I32;' for name in exports) + ' }'
         if language == 'clojurescript':
-            exports = ['greet', 'echo', 'failure', 'nested', 'hash_file', 'copy_file']
+            exports = ['greet', 'echo', 'failure', 'nested', 'hash_file', 'copy_file', 'matrix', 'workflow', 'files', 'service', 'cancel', 'secret_env', 'action_plan', 'native_service']
             declarations[1] = 'declare module "main" { ' + ' '.join(f'export function {name}(): I32;' for name in exports) + ' }'
         entry = (ROOT / f'sdk/{language}/demo-plugin/{"entry.ts" if language == "typescript" else "entry.mjs"}').read_text()
         if language in ['purescript', 'rescript']:

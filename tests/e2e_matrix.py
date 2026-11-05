@@ -1,4 +1,4 @@
-"""Execute the same matrix through six actual Wasm PDKs; no tool provisioning."""
+"""Execute the same matrix through seven actual Wasm PDKs; no tool provisioning."""
 import json
 import os
 from pathlib import Path
@@ -11,7 +11,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 BINARY = Path(os.environ.get("FLUENTCI_ENGINE_BIN", ROOT / "target/release/fluentci-engine")).resolve()
-LANGUAGES = ["python", "typescript", "rescript", "gleam", "elixir", "purescript"]
+LANGUAGES = os.environ.get("FLUENTCI_TEST_LANGUAGES", "python,typescript,rescript,gleam,elixir,purescript,clojurescript").split(",")
 
 
 def plugin(language):
@@ -84,42 +84,42 @@ class MatrixGuests(unittest.TestCase):
             self.assertFalse(list(root.glob("pid-*")), "invalid run directory started matrix jobs")
 
     def test_cancelled_matrix_reaps_all_running_case_processes(self):
-        with tempfile.TemporaryDirectory(prefix="fluentci cancel matrix ") as directory:
-            root = Path(directory)
-            for source in (ROOT / "fixtures/matrix-demo").iterdir():
-                shutil.copy2(source, root / source.name)
-            (root / "mode.txt").write_text("sleep")
-            proc = subprocess.Popen([str(BINARY), "call", "-m", str(plugin("purescript")), "matrix", str(root / "cancelled")],
-                                    cwd=root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            try:
-                deadline = time.monotonic() + 20
-                while len(list(root.glob("pid-*"))) < 2 and proc.poll() is None and time.monotonic() < deadline:
-                    time.sleep(0.02)
-                self.assertEqual(len(list(root.glob("pid-*"))), 2, "matrix cases never started")
-                # A pid file can become visible between open() and write().
-                while any(not path.read_text().strip().isdigit() for path in root.glob("pid-*")) and time.monotonic() < deadline:
-                    time.sleep(0.01)
-                proc.send_signal(signal.SIGINT)
-                proc.communicate(timeout=15)
-                self.assertNotEqual(proc.returncode, 0)
-                report = json.loads((root / "cancelled/result.json").read_text())
-                self.assertEqual(report["outcome"], "cancelled")
-                for path in root.glob("pid-*"):
-                    pid = int(path.read_text())
-                    deadline = time.monotonic() + 5
-                    while time.monotonic() < deadline:
-                        try:
-                            os.kill(pid, 0)
-                        except ProcessLookupError:
-                            break
+        for language in LANGUAGES:
+            with tempfile.TemporaryDirectory(prefix="fluentci cancel matrix ") as directory:
+                root = Path(directory)
+                for source in (ROOT / "fixtures/matrix-demo").iterdir():
+                    shutil.copy2(source, root / source.name)
+                (root / "mode.txt").write_text("sleep")
+                proc = subprocess.Popen([str(BINARY), "call", "-m", str(plugin(language)), "matrix", str(root / "cancelled")],
+                                        cwd=root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                try:
+                    deadline = time.monotonic() + 20
+                    while len(list(root.glob("pid-*"))) < 2 and proc.poll() is None and time.monotonic() < deadline:
                         time.sleep(0.02)
-                    else:
-                        self.fail(f"cancelled matrix process {pid} survived cleanup")
-            finally:
-                if proc.poll() is None:
-                    proc.kill()
-                    proc.communicate(timeout=5)
-
+                    self.assertEqual(len(list(root.glob("pid-*"))), 2, "matrix cases never started")
+                    # A pid file can become visible between open() and write().
+                    while any(not path.read_text().strip().isdigit() for path in root.glob("pid-*")) and time.monotonic() < deadline:
+                        time.sleep(0.01)
+                    proc.send_signal(signal.SIGINT)
+                    proc.communicate(timeout=15)
+                    self.assertNotEqual(proc.returncode, 0)
+                    report = json.loads((root / "cancelled/result.json").read_text())
+                    self.assertEqual(report["outcome"], "cancelled")
+                    for path in root.glob("pid-*"):
+                        pid = int(path.read_text())
+                        deadline = time.monotonic() + 5
+                        while time.monotonic() < deadline:
+                            try:
+                                os.kill(pid, 0)
+                            except ProcessLookupError:
+                                break
+                            time.sleep(0.02)
+                        else:
+                            self.fail(f"cancelled matrix process {pid} survived cleanup")
+                finally:
+                    if proc.poll() is None:
+                        proc.kill()
+                        proc.communicate(timeout=5)
 
 if __name__ == "__main__":
     unittest.main()

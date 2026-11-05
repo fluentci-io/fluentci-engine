@@ -6,7 +6,9 @@ import time
 
 node, suite = sys.argv[1:]
 mode = pathlib.Path("mode.txt").read_text().strip()
-started = time.monotonic_ns()
+# macOS Python <3.10 uses a process-local monotonic epoch. Shared timestamps
+# are required to compare overlap between different case processes.
+started = time.time_ns()
 pathlib.Path(f"start-{node}-{suite}").write_text(str(started))
 pathlib.Path(f"pid-{node}-{suite}").write_text(str(__import__("os").getpid()))
 if mode == "sleep":
@@ -18,5 +20,5 @@ else:
     time.sleep(0.3)
     if mode == "fail" and (node, suite) == ("22", "unit"):
         sys.exit(7)
-    pathlib.Path(f"out-{node}-{suite}").write_text(json.dumps({"node": node, "suite": suite, "start": started, "end": time.monotonic_ns()}))
+    pathlib.Path(f"out-{node}-{suite}").write_text(json.dumps({"node": node, "suite": suite, "start": started, "end": time.time_ns()}))
     print(f"done {node}/{suite}")

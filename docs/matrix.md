@@ -98,6 +98,7 @@ and native library execution without a second scheduler or plan protocol.
 | ReScript | `Matrix` | `Matrix.run(plan, runDir)` |
 | Gleam | `fluentci/matrix`, `fluentci/host` | `matrix.run(plan, runDir)` |
 | Elixir | `FluentCI.Matrix`, `FluentCI.Host` | DSL `run_plan(plan, input())` |
+| ClojureScript | `fluentci.matrix`, `fluentci.host` | `host/run!` or `plugin/run-plan!` |
 
 The Elixir DSL expands cases at build time and compiles the native plan into its
 Wasm guest. `run_plan` fails the export when a job fails by default; use
@@ -164,4 +165,4 @@ cd fixtures/matrix-demo
 
 The fixture runs four parameterized jobs with two slots, a prerequisite and a
 success-only join. Engine CI checks actual overlap, cache hits/restoration,
-failure propagation, and cancellation through compiled Wasm for all six languages.
+failure propagation, and cancellation through compiled Wasm for all seven languages.

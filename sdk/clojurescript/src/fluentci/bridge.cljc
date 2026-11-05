@@ -41,3 +41,9 @@
 (defn output! [value]
   #?(:clj (throw (ex-info "Guest output requires Extism" {}))
      :cljs (do (.outputString js/Host value) nil)))
+
+#?(:clj (t/ann component [t/Str -> t/Str]))
+(defn component [value]
+  #?(:clj (throw (ex-info "Guest URI encoding requires JavaScript" {}))
+     :cljs (.replace (js/encodeURIComponent value) (js/RegExp. "[!'()*]" "g")
+                     (fn [character] (str "%" (.toUpperCase (.toString (.charCodeAt character 0) 16)))))))
