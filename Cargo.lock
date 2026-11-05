@@ -2536,14 +2536,17 @@ dependencies = [
 name = "fluentci-executor"
 version = "0.1.2"
 dependencies = [
+ "fluentci-primitives",
  "hex",
  "libc",
  "opentelemetry",
  "opentelemetry_sdk",
+ "rmp-serde",
  "serde",
  "serde_json",
  "sha2 0.10.8",
  "tempfile",
+ "url 2.5.8",
 ]
 
 [[package]]
@@ -2633,9 +2636,18 @@ name = "fluentci-pdk"
 version = "0.2.6"
 dependencies = [
  "extism-pdk",
+ "fluentci-primitives",
  "fluentci-types",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "fluentci-primitives"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "url 2.5.8",
 ]
 
 [[package]]
