@@ -79,8 +79,8 @@ jobs:
             NONINTERACTIVE=1 /bin/bash "$RUNNER_TEMP/homebrew-install.sh"
           fi
           cargo test --release --locked -p fluentci-executor --test packages native_package_plan_install -- --ignored --exact
-      - name: Executor lint
-        run: cargo clippy --release --locked -p fluentci-executor --all-targets -- -D warnings
+      - name: Workspace lint
+        run: cargo clippy --release --locked --workspace --all-targets -- -D warnings
       - name: Build CLI and run end-to-end tests
         env:
           FLUENTCI_E2E_ARTIFACTS: .ci-artifacts/host-e2e

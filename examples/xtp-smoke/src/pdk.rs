@@ -750,9 +750,9 @@ pub(crate) fn as_service(input: String) -> std::result::Result<types::Service, e
 /// branch
 #[allow(unused)]
 pub(crate) fn branch(input: String) -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::branch(input)? };
+    unsafe { raw_imports::branch(input)? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// cache
@@ -967,9 +967,9 @@ pub(crate) fn http(input: String) -> std::result::Result<types::File, extism_pdk
 /// install
 #[allow(unused)]
 pub(crate) fn install() -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::install()? };
+    unsafe { raw_imports::install()? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// md5
@@ -1050,26 +1050,26 @@ pub(crate) fn proto() -> std::result::Result<types::Proto, extism_pdk::Error> {
 /// remove_env
 #[allow(unused)]
 pub(crate) fn remove_env(input: String) -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::remove_env(input)? };
+    unsafe { raw_imports::remove_env(input)? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// set_envs
 /// It takes input of Vec<u8> (Legacy payload: UTF-8 JSON array of [name, value] string pairs. XTP v1 cannot describe nested tuple arrays; pass these JSON bytes unchanged.)
 #[allow(unused)]
 pub(crate) fn set_envs(input: Vec<u8>) -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::set_envs(input)? };
+    unsafe { raw_imports::set_envs(input)? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// set_runner
 #[allow(unused)]
 pub(crate) fn set_runner(input: String) -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::set_runner(input)? };
+    unsafe { raw_imports::set_runner(input)? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// set_secret
@@ -1141,9 +1141,9 @@ pub(crate) fn tree() -> std::result::Result<types::Directory, extism_pdk::Error>
 /// trust
 #[allow(unused)]
 pub(crate) fn trust() -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::trust()? };
+    unsafe { raw_imports::trust()? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// unzip
@@ -1161,45 +1161,45 @@ pub(crate) fn unzip(input: String) -> std::result::Result<types::Directory, exti
 /// It takes input of Vec<i64> (Unsigned 32-bit values; each must be in 0..4294967295.)
 #[allow(unused)]
 pub(crate) fn wait_on(input: Vec<i64>) -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::wait_on(extism_pdk::Json(input))? };
+    unsafe { raw_imports::wait_on(extism_pdk::Json(input))? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// with_cache
 /// It takes input of types::Cache ()
 #[allow(unused)]
 pub(crate) fn with_cache(input: types::Cache) -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::with_cache(extism_pdk::Json(input))? };
+    unsafe { raw_imports::with_cache(extism_pdk::Json(input))? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// with_exec
 /// It takes input of Vec<String> (StringList JSON array.)
 #[allow(unused)]
 pub(crate) fn with_exec(input: Vec<String>) -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::with_exec(extism_pdk::Json(input))? };
+    unsafe { raw_imports::with_exec(extism_pdk::Json(input))? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// with_file
 /// It takes input of types::File ()
 #[allow(unused)]
 pub(crate) fn with_file(input: types::File) -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::with_file(extism_pdk::Json(input))? };
+    unsafe { raw_imports::with_file(extism_pdk::Json(input))? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// with_packages
 /// It takes input of Vec<String> (StringList JSON array.)
 #[allow(unused)]
 pub(crate) fn with_packages(input: Vec<String>) -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::with_packages(extism_pdk::Json(input))? };
+    unsafe { raw_imports::with_packages(extism_pdk::Json(input))? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// with_secret_variable
@@ -1208,25 +1208,25 @@ pub(crate) fn with_packages(input: Vec<String>) -> std::result::Result<(), extis
 pub(crate) fn with_secret_variable(
     input: Vec<String>,
 ) -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::with_secret_variable(extism_pdk::Json(input))? };
+    unsafe { raw_imports::with_secret_variable(extism_pdk::Json(input))? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// with_service
 #[allow(unused)]
 pub(crate) fn with_service(input: String) -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::with_service(input)? };
+    unsafe { raw_imports::with_service(input)? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// with_workdir
 #[allow(unused)]
 pub(crate) fn with_workdir(input: String) -> std::result::Result<(), extism_pdk::Error> {
-    let res = unsafe { raw_imports::with_workdir(input)? };
+    unsafe { raw_imports::with_workdir(input)? };
 
-    Ok(res)
+    Ok(())
 }
 
 /// zip

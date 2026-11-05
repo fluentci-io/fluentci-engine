@@ -240,10 +240,8 @@ impl Operation {
             Self::Digest {
                 input: Input::File(path),
                 ..
-            } => {
-                if path.as_os_str().is_empty() {
-                    return Err("empty digest file path".into());
-                }
+            } if path.as_os_str().is_empty() => {
+                return Err("empty digest file path".into());
             }
             _ => {}
         }

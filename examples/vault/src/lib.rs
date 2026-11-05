@@ -11,7 +11,7 @@ pub fn get_secret(name: String) -> FnResult<String> {
         .get_secret(&name)?;
 
     if secrets.is_empty() {
-        return Err(WithReturnCode::from(Error::msg("secret not found")).into());
+        return Err(WithReturnCode::from(Error::msg("secret not found")));
     }
 
     let stdout = dag()

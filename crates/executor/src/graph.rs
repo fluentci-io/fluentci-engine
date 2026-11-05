@@ -152,6 +152,63 @@ impl DependencyGraph {
     }
 }
 
+/// Incremental admission for ordinary success-dependent tasks. Each edge is visited once.
+pub(crate) struct Frontier {
+    remaining: Vec<usize>,
+    completed: Vec<bool>,
+    ranks: Vec<usize>,
+    ready: std::collections::BTreeSet<(usize, usize)>,
+    unfinished: usize,
+}
+
+impl Frontier {
+    pub fn new(graph: &DependencyGraph) -> Self {
+        let mut ranks = vec![0; graph.order.len()];
+        for (rank, &node) in graph.order.iter().enumerate() {
+            ranks[node] = rank;
+        }
+        let remaining = graph
+            .dependencies
+            .iter()
+            .map(<[usize]>::len)
+            .collect::<Vec<_>>();
+        let ready = remaining
+            .iter()
+            .enumerate()
+            .filter_map(|(node, &count)| (count == 0).then_some((ranks[node], node)))
+            .collect();
+        Self {
+            completed: vec![false; remaining.len()],
+            unfinished: remaining.len(),
+            remaining,
+            ranks,
+            ready,
+        }
+    }
+    pub fn next(&mut self) -> Option<usize> {
+        self.ready.pop_first().map(|(_, node)| node)
+    }
+    pub fn complete(&mut self, node: usize, graph: &DependencyGraph) {
+        if self.completed[node] {
+            return;
+        }
+        self.completed[node] = true;
+        self.unfinished -= 1;
+        for &next in &graph.successors[node] {
+            self.remaining[next] -= 1;
+            if self.remaining[next] == 0 {
+                self.ready.insert((self.ranks[next], next));
+            }
+        }
+    }
+    pub fn finished(&self) -> bool {
+        self.unfinished == 0
+    }
+    pub fn rank(&self, node: usize) -> usize {
+        self.ranks[node]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -232,62 +289,5 @@ mod tests {
         assert_eq!(ready.next(), Some(count));
         ready.complete(count, &graph);
         assert!(ready.finished());
-    }
-}
-
-/// Incremental admission for ordinary success-dependent tasks. Each edge is visited once.
-pub(crate) struct Frontier {
-    remaining: Vec<usize>,
-    completed: Vec<bool>,
-    ranks: Vec<usize>,
-    ready: std::collections::BTreeSet<(usize, usize)>,
-    unfinished: usize,
-}
-
-impl Frontier {
-    pub fn new(graph: &DependencyGraph) -> Self {
-        let mut ranks = vec![0; graph.order.len()];
-        for (rank, &node) in graph.order.iter().enumerate() {
-            ranks[node] = rank;
-        }
-        let remaining = graph
-            .dependencies
-            .iter()
-            .map(<[usize]>::len)
-            .collect::<Vec<_>>();
-        let ready = remaining
-            .iter()
-            .enumerate()
-            .filter_map(|(node, &count)| (count == 0).then_some((ranks[node], node)))
-            .collect();
-        Self {
-            completed: vec![false; remaining.len()],
-            unfinished: remaining.len(),
-            remaining,
-            ranks,
-            ready,
-        }
-    }
-    pub fn next(&mut self) -> Option<usize> {
-        self.ready.pop_first().map(|(_, node)| node)
-    }
-    pub fn complete(&mut self, node: usize, graph: &DependencyGraph) {
-        if self.completed[node] {
-            return;
-        }
-        self.completed[node] = true;
-        self.unfinished -= 1;
-        for &next in &graph.successors[node] {
-            self.remaining[next] -= 1;
-            if self.remaining[next] == 0 {
-                self.ready.insert((self.ranks[next], next));
-            }
-        }
-    }
-    pub fn finished(&self) -> bool {
-        self.unfinished == 0
-    }
-    pub fn rank(&self, node: usize) -> usize {
-        self.ranks[node]
     }
 }

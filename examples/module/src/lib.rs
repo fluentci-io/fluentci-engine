@@ -16,6 +16,6 @@ pub fn call(command: String) -> FnResult<String> {
         return Err(Error::msg("Invalid module, must be a wasm file").into());
     }
 
-    let response = dag().call(&url, &function, args)?;
+    let response = dag().call(&url, function, args)?;
     Ok(response)
 }

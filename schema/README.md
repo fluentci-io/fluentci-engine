@@ -43,7 +43,10 @@ Review the CLI's validation messages: the tested CLI can continue after schema
 errors when `--yes` is supplied. The checked-in smoke plugin's `src/pdk.rs` is the
 output of that official Rust template, formatted by `cargo fmt`. To refresh it,
 copy `/tmp/fluentci-xtp-smoke/src/pdk.rs` to
-`examples/xtp-smoke/src/pdk.rs`, then run `cargo fmt --all`. Its Cargo manifest
+`examples/xtp-smoke/src/pdk.rs`, then run `cargo fmt --all` and
+`cargo clippy --fix --release --locked -p xtp-smoke --all-targets --allow-dirty -- -D warnings`.
+The official template currently emits unit-valued temporary bindings; the Clippy
+step normalizes those wrappers before the required workspace lint. Its Cargo manifest
 uses the workspace PDK pin rather than the template's older default.
 
 ```sh
