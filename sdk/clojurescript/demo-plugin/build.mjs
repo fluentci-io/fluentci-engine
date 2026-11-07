@@ -1,17 +1,13 @@
-import { build } from "esbuild";
-import { mkdirSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { buildPlugin, command } from "@fluentci/inspection";
 import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+
 const sdk = fileURLToPath(new URL("..", import.meta.url));
 const demo = fileURLToPath(new URL(".", import.meta.url));
-function command(program, args, cwd = sdk) {
-  const result = spawnSync(program, args, { cwd, stdio: "inherit" });
-  if (result.error) throw result.error;
-  if (result.status !== 0) throw Error(`${program} failed with exit status ${result.status}`);
-}
-// Static checking is mandatory; compilation cannot bypass it via npm run build.
-command("clojure", ["-M:check"]);
-command("clojure", ["-M:plugin"]);
-mkdirSync(new URL("dist/", import.meta.url), { recursive: true });
-await build({ absWorkingDir: demo, entryPoints: ["entry.mjs"], outfile: "dist/plugin.js", bundle: true, format: "cjs", platform: "neutral", target: "es2020" });
-command("extism-js", ["dist/plugin.js", "-i", "imports.d.ts", "-o", "dist/plugin.wasm"], demo);
+command("clojure", ["-M:check"], sdk);
+command("clojure", ["-M:plugin"], sdk);
+await buildPlugin({
+  sdk: "clojurescript",
+  root: demo,
+  clojurescriptInterface: join(sdk, "dist/clojurescript-interface.json"),
+});

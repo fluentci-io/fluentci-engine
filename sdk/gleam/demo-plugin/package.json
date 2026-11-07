@@ -2,6 +2,12 @@
   "name": "fluentci-gleam-plugin-demo",
   "private": true,
   "type": "module",
-  "scripts": {"build": "node build.mjs"},
-  "devDependencies": {"esbuild": "0.25.3"}
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.3",
+    "@fluentci/inspection": "file:../../inspection",
+    "typescript": "5.9.3"
+  }
 }

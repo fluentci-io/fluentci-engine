@@ -68,7 +68,7 @@ jobs:
           uv run fluentci-plugin demo/plugin.py -o dist/plugin.wasm
       - name: Test Elixir DSL and compile its Wasm guest
         run: |
-          (cd sdk/elixir && mix format --check-formatted && mix test --warnings-as-errors test/plugin_test.exs test/matrix_test.exs test/host_test.exs)
+          (cd sdk/elixir && mix format --check-formatted && mix test --warnings-as-errors test/plugin_test.exs test/matrix_test.exs test/host_test.exs test/named_arguments_test.exs)
           cd sdk/elixir/demo-plugin
           mix deps.get
           mix fluentci.plugin.build DemoPlugin --pdk-path ../../../crates/pdk --output dist/plugin.wasm
@@ -93,6 +93,16 @@ jobs:
           cd demo-plugin
           npm ci
           mise exec -- npm run build
+      - name: Test SDK metadata inspection
+        working-directory: sdk/inspection
+        run: |
+          npm ci --ignore-scripts
+          PATH="$PWD/../rescript/demo-plugin/node_modules/.bin:$PATH" npm test
+          python3 test_python.py
+          mise exec -- clojure -M test_clojurescript.clj
+          cargo test --release --locked --manifest-path rust/Cargo.toml
+          cargo clippy --release --locked --all-targets --manifest-path rust/Cargo.toml -- -D warnings
+          cargo fmt --manifest-path rust/Cargo.toml --check
       - name: Compile and test the PureScript sccache example
         working-directory: examples/sccache
         run: npm ci && npm run build && npm test
