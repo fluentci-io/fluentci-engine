@@ -39,8 +39,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: fluentci-io/setup-fluentci@next
-        with:
-          version: '2026.11.04'
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # pinned action; toolchain selected below
         with:
           toolchain: '1.99.1'
@@ -186,8 +184,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: fluentci-io/setup-fluentci@next
-        with:
-          version: '2026.11.04'
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # pinned action; toolchain selected below
         with:
           toolchain: '1.99.1'
@@ -273,8 +269,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: fluentci-io/setup-fluentci@next
-        with:
-          version: '2026.11.04'
       - name: Restore native freebsd Rust caches
         uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
@@ -313,8 +307,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: fluentci-io/setup-fluentci@next
-        with:
-          version: '2026.11.04'
       - name: Restore native netbsd Rust caches
         uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
@@ -367,8 +359,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: fluentci-io/setup-fluentci@next
-        with:
-          version: '2026.11.04'
       - name: Restore native openbsd Rust caches
         uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
         with:
@@ -408,8 +398,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: fluentci-io/setup-fluentci@next
-        with:
-          version: '2026.11.04'
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
         with:
           toolchain: '1.99.1'

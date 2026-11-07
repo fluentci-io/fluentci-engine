@@ -53,8 +53,6 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
       - uses: fluentci-io/setup-fluentci@next
-        with:
-          version: '2026.11.04'
       - name: Require an explicit existing release tag when publishing
         if: github.event_name == 'workflow_dispatch' && inputs.publish
         env:
@@ -113,8 +111,6 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
       - uses: fluentci-io/setup-fluentci@next
-        with:
-          version: '2026.11.04'
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: bsd-smoke-fixtures
@@ -217,8 +213,6 @@ jobs:
       contents: write
     steps:
       - uses: fluentci-io/setup-fluentci@next
-        with:
-          version: '2026.11.04'
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           pattern: bsd-release-*

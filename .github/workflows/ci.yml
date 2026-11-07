@@ -14,8 +14,6 @@ jobs:
         with:
           set-safe-directory: false
       - uses: fluentci-io/setup-fluentci@next
-        with:
-          version: '2026.11.04'
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
         with:
@@ -85,8 +83,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: fluentci-io/setup-fluentci@next
-        with:
-          version: '2026.11.04'
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v1.41
