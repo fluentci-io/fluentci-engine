@@ -97,7 +97,7 @@ jobs:
           npm ci --ignore-scripts
           PATH="$PWD/../rescript/demo-plugin/node_modules/.bin:$PATH" npm test
           python3 test_python.py
-          mise exec -- clojure -M test_clojurescript.clj
+          (cd ../clojurescript && mise exec -- clojure -M ../inspection/test_clojurescript.clj)
           cargo test --release --locked --manifest-path rust/Cargo.toml
           cargo clippy --release --locked --all-targets --manifest-path rust/Cargo.toml -- -D warnings
           cargo fmt --manifest-path rust/Cargo.toml --check
