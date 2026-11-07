@@ -1,7 +1,7 @@
 [workspace]
 default-members = ["crates/cli"]
 members = ["crates/*", "examples/*", "vendor/superconsole"]
-exclude = ["vendor/wasmtime", "vendor/extism-openbsd", "examples/sccache", "examples/hash-clojurescript", "examples/buildx"]
+exclude = ["vendor/wasmtime", "vendor/extism-openbsd", "vendor/wasmtime-wasi-openbsd", "examples/sccache", "examples/hash-clojurescript", "examples/buildx"]
 resolver = "2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

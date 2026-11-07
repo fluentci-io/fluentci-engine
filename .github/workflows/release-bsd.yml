@@ -28,6 +28,14 @@ on:
         description: 'Tag to build (empty builds the selected branch without publishing)'
         type: string
         default: ''
+      source_ref:
+        description: 'Source commit/ref override for rebuilding an existing release'
+        type: string
+        default: ''
+      openbsd_only:
+        description: 'Build and publish only the OpenBSD target'
+        type: boolean
+        default: false
       publish:
         description: 'Upload verified assets to the existing release for tag'
         type: boolean
@@ -51,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
+          ref: ${{ inputs.source_ref || github.event.release.tag_name || inputs.tag || github.sha }}
       - uses: fluentci-io/setup-fluentci@next
       - name: Require an explicit existing release tag when publishing
         if: github.event_name == 'workflow_dispatch' && inputs.publish
@@ -94,22 +102,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: freebsd
-            release: '14.3'
-            target: x86_64-unknown-freebsd
-          - os: netbsd
-            release: '10.1'
-            target: x86_64-unknown-netbsd
-          - os: openbsd
-            release: '7.8'
-            target: x86_64-unknown-openbsd
+        include: ${{ fromJSON(inputs.openbsd_only && '[{"os":"openbsd","release":"7.8","target":"x86_64-unknown-openbsd"}]' || '[{"os":"freebsd","release":"14.3","target":"x86_64-unknown-freebsd"},{"os":"netbsd","release":"10.1","target":"x86_64-unknown-netbsd"},{"os":"openbsd","release":"7.8","target":"x86_64-unknown-openbsd"}]') }}
     env:
       RELEASE_TARGET: ${{ matrix.target }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
+          ref: ${{ inputs.source_ref || github.event.release.tag_name || inputs.tag || github.sha }}
       - uses: fluentci-io/setup-fluentci@next
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
