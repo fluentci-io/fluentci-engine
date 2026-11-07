@@ -12,3 +12,7 @@ sdk/gleam/*/build
 /.ci-cache/
 .psc-ide-port
 __pycache__/
+
+/tools/component-model/target/
+
+/sdk/inspection/component-rust/target/
