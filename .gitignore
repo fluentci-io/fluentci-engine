@@ -16,3 +16,6 @@ __pycache__/
 /tools/component-model/target/
 
 /sdk/inspection/component-rust/target/
+
+# JavaScript SDK inspection dependencies
+/sdk/inspection/node_modules/
