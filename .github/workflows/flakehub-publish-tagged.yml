@@ -12,6 +12,10 @@ on:
 jobs:
   flakehub-publish:
     runs-on: "ubuntu-22.04"
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
     permissions:
       id-token: "write"
       contents: "read"
@@ -19,10 +23,29 @@ jobs:
       - uses: "actions/checkout@v4"
         with:
           ref: "${{ (inputs.tag != null) && format('refs/tags/{0}', inputs.tag) || '' }}"
+          fetch-depth: 0
       - uses: fluentci-io/setup-fluentci@next
-      - uses: "DeterminateSystems/nix-installer-action@main"
-      - uses: "DeterminateSystems/flakehub-push@main"
         with:
-          visibility: "public"
-          name: "fluentci-io/fluentci-engine"
-          tag: "${{ inputs.tag }}"
+          version: v0.17.3
+      - name: Set up Determinate Nix through FluentCI
+        run: |
+          fluentci --check-update=false run setup-determinate-nix@0.2.2 setup --sudo --trusted-users "$(id -un)"
+          echo /nix/var/nix/profiles/default/bin >> "$GITHUB_PATH"
+      - name: Set up FlakeHub publisher through FluentCI
+        run: |
+          fluentci --check-update=false run setup-flakehub-push@v0.2.0 setup --install-dir "$RUNNER_TEMP/flakehub-push"
+          echo "$RUNNER_TEMP/flakehub-push/bin" >> "$GITHUB_PATH"
+      - name: Publish tagged flake through FluentCI
+        env:
+          RELEASE_VERSION: ${{ inputs.tag || github.ref_name }}
+          FLAKEHUB_PUSH_GITHUB_TOKEN: ${{ github.token }}
+          NIX_CONFIG: |
+            access-tokens = github.com=${{ github.token }}
+        run: |
+          export FLAKEHUB_PUSH_REV="$(git rev-parse HEAD)"
+          fluentci --check-update=false run nix-publish@v0.2.0 flakehub \
+            --run-dir "$RUNNER_TEMP/flakehub-$GITHUB_RUN_ATTEMPT" \
+            --name "$GITHUB_REPOSITORY" \
+            --version "$RELEASE_VERSION" \
+            --visibility public \
+            --timeout-ms 2400000
