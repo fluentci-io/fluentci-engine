@@ -455,9 +455,17 @@ FluentCI Engine supports caching. To enable it, set the following environment va
 - `FLUENTCI_CACHE_S3_ENDPOINT` - S3 endpoint, if you are using S3-compatible storage
 - `FLUENTCI_CACHE_S3_BUCKET` - S3 bucket name, if you are using S3-compatible storage
 - `FLUENTCI_CACHE_CDN_ENDPOINT` - CDN endpoint, if you are using CDN (optional) for downloading cache
+- `FLUENTCI_CACHE_DOWNLOAD_JOBS` - parallel CDN download workers, 1–32 (default 4)
 
 > [!NOTE]
 > You need to set `GOOGLE_APPLICATION_CREDENTIALS` or `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables to use GCS or S3 cache.
+
+CDN archive restores use Tokio/reqwest with indicatif progress (percentage, bytes,
+speed, and ETA). Large objects use parallel 8 MiB ranges when a strong ETag and
+range support are available; other responses stream sequentially. Downloads are
+published atomically after validating ranges and lengths. Failed or cancelled
+transfers leave no reusable partial cache file. The native DAG action-record
+cache remains local.
 
 ## 🔭 OpenTelemetry Tracing
 
